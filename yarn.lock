@@ -12,6 +12,11 @@
   resolved "https://registry.yarnpkg.com/@types/jquery/-/jquery-2.0.54.tgz#d7999245f77c3fab5d84e7d32b8a6c20bfd1f072"
   integrity sha512-D/PomKwNkDfSKD13DEVQT/pq2TUjN54c6uB341fEZanIzkjfGe7UaFuuaLZbpEiS5j7Wk2MUHAZqZIoECw29lg==
 
+Sortable@RubaXa/Sortable#1.14.0:
+  version "1.14.0"
+  uid "4684991aabfdf5cab989427fe204814d99520509"
+  resolved "https://codeload.github.com/RubaXa/Sortable/tar.gz/4684991aabfdf5cab989427fe204814d99520509"
+
 bootstrap@4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-4.6.0.tgz#97b9f29ac98f98dfa43bf7468262d84392552fd7"
@@ -706,6 +711,11 @@ outlayer@^2.1.0:
     ev-emitter "^1.0.0"
     fizzy-ui-utils "^2.0.0"
     get-size "^2.0.2"
+
+popper.js@^1.16.1:
+  version "1.16.1"
+  resolved "https://registry.yarnpkg.com/popper.js/-/popper.js-1.16.1.tgz#2a223cb3dc7b6213d740e40372be40de43e65b1b"
+  integrity sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==
 
 robust-predicates@^3.0.0:
   version "3.0.1"
