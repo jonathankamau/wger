@@ -53,19 +53,21 @@ def overview(request):
     return render(request, 'images/overview.html', context)
 
 
-class ImageAddView(WgerFormMixin, CreateView):
+class ImageAddView(WgerFormMixin, LoginRequiredMixin, CreateView):
     """
     Generic view to add a new weight entry
     """
+
     model = Image
     form_class = ImageForm
     title = _('Add')
+    template_name = 'form_content.html'
 
     def get_initial(self):
         """
         Set the initial data for the form.
 
-        Read the comment on weight/models.py WeightEntry about why we need
+        Read the note on manager.models.WorkoutSession.user about why we need
         to pass the user here.
         """
         return {'user': self.request.user, 'date': datetime.today()}
@@ -88,8 +90,10 @@ class ImageUpdateView(WgerFormMixin, LoginRequiredMixin, UpdateView):
     """
     Generic view to edit an existing weight entry
     """
+
     model = Image
     form_class = ImageForm
+    template_name = 'form_content.html'
 
     def get_context_data(self, **kwargs):
         context = super(ImageUpdateView, self).get_context_data(**kwargs)
@@ -110,7 +114,6 @@ class ImageDeleteView(WgerDeleteMixin, LoginRequiredMixin, DeleteView):
     """
 
     model = Image
-    fields = ['image', 'date', 'description']
     success_url = reverse_lazy('gallery:images:overview')
 
     def get_context_data(self, **kwargs):

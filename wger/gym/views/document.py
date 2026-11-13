@@ -37,6 +37,7 @@ from django.views.generic import (
 )
 
 # wger
+from wger.gym.helpers import is_same_gym
 from wger.gym.models import UserDocument
 from wger.utils.generic_views import (
     WgerDeleteMixin,
@@ -51,6 +52,7 @@ class ListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
     Overview of all available admin notes
     """
+
     model = UserDocument
     permission_required = 'gym.add_userdocument'
     template_name = 'document/list.html'
@@ -71,7 +73,7 @@ class ListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         user = User.objects.get(pk=self.kwargs['user_pk'])
         self.member = user
-        if user.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(user, request.user):
             return HttpResponseForbidden()
         return super(ListView, self).dispatch(request, *args, **kwargs)
 
@@ -90,7 +92,7 @@ class AddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Create
     """
 
     model = UserDocument
-    fields = ['document', 'name', 'note']
+    fields = ('document', 'name', 'note')
     title = gettext_lazy('Add note')
     permission_required = 'gym.add_userdocument'
     member = None
@@ -110,7 +112,7 @@ class AddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Create
 
         user = User.objects.get(pk=self.kwargs['user_pk'])
         self.member = user
-        if user.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(user, request.user):
             return HttpResponseForbidden()
         return super(AddView, self).dispatch(request, *args, **kwargs)
 
@@ -140,7 +142,7 @@ class UpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Upd
     """
 
     model = UserDocument
-    fields = ['document', 'name', 'note']
+    fields = ('document', 'name', 'note')
     permission_required = 'gym.change_userdocument'
 
     def get_success_url(self):
@@ -158,7 +160,7 @@ class UpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Upd
             return HttpResponseForbidden()
 
         note = self.get_object()
-        if note.member.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(note.member, request.user):
             return HttpResponseForbidden()
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
 
@@ -177,7 +179,6 @@ class DeleteView(WgerDeleteMixin, LoginRequiredMixin, PermissionRequiredMixin, D
     """
 
     model = UserDocument
-    fields = ('document', 'name', 'note')
     permission_required = 'gym.delete_userdocument'
 
     def get_success_url(self):
@@ -194,7 +195,7 @@ class DeleteView(WgerDeleteMixin, LoginRequiredMixin, PermissionRequiredMixin, D
             return HttpResponseForbidden()
 
         note = self.get_object()
-        if note.member.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(note.member, request.user):
             return HttpResponseForbidden()
         return super(DeleteView, self).dispatch(request, *args, **kwargs)
 

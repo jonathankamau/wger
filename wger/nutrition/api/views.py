@@ -16,46 +16,61 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard Library
-import datetime
+import logging
 
 # Django
-from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.db.models import Prefetch
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 # Third Party
-from rest_framework import viewsets
-from rest_framework.decorators import (
-    action,
-    api_view,
+from drf_spectacular.openapi import AutoSchema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
 )
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 # wger
+from wger.nutrition.api.filtersets import (
+    IngredientFilterSet,
+    LogItemFilterSet,
+)
 from wger.nutrition.api.serializers import (
+    IngredientImageSerializer,
     IngredientInfoSerializer,
     IngredientSerializer,
+    IngredientValuesSerializer,
     IngredientWeightUnitSerializer,
     LogItemSerializer,
     MealItemSerializer,
     MealSerializer,
+    NutritionalValuesSerializer,
     NutritionPlanInfoSerializer,
     NutritionPlanSerializer,
-    WeightUnitSerializer,
 )
 from wger.nutrition.forms import UnitChooserForm
 from wger.nutrition.models import (
+    Image,
     Ingredient,
     IngredientWeightUnit,
     LogItem,
     Meal,
     MealItem,
     NutritionPlan,
-    WeightUnit,
 )
-from wger.utils.language import (
-    load_ingredient_languages,
-    load_language,
+from wger.utils.pagination import (
+    IngredientCursorPagination,
+    IngredientLimitOffsetPagination,
 )
 from wger.utils.viewsets import WgerOwnerObjectModelViewSet
+
+
+logger = logging.getLogger(__name__)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -63,28 +78,55 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     API endpoint for ingredient objects. For a read-only endpoint with all
     the information of an ingredient, see /api/v2/ingredientinfo/
     """
-    queryset = Ingredient.objects.accepted()
-    serializer_class = IngredientSerializer
-    ordering_fields = '__all__'
-    filterset_fields = (
-        'code',
-        'carbohydrates',
-        'carbohydrates_sugar',
-        'creation_date',
-        'energy',
-        'fat',
-        'fat_saturated',
-        'fibres',
-        'name',
-        'protein',
-        'sodium',
-        'status',
-        'update_date',
-        'language',
-        'license',
-        'license_author',
-    )
 
+    serializer_class = IngredientSerializer
+    # Restrict ordering to indexed columns
+    ordering_fields = (
+        'id',
+        'name',
+        'code',
+        'uuid',
+        'remote_id',
+        'last_update',
+        'last_imported',
+        'nutriscore',
+    )
+    filterset_class = IngredientFilterSet
+
+    # Strip default ordering ('name'), this makes the API/DB more performant
+    queryset = Ingredient.objects.prefetch_related('ingredientweightunit_set').order_by()
+    pagination_class = IngredientLimitOffsetPagination
+    throttle_scope = 'ingredient_list'
+
+    def get_throttles(self):
+        """
+        Apply distinct throttle scopes to list and detail actions.
+
+        List queries on a 3M-row table are expensive (sort, deep pagination);
+        detail queries are cheap PK lookups. Separate buckets keep autocomplete
+        and detail loads from competing for the same quota.
+        """
+        self.throttle_scope = 'ingredient_list' if self.action == 'list' else 'ingredient_detail'
+        return super().get_throttles()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                'amount',
+                OpenApiTypes.DECIMAL,
+                OpenApiParameter.QUERY,
+                required=True,
+                description='The amount to calculate the values for',
+            ),
+            OpenApiParameter(
+                'unit',
+                OpenApiTypes.INT,
+                OpenApiParameter.QUERY,
+                description='ID of an ingredient weight unit. Defaults to grams.',
+            ),
+        ],
+        responses={200: IngredientValuesSerializer},
+    )
     @action(detail=True)
     def get_values(self, request, pk):
         """
@@ -103,16 +145,15 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
             'carbohydrates_sugar': 0,
             'fat': 0,
             'fat_saturated': 0,
-            'fibres': 0,
+            'fiber': 0,
             'sodium': 0,
-            'errors': []
+            'errors': [],
         }
         ingredient = self.get_object()
 
         form = UnitChooserForm(request.GET)
 
         if form.is_valid():
-
             # Create a temporary MealItem object
             if form.cleaned_data['unit']:
                 unit_id = form.cleaned_data['unit'].id
@@ -124,10 +165,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
             item.weight_unit_id = unit_id
             item.amount = form.cleaned_data['amount']
 
-            result = item.get_nutritional_values()
-
-            for i in result:
-                result[i] = '{0:f}'.format(result[i])
+            result = item.get_nutritional_values().to_dict
         else:
             result['errors'] = form.errors
 
@@ -139,67 +177,92 @@ class IngredientInfoViewSet(IngredientViewSet):
     Read-only info API endpoint for ingredient objects. Returns nested data
     structures for more easy parsing.
     """
+
     serializer_class = IngredientInfoSerializer
 
+    def get_queryset(self):
+        """Optimize the queryset with select_related to avoid n+1 queries"""
 
-@api_view(['GET'])
-def search(request):
-    """
-    Searches for ingredients.
-
-    This format is currently used by the ingredient search autocompleter
-    """
-    term = request.GET.get('term', None)
-    requested_language = request.GET.get('language', None)
-    results = []
-    json_response = {}
-    if term:
-        if requested_language:
-            languages = [load_language(requested_language)]
-        else:
-            languages = load_ingredient_languages(request)
-        ingredients = Ingredient.objects.filter(
-            name__icontains=term,
-            language__in=languages,
-            status=Ingredient.STATUS_ACCEPTED,
+        # See IngredientViewSet.queryset for the rationale behind .order_by().
+        return (
+            Ingredient.objects.select_related('language', 'license', 'image')
+            .prefetch_related('ingredientweightunit_set')
+            .order_by()
         )
 
-        for ingredient in ingredients:
-            ingredient_json = {
-                'value': ingredient.name,
-                'data': {
-                    'id': ingredient.id,
-                    'name': ingredient.name,
-                }
-            }
-            results.append(ingredient_json)
-        json_response['suggestions'] = results
 
-    return Response(json_response)
-
-
-class WeightUnitViewSet(viewsets.ReadOnlyModelViewSet):
+class IngredientSyncAutoSchema(AutoSchema):
     """
-    API endpoint for weight unit objects
+    Gives the cursor-paginated response its own component.
+
+    This endpoint shares its serializer with /api/v2/ingredientinfo/, so both
+    wrappers would be called PaginatedIngredientInfoList. The cursor one has no
+    count, and whichever is generated last wins.
     """
-    queryset = WeightUnit.objects.all()
-    serializer_class = WeightUnitSerializer
+
+    def get_paginated_name(self, serializer_name: str) -> str:
+        return f'Cursor{super().get_paginated_name(serializer_name)}'
+
+
+class IngredientSyncViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Cursor-paginated read-only endpoint designed for syncing the ingredient
+    catalogue.
+
+    Unlike /api/v2/ingredient/, this endpoint uses cursor pagination so deep
+    pagination stays fast and is intended for clients such as local wger instances.
+
+    For incremental syncs, combine with the `last_update__gt` filter to only
+    fetch ingredients that changed since that time.
+
+    Note: the response does not contain a `count` key.
+    """
+
+    schema = IngredientSyncAutoSchema()
+    serializer_class = IngredientInfoSerializer
+    pagination_class = IngredientCursorPagination
+    filterset_class = IngredientFilterSet
+    throttle_scope = 'ingredient_sync'
+
+    def get_queryset(self):
+        return Ingredient.objects.select_related(
+            'language',
+            'license',
+            'image',
+        ).prefetch_related('ingredientweightunit_set')
+
+
+class ImageViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for ingredient images
+    """
+
+    serializer_class = IngredientImageSerializer
     ordering_fields = '__all__'
-    filterset_fields = ('language', 'name')
+    filterset_fields = ('uuid', 'ingredient_id', 'ingredient__uuid')
+
+    @method_decorator(cache_page(settings.WGER_SETTINGS['INGREDIENT_CACHE_TTL']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        """Optimize the queryset"""
+
+        return Image.objects.select_related('ingredient')
 
 
 class IngredientWeightUnitViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint for many-to-many table ingredient-weight unit objects
+    API endpoint for ingredient weight unit objects
     """
+
     queryset = IngredientWeightUnit.objects.all()
     serializer_class = IngredientWeightUnitSerializer
     ordering_fields = '__all__'
     filterset_fields = (
-        'amount',
         'gram',
         'ingredient',
-        'unit',
+        'name',
     )
 
 
@@ -208,12 +271,12 @@ class NutritionPlanViewSet(viewsets.ModelViewSet):
     API endpoint for nutrition plan objects. For a read-only endpoint with all
     the information of nutritional plan(s), see /api/v2/nutritionplaninfo/
     """
+
     serializer_class = NutritionPlanSerializer
     is_private = True
     ordering_fields = '__all__'
     filterset_fields = (
         'creation_date',
-        'language',
         'description',
         'has_goal_calories',
     )
@@ -222,45 +285,32 @@ class NutritionPlanViewSet(viewsets.ModelViewSet):
         """
         Only allow access to appropriate objects
         """
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return NutritionPlan.objects.none()
+
         return NutritionPlan.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         """
         Set the owner
         """
-        serializer.save(user=self.request.user, language=load_language())
+        serializer.save(user=self.request.user)
 
+    @extend_schema(responses={200: NutritionalValuesSerializer})
     @action(detail=True)
     def nutritional_values(self, request, pk):
         """
         Return an overview of the nutritional plan's values
         """
-        return Response(NutritionPlan.objects.get(pk=pk).get_nutritional_values())
+        serializer = NutritionalValuesSerializer(
+            self.get_object().get_nutritional_values()['total'],
+        )
+        return Response(serializer.data)
 
-    @action(detail=True)
-    def get_log_overview(self, request, pk):
-        """
-        Return a list of log diary entries for the nutrition plan
-        """
-        plan = get_object_or_404(NutritionPlan, pk=pk, user=request.user)
-        return Response(plan.get_log_overview())
-
-    @action(detail=True)
-    def log_summary(self, request, pk):
-        """
-        Return a summary of the nutrition diary for a given date
-        """
-        today = datetime.date.today()
-        year = request.GET.get('year', today.year)
-        month = request.GET.get('month', today.month)
-        day = request.GET.get('day', today.day)
-        plan = get_object_or_404(NutritionPlan, pk=pk, user=request.user)
-
-        try:
-            date = datetime.date(year=int(year), month=int(month), day=int(day))
-        except ValueError:
-            date = today
-        return Response(plan.get_log_summary(date))
+    @staticmethod
+    def get_owner_objects():
+        return []
 
 
 class NutritionPlanInfoViewSet(NutritionPlanViewSet):
@@ -268,13 +318,47 @@ class NutritionPlanInfoViewSet(NutritionPlanViewSet):
     Read-only info API endpoint for nutrition plan objects. Returns nested data
     structures for more easy parsing.
     """
+
     serializer_class = NutritionPlanInfoSerializer
+    http_method_names = ['get', 'head', 'options']
+
+    def get_queryset(self):
+        """
+        Prefetch the nutritional plan sub-objects
+        """
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return NutritionPlan.objects.none()
+
+        return NutritionPlan.objects.filter(user=self.request.user).prefetch_related(
+            Prefetch(
+                'meal_set',
+                queryset=Meal.objects.prefetch_related(
+                    Prefetch(
+                        'mealitem_set',
+                        queryset=MealItem.objects.select_related(
+                            'ingredient',
+                            'ingredient__language',
+                            'ingredient__license',
+                            'ingredient__image',
+                            'weight_unit',
+                        ).prefetch_related(
+                            Prefetch(
+                                'ingredient__ingredientweightunit_set',
+                                queryset=IngredientWeightUnit.objects.select_related('ingredient'),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
 
 
 class MealViewSet(WgerOwnerObjectModelViewSet):
     """
     API endpoint for meal objects
     """
+
     serializer_class = MealSerializer
     is_private = True
     ordering_fields = '__all__'
@@ -288,6 +372,10 @@ class MealViewSet(WgerOwnerObjectModelViewSet):
         """
         Only allow access to appropriate objects
         """
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Meal.objects.none()
+
         return Meal.objects.filter(plan__user=self.request.user)
 
     def perform_create(self, serializer):
@@ -296,24 +384,28 @@ class MealViewSet(WgerOwnerObjectModelViewSet):
         """
         serializer.save(order=1)
 
-    def get_owner_objects(self):
+    @staticmethod
+    def get_owner_objects():
         """
         Return objects to check for ownership permission
         """
         return [(NutritionPlan, 'plan')]
 
+    @extend_schema(responses={200: NutritionalValuesSerializer})
     @action(detail=True)
     def nutritional_values(self, request, pk):
         """
         Return an overview of the nutritional plan's values
         """
-        return Response(Meal.objects.get(pk=pk).get_nutritional_values())
+        serializer = NutritionalValuesSerializer(self.get_object().get_nutritional_values())
+        return Response(serializer.data)
 
 
 class MealItemViewSet(WgerOwnerObjectModelViewSet):
     """
     API endpoint for meal item objects
     """
+
     serializer_class = MealItemSerializer
     is_private = True
     ordering_fields = '__all__'
@@ -329,6 +421,10 @@ class MealItemViewSet(WgerOwnerObjectModelViewSet):
         """
         Only allow access to appropriate objects
         """
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return MealItem.objects.none()
+
         return MealItem.objects.filter(meal__plan__user=self.request.user)
 
     def perform_create(self, serializer):
@@ -337,18 +433,21 @@ class MealItemViewSet(WgerOwnerObjectModelViewSet):
         """
         serializer.save(order=1)
 
-    def get_owner_objects(self):
+    @staticmethod
+    def get_owner_objects():
         """
         Return objects to check for ownership permission
         """
         return [(Meal, 'meal')]
 
+    @extend_schema(responses={200: NutritionalValuesSerializer})
     @action(detail=True)
     def nutritional_values(self, request, pk):
         """
         Return an overview of the nutritional plan's values
         """
-        return Response(MealItem.objects.get(pk=pk).get_nutritional_values())
+        serializer = NutritionalValuesSerializer(self.get_object().get_nutritional_values())
+        return Response(serializer.data)
 
 
 class LogItemViewSet(WgerOwnerObjectModelViewSet):
@@ -359,30 +458,30 @@ class LogItemViewSet(WgerOwnerObjectModelViewSet):
     serializer_class = LogItemSerializer
     is_private = True
     ordering_fields = '__all__'
-    filterset_fields = (
-        'amount',
-        'ingredient',
-        'plan',
-        'weight_unit',
-    )
+    filterset_class = LogItemFilterSet
 
     def get_queryset(self):
         """
         Only allow access to appropriate objects
         """
-        return LogItem.objects.filter(plan__user=self.request.user)
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return LogItem.objects.none()
 
-    def get_owner_objects(self):
+        return LogItem.objects.select_related('plan').filter(plan__user=self.request.user)
+
+    @staticmethod
+    def get_owner_objects():
         """
         Return objects to check for ownership permission
         """
         return [(NutritionPlan, 'plan'), (Meal, 'meal')]
 
+    @extend_schema(responses={200: NutritionalValuesSerializer})
     @action(detail=True)
     def nutritional_values(self, request, pk):
         """
         Return an overview of the nutritional plan's values
         """
-        return Response(
-            LogItem.objects.get(pk=pk, plan__user=self.request.user).get_nutritional_values()
-        )
+        serializer = NutritionalValuesSerializer(self.get_object().get_nutritional_values())
+        return Response(serializer.data)

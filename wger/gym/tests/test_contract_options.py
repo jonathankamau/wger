@@ -42,7 +42,6 @@ class AddContractOptionTestCase(WgerAddTestCase):
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -65,7 +64,6 @@ class EditContractOptionTestCase(WgerEditTestCase):
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -89,7 +87,6 @@ class DeleteContractOptionTestCase(WgerDeleteTestCase):
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -106,13 +103,13 @@ class AccessContractOptionOverviewTestCase(WgerAccessTestCase):
     """
     Test accessing the contract option page
     """
+
     url = reverse('gym:contract-option:list', kwargs={'gym_pk': 1})
     user_success = ('manager1', 'manager2')
     user_fail = (
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',

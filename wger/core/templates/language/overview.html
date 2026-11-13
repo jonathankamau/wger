@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load i18n static wger_extras %}
+
+{% block title %}{% translate "Languages" %}{% endblock %}
+
+
+{% block content %}
+    <div class="list-group">
+        {% for language in language_list %}
+            <a href="{% url 'core:language:view' language.id %}"
+               class="list-group-item list-group-item-action">
+                <span class="glyphicon glyphicon-chevron-right float-end"></span>
+                <img src="{% static language.static_path %}"
+                     width="18"
+                     alt="{% translate language.full_name %}"
+                     title="{% translate language.full_name %}">
+                {{ language.full_name }}
+                <small>({{ language.full_name_en }})</small>
+            </a>
+            {% empty %}
+            <a href="{% url 'core:language:add' %}" class="list-group-item">
+                {% translate "Nothing found." %}<br>{% translate "Add one now." %}
+            </a>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+
+
+{#         #}
+{# Options #}
+{#         #}
+{% block options %}
+    {% translate 'Add' as text %}
+    {% modal_link url="core:language:add" text=text %}
+{% endblock %}

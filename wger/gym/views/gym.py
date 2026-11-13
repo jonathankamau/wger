@@ -20,6 +20,7 @@ import datetime
 import logging
 
 # Django
+from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import (
     LoginRequiredMixin,
@@ -55,8 +56,13 @@ from django.views.generic import (
 )
 
 # Third Party
+from allauth.account.models import EmailAddress
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit
+from crispy_forms.layout import (
+    ButtonHolder,
+    Layout,
+    Submit,
+)
 
 # wger
 from wger.config.models import GymConfig as GlobalGymConfig
@@ -66,7 +72,11 @@ from wger.gym.forms import (
 )
 from wger.gym.helpers import (
     get_permission_list,
+    holds_gym_permission,
     is_any_gym_admin,
+    is_same_gym,
+    outranks,
+    sanitize_csv_cell,
 )
 from wger.gym.models import (
     Gym,
@@ -88,6 +98,7 @@ class GymListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
     Overview of all available gyms
     """
+
     model = Gym
     permission_required = 'gym.manage_gyms'
     template_name = 'gym/list.html'
@@ -105,6 +116,7 @@ class GymUserListView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, L
     """
     Overview of all users for a specific gym
     """
+
     model = User
     permission_required = ('gym.manage_gym', 'gym.gym_trainer', 'gym.manage_gyms')
     template_name = 'gym/member_list.html'
@@ -113,10 +125,10 @@ class GymUserListView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, L
         """
         Only managers and trainers for this gym can access the members
         """
-        if request.user.has_perm('gym.manage_gyms') \
-            or ((request.user.has_perm('gym.manage_gym')
-                 or request.user.has_perm('gym.gym_trainer'))
-                and request.user.userprofile.gym_id == int(self.kwargs['pk'])):
+        if request.user.has_perm('gym.manage_gyms') or (
+            (request.user.has_perm('gym.manage_gym') or request.user.has_perm('gym.gym_trainer'))
+            and request.user.userprofile.gym_id == int(self.kwargs['pk'])
+        ):
             return super(GymUserListView, self).dispatch(request, *args, **kwargs)
         return HttpResponseForbidden()
 
@@ -138,8 +150,8 @@ class GymUserListView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, L
                         'manage_gym': u.has_perm('gym.manage_gym'),
                         'manage_gyms': u.has_perm('gym.manage_gyms'),
                         'gym_trainer': u.has_perm('gym.gym_trainer'),
-                        'any_admin': is_any_gym_admin(u)
-                    }
+                        'any_admin': is_any_gym_admin(u),
+                    },
                 }
             )
         return out
@@ -153,9 +165,8 @@ class GymUserListView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, L
         context['admin_count'] = len(context['object_list']['admins'])
         context['user_count'] = len(context['object_list']['members'])
         context['user_table'] = {
-            'keys': [_('ID'), _('Username'), _('Name'),
-                     _('Last activity')],
-            'users': context['object_list']['members']
+            'keys': [_('ID'), _('Username'), _('Name'), _('Last activity')],
+            'users': context['object_list']['members'],
         }
         return context
 
@@ -166,7 +177,7 @@ class GymAddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Cre
     """
 
     model = Gym
-    fields = ['name', 'phone', 'email', 'owner', 'zip_code', 'city', 'street']
+    fields = ('name', 'phone', 'email', 'owner', 'zip_code', 'city', 'street')
     title = gettext_lazy('Add new gym')
     permission_required = 'gym.add_gym'
 
@@ -182,13 +193,12 @@ def gym_new_user_info(request):
     if not request.session.get('gym.user'):
         return HttpResponseRedirect(reverse('gym:gym:list'))
 
-    if not request.user.has_perm('gym.manage_gyms') \
-            and not request.user.has_perm('gym.manage_gym'):
+    if not request.user.has_perm('gym.manage_gyms') and not request.user.has_perm('gym.manage_gym'):
         return HttpResponseForbidden()
 
     context = {
         'new_user': get_object_or_404(User, pk=request.session['gym.user']['user_pk']),
-        'password': request.session['gym.user']['password']
+        'password': request.session['gym.user']['password'],
     }
     return render(request, 'gym/new_user.html', context)
 
@@ -204,8 +214,7 @@ def gym_new_user_info_export(request):
     if not request.session.get('gym.user'):
         return HttpResponseRedirect(reverse('gym:gym:list'))
 
-    if not request.user.has_perm('gym.manage_gyms') \
-            and not request.user.has_perm('gym.manage_gym'):
+    if not request.user.has_perm('gym.manage_gyms') and not request.user.has_perm('gym.manage_gym'):
         return HttpResponseForbidden()
 
     new_user = get_object_or_404(User, pk=request.session['gym.user']['user_pk'])
@@ -218,8 +227,14 @@ def gym_new_user_info_export(request):
     writer.writerow([_('Username'), _('First name'), _('Last name'), _('Gym'), _('Password')])
     writer.writerow(
         [
-            new_username, new_user.first_name, new_user.last_name, new_user.userprofile.gym.name,
-            password
+            sanitize_csv_cell(value)
+            for value in [
+                new_username,
+                new_user.first_name,
+                new_user.last_name,
+                new_user.userprofile.gym.name,
+                password,
+            ]
         ]
     )
 
@@ -228,7 +243,7 @@ def gym_new_user_info_export(request):
     filename = 'User-data-{t.year}-{t.month:02d}-{t.day:02d}-{user}.csv'.format(
         t=today, user=new_username
     )
-    response['Content-Disposition'] = 'attachment; filename={0}'.format(filename)
+    response['Content-Disposition'] = f'attachment; filename={filename}'
     response['Content-Length'] = len(response.content)
     return response
 
@@ -236,6 +251,10 @@ def gym_new_user_info_export(request):
 def reset_user_password(request, user_pk):
     """
     Resets the password of the selected user to random password
+
+    GET only renders a confirmation form: resetting a password is a state
+    change and must go through Django's CSRF protection, which only applies
+    to unsafe HTTP methods (e.g. POST), not GET.
     """
 
     user = get_object_or_404(User, pk=user_pk)
@@ -243,13 +262,34 @@ def reset_user_password(request, user_pk):
     if not request.user.is_authenticated:
         return HttpResponseForbidden()
 
-    if not request.user.has_perm('gym.manage_gyms') \
-            and not request.user.has_perm('gym.manage_gym'):
+    if not request.user.has_perm('gym.manage_gyms') and not request.user.has_perm('gym.manage_gym'):
         return HttpResponseForbidden()
 
-    if request.user.has_perm('gym.manage_gym') \
-            and request.user.userprofile.gym != user.userprofile.gym:
+    if request.user.has_perm('gym.manage_gym') and not is_same_gym(request.user, user):
         return HttpResponseForbidden()
+
+    if not outranks(request.user, user):
+        return HttpResponseForbidden()
+
+    if request.method != 'POST':
+        form = forms.Form()
+        form.helper = FormHelper()
+        form.helper.form_method = 'post'
+        form.helper.form_action = request.path
+        form.helper.layout = Layout(
+            ButtonHolder(
+                Submit('submit', _('Yes, reset the password'), css_class='btn-warning btn-block')
+            )
+        )
+        return render(
+            request,
+            'confirm.html',
+            {
+                'title': _('Reset the password for this user?'),
+                'confirm_message': str(user),
+                'form': form,
+            },
+        )
 
     password = password_generator()
     user.set_password(password)
@@ -272,7 +312,11 @@ def gym_permissions_user_edit(request, user_pk):
     if not user.has_perm('gym.manage_gyms') and not user.has_perm('gym.manage_gym'):
         return HttpResponseForbidden()
 
-    if user.has_perm('gym.manage_gym') and user.userprofile.gym != member.userprofile.gym:
+    if user.has_perm('gym.manage_gym') and not is_same_gym(user, member):
+        return HttpResponseForbidden()
+
+    # Saving removes all gym roles, so the member must not hold one the user can't grant
+    if not user.has_perm('gym.manage_gyms') and holds_gym_permission(member, 'manage_gyms'):
         return HttpResponseForbidden()
 
     # Calculate available user permissions
@@ -282,7 +326,6 @@ def gym_permissions_user_edit(request, user_pk):
         form = GymUserPermissionForm(available_roles=form_group_permission, data=request.POST)
 
         if form.is_valid():
-
             # Remove the user from all gym permission groups
             member.groups.remove(Group.objects.get(name='gym_member'))
             member.groups.remove(Group.objects.get(name='gym_trainer'))
@@ -357,15 +400,18 @@ class GymAddUserView(
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
 
-        if not request.user.has_perm('gym.manage_gyms') \
-                and not request.user.has_perm('gym.manage_gym'):
+        if not request.user.has_perm('gym.manage_gyms') and not request.user.has_perm(
+            'gym.manage_gym'
+        ):
             return HttpResponseForbidden()
 
         # Gym managers can edit their own gym only, general gym managers
         # can edit all gyms
-        if request.user.has_perm('gym.manage_gym') \
-                and not request.user.has_perm('gym.manage_gyms') \
-                and request.user.userprofile.gym_id != int(self.kwargs['gym_pk']):
+        if (
+            request.user.has_perm('gym.manage_gym')
+            and not request.user.has_perm('gym.manage_gyms')
+            and request.user.userprofile.gym_id != int(self.kwargs['gym_pk'])
+        ):
             return HttpResponseForbidden()
 
         return super(GymAddUserView, self).dispatch(request, *args, **kwargs)
@@ -403,6 +449,11 @@ class GymAddUserView(
         user.userprofile.birthdate = form.cleaned_data['birthdate']
         user.userprofile.save()
 
+        # Register the email with allauth so the member can log in by email
+        # and receive a confirmation link
+        if user.email:
+            EmailAddress.objects.add_email(self.request, user, user.email, confirm=True)
+
         # Set appropriate permission groups
         if 'user' in form.cleaned_data['role']:
             user.groups.add(Group.objects.get(name='gym_member'))
@@ -434,7 +485,7 @@ class GymUpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, 
     """
 
     model = Gym
-    fields = ['name', 'phone', 'email', 'owner', 'zip_code', 'city', 'street']
+    fields = ('name', 'phone', 'email', 'owner', 'zip_code', 'city', 'street')
     title = gettext_lazy('Edit gym')
     permission_required = 'gym.change_gym'
 
@@ -445,8 +496,7 @@ class GymUpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, 
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
 
-        if request.user.has_perm('gym.manage_gym') \
-                and not request.user.has_perm('gym.manage_gyms'):
+        if request.user.has_perm('gym.manage_gym') and not request.user.has_perm('gym.manage_gyms'):
             if request.user.userprofile.gym_id != int(self.kwargs['pk']):
                 return HttpResponseForbidden()
         return super(GymUpdateView, self).dispatch(request, *args, **kwargs)
@@ -466,15 +516,6 @@ class GymDeleteView(WgerDeleteMixin, LoginRequiredMixin, PermissionRequiredMixin
     """
 
     model = Gym
-    fields = (
-        'name',
-        'phone',
-        'email',
-        'owner',
-        'zip_code',
-        'city',
-        'street',
-    )
     success_url = reverse_lazy('gym:gym:list')
     permission_required = 'gym.delete_gym'
 

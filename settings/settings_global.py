@@ -1,0 +1,760 @@
+# This file is part of wger Workout Manager.
+#
+# wger Workout Manager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# wger Workout Manager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+
+# Standard Library
+import datetime
+import os
+import re
+import sys
+from base64 import urlsafe_b64decode
+from datetime import timedelta
+from pathlib import Path
+
+# Third Party
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+from jwt.algorithms import RSAAlgorithm
+
+# wger
+from wger.core.api.docs import (
+    API_DESCRIPTION,
+    API_TAGS,
+)
+from wger.utils.constants import DOWNLOAD_INGREDIENT_WGER
+from wger.version import get_version
+
+"""
+This file contains the global settings that don't usually need to be changed.
+For a full list of options, visit:
+    https://docs.djangoproject.com/en/dev/ref/settings/
+"""
+
+BASE_DIR = Path(__file__).resolve().parent.parent / 'wger'
+SITE_ROOT = Path(__file__).resolve().parent.parent / 'wger'
+
+
+# Static and media files (only during development)
+MEDIA_ROOT = BASE_DIR.parent / 'media'
+STATIC_ROOT = BASE_DIR.parent / 'static'
+MEDIA_URL = '/media/'
+STATIC_URL = '/static/'
+
+#
+# Application definition
+#
+SITE_ID = 1
+ROOT_URLCONF = 'wger.urls'
+WSGI_APPLICATION = 'wger.wsgi.application'
+
+
+# fmt: off
+INSTALLED_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.humanize',  # used by allauth's mfa/webauthn templates
+    'django.contrib.messages',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'django.contrib.staticfiles',
+    'django.contrib.postgres',
+    'storages',
+
+    # Uncomment the next line to enable the admin:
+    # 'django.contrib.admin',
+
+    # Apps from wger proper
+    'wger.config',
+    'wger.core',
+    'wger.mailer',
+    'wger.exercises',
+    'wger.gym',
+    'wger.manager',
+    'wger.nutrition',
+    'wger.software',
+    'wger.utils',
+    'wger.weight',
+    'wger.gallery',
+    'wger.measurements',
+    'wger.trophies',
+
+    # reCaptcha support, see https://github.com/praekelt/django-recaptcha
+    'django_recaptcha',
+
+    # The sitemaps app
+    'django.contrib.sitemaps',
+
+    # thumbnails
+    'easy_thumbnails',
+
+    # Form renderer helper
+    'crispy_forms',
+    'crispy_bootstrap5',
+
+    # REST-API
+    'rest_framework',
+    'rest_framework.authtoken',
+    'django_filters',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
+
+    # Breadcrumbs
+    'django_bootstrap_breadcrumbs',
+
+    # CORS
+    'corsheaders',
+
+    # Django Axes
+    'axes',
+
+    # History keeping
+    'simple_history',
+
+    # Activity stream
+    'actstream',
+
+    # Fontawesome
+    'fontawesomefree',
+
+    # Prometheus
+    'django_prometheus',
+
+    # Django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.mfa',
+    'allauth.headless',
+    'allauth.socialaccount',
+    # Per-provider apps (allauth.socialaccount.providers.google, ...) are
+    # added conditionally in main.py based on WGER_SOCIAL_PROVIDERS.
+
+    # OAuth2/OIDC provider, used by API clients that log in as the user
+    'allauth.idp.oidc',
+]
+
+MIDDLEWARE = [
+    # Prometheus
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+
+    # Django Admin
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    # Auth proxy middleware
+    'wger.core.middleware.AuthProxyHeaderMiddleware',
+
+    # Javascript Header. Sends helper headers for AJAX
+    'wger.utils.middleware.JavascriptAJAXRedirectionMiddleware',
+
+    # Custom authentication middleware. Creates users on-the-fly for certain paths
+    'wger.utils.middleware.WgerAuthenticationMiddleware',
+
+    # Activates the user's time zone. Has to come after the authentication
+    # middlewares: reading request.user earlier caches it and the guest user
+    # would never be created
+    'wger.core.middleware.TimezoneMiddleware',
+
+    # Blocks allauth's account pages while a trainer is logged in as a member
+    'wger.core.middleware.TrainerLoginMiddleware',
+
+    # Send an appropriate Header so search engines don't index pages
+    'wger.utils.middleware.RobotsExclusionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+
+    # allauth
+    "allauth.account.middleware.AccountMiddleware",
+
+    # History keeping
+    'simple_history.middleware.HistoryRequestMiddleware',
+
+    # Prometheus
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
+
+    # Django Axes
+    'axes.middleware.AxesMiddleware',  # should be the last one in the list
+]
+# fmt: off
+
+AUTHENTICATION_BACKENDS = (
+    'axes.backends.AxesStandaloneBackend',  # should be the first one in the list
+    'wger.core.backends.AuthProxyUserBackend',
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'OPTIONS': {
+            'context_processors': [
+                'wger.utils.context_processor.processor',
+                # Django
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                # Breadcrumbs
+                'django.template.context_processors.request',
+            ],
+            'loaders': [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ],
+            'debug': False,
+        },
+    },
+]
+
+# Store the user messages in the session
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+# Static files
+# https://docs.djangoproject.com/en/6.0/ref/contrib/staticfiles/
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+)
+# Additional places to copy to static files
+STATICFILES_DIRS = (('node', os.path.join(BASE_DIR, '..', 'node_modules')),)
+
+
+#
+# Password hashing
+#
+# Django's own list, but with argon2 moved to the front. It is both faster and
+# harder to attack than PBKDF2, which is only the default because it needs no
+# third party library. Existing hashes stay valid and are rewritten to argon2
+# on the next successful login.
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+
+#
+# Email
+#
+EMAIL_SUBJECT_PREFIX = '[wger] '
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Backend that performs the delivery when EMAIL_BACKEND only queues it, see
+# wger.core.mail
+EMAIL_DELIVERY_BACKEND = EMAIL_BACKEND
+
+#
+# django-allauth
+#
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 2
+ACCOUNT_ADAPTER = 'wger.core.account_adapter.WgerAccountAdapter'
+
+# Treat a user as having a single email address: changing it adds a pending
+# address that only replaces the current one (and updates User.email) once
+# confirmed via the verification link.
+ACCOUNT_CHANGE_EMAIL = True
+
+# Allow logging in with either the username or the email address. allauth's
+# authentication backend resolves the email against its EmailAddress table.
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+
+# Use wger's own login/signup/password reset forms (allauth's forms + the
+# password-visibility toggle, and a conditional captcha field on signup and
+# password reset).
+ACCOUNT_FORMS = {
+    'login': 'wger.core.forms.WgerLoginForm',
+    'signup': 'wger.core.forms.WgerSignupForm',
+    'reset_password': 'wger.core.forms.WgerResetPasswordForm',
+}
+
+# Failed logins are throttled per key: per username for passwords and per user
+# for second factor codes (allauth.mfa counts those under the same action, axes
+# never sees them). No per-IP part, behind the reverse proxy every client has
+# the same address. django-axes additionally locks out per IP.
+ACCOUNT_RATE_LIMITS = {'login': None, 'login_failed': '5/300s/key'}
+
+#
+# Two-factor authentication (allauth.mfa)
+#
+MFA_SUPPORTED_TYPES = ['totp', 'recovery_codes', 'webauthn']
+MFA_TOTP_ISSUER = 'wger'
+# Passkeys may also be used for passwordless login (a "Sign in with a passkey"
+# button), but not for passwordless signup.
+MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = False
+
+#
+# Social account providers
+#
+ACCOUNT_LOGOUT_ON_GET = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+#
+# allauth.headless — REST API used by the Flutter app for the full auth flow
+# (login + multi-step MFA challenge + email/password management).
+#
+# The web frontend continues to use the regular allauth views, so only the
+# 'app' client is enabled.
+#
+HEADLESS_CLIENTS = ('app',)
+HEADLESS_TOKEN_STRATEGY = 'wger.utils.headless_auth.WgerJWTTokenStrategy'
+HEADLESS_JWT_ALGORITHM = 'RS256'
+HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN = 120 * 24 * 3600
+
+#
+# PowerSync
+#
+POWERSYNC_TOKEN_LIFETIME = 600
+
+#
+# allauth.idp.oidc — OAuth2/OIDC provider
+#
+IDP_OIDC_ADAPTER = 'wger.utils.oidc_auth.WgerOIDCAdapter'
+
+# Empty means the provider is switched off, installations that want to act as
+# one set it themselves (see settings/main.py)
+IDP_OIDC_PRIVATE_KEY = ''
+
+# Without this refresh tokens never expire, and since only tokens with an expiry
+# are cleaned up, abandoned grants would pile up forever. Same lifetime as the
+# tokens the app gets.
+IDP_OIDC_REFRESH_TOKEN_EXPIRES_IN = HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN
+
+
+def jwk_b64_to_pem(b64_jwk_str: str):
+    """
+    Decode a base64-wrapped JWK (as written by generate-jwt-keys) into a PEM
+    string suitable for SimpleJWT and allauth.headless.
+    """
+
+    if not b64_jwk_str:
+        return ''
+
+    key = RSAAlgorithm.from_jwk(urlsafe_b64decode(b64_jwk_str).decode())
+    if isinstance(key, RSAPrivateKey):
+        pem = key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+    else:
+        pem = key.public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+    return pem.decode()
+
+#
+# Login
+#
+LOGIN_URL = '/user/login'
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = LOGIN_URL
+
+#
+# Internationalization
+#
+USE_TZ = True
+USE_I18N = True
+USE_L10N = True
+USE_THOUSAND_SEPARATOR = True
+
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# On Unix systems, a value of None will cause Django to use the same
+# timezone as the operating system.
+# If running in a Windows environment this must be set to the same as your
+# system time zone.
+TIME_ZONE = 'UTC'
+
+# Available languages. Needs to be kept in sync with sufficiently
+# translated languages: https://hosted.weblate.org/projects/wger/web/
+#
+# Translated languages for which a country specific locale exists in django
+# upstream need to be added here as well (plus their country flag)
+# https://github.com/django/django/blob/main/django/conf/global_settings.py
+AVAILABLE_LANGUAGES = (
+    ('bg', 'Bulgarian'),
+    ('ca', 'Catalan'),
+    ('cs', 'Czech'),
+    ('de', 'German'),
+    ('el', 'Greek'),
+    ('en', 'English'),
+    ('en-au', 'Australian English'),
+    ('en-gb', 'British English'),
+    ('es', 'Spanish'),
+    ('es-ar', 'Argentinian Spanish'),
+    ('es-co', 'Colombian Spanish'),
+    ('es-mx', 'Mexican Spanish'),
+    ('es-ni', 'Nicaraguan Spanish'),
+    ('es-ve', 'Venezuelan Spanish'),
+    ('fi', 'Finnish'),
+    ('fr', 'French'),
+    ('he', 'Hebrew'),
+    ('hr', 'Croatian'),
+    ('it', 'Italian'),
+    ('ko', 'Korean'),
+    ('mk', 'Macedonian'),
+    ('nl', 'Dutch'),
+    ('nb', 'Norwegian'),
+    ('pl', 'Polish'),
+    ('pt', 'Portuguese'),
+    ('pt-br', 'Brazilian Portuguese'),
+    ('ro', 'Romanian'),
+    ('ru', 'Russian'),
+    ('sk', 'Slovak'),
+    ('sl', 'Slovenian'),
+    ('sr', 'Serbian'),
+    ('sv', 'Swedish'),
+    ('ta', 'Tamil'),
+    ('th', 'Thai'),
+    ('tr', 'Turkish'),
+    ('uk', 'Ukrainian'),
+    ('zh-hans', 'Chinese simplified'),
+    ('zh-hant', 'Traditional Chinese'),
+)
+
+# Default language code for this installation.
+LANGUAGE_CODE = 'en'
+
+# All translation files are in one place
+LOCALE_PATHS = (os.path.join(SITE_ROOT, 'locale'),)
+
+# Primary keys are AutoFields
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+#
+# Logging
+# See http://docs.python.org/library/logging.config.html
+#
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '%(levelname)s %(asctime)s %(module)s %(message)s'},
+    },
+    'handlers': {
+        'console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'simple'},
+    },
+    'loggers': {
+        'wger': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+
+#
+# Cache
+#
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'wger-cache',
+        'TIMEOUT': 30 * 24 * 60 * 60,  # Cache for a month
+    }
+}
+
+#
+# Django Axes
+#
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 10
+AXES_COOLOFF_TIME = timedelta(minutes=30)
+AXES_LOCKOUT_TEMPLATE = None
+AXES_RESET_ON_SUCCESS = False
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = True
+
+# If you want to set up redis, set AXES_HANDLER = 'axes.handlers.cache.AxesCacheHandler'
+AXES_HANDLER = 'axes.handlers.database.AxesDatabaseHandler'
+
+# If your redis or MemcachedCache has a different name other than 'default'
+# (e.g. when you have multiple caches defined in CACHES), change the following value to that name
+AXES_CACHE = 'default'
+
+#
+# Django Crispy Templates
+#
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+#
+# Easy thumbnails
+#
+THUMBNAIL_ALIASES = {
+    '': {
+        'small': {'size': (200, 200)},
+        'medium': {'size': (400, 400)},
+    },
+}
+
+
+#
+# Django Rest Framework
+# https://www.django-rest-framework.org/
+#
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': ('wger.utils.permissions.WgerPermission',),
+    'DEFAULT_PAGINATION_CLASS': 'wger.utils.pagination.WgerLimitOffsetPagination',
+    'PAGE_SIZE': 20,
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    # JSON only, endpoints taking a file set MultiPartParser themselves.
+    'DEFAULT_PARSER_CLASSES': ('rest_framework.parsers.JSONParser',),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        # The token-based classes activate the user's timezone, which the
+        # middleware only manages for session requests; see timezone_auth
+        'rest_framework.authentication.SessionAuthentication',
+        'wger.utils.timezone_auth.TimezoneTokenAuthentication',
+        'wger.utils.headless_auth.HeadlessJWTAuthentication',
+        # Also uses Bearer, but with opaque tokens, so it has to run before
+        # simplejwt, which raises instead of passing the token on. Placed after
+        # the headless class so app requests don't pay for the token lookup.
+        'wger.utils.oidc_auth.OidcTokenAuthentication',
+        'wger.utils.timezone_auth.TimezoneJWTAuthentication',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/min',
+
+        # Ingredient endpoints: protect the multi-million-row table from
+        # crawlers and older sync clients. Throttling is per-IP for anonymous
+        # callers and per-user for authenticated ones.
+        'ingredient_list': '120/min',
+        'ingredient_detail': '300/min',
+        'ingredient_sync': '600/min',
+
+        # Exercise endpoints: Shared cap across all create endpoints (submission,
+        # exercise, translation) to stop scripts from bulk-creating exercises. Only
+        # POSTs are throttled, reads and edits are not (see CreateScopedRateThrottle).
+        'exercise_create': '20/hour',
+    },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+#
+# API docs
+# https://drf-spectacular.readthedocs.io/en/latest/
+#
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'wger',
+    'SERVERS': [
+        {'url': '/', 'description': 'This server'},
+        {'url': 'https://wger.de', 'description': 'The "official" upstream wger instance'},
+    ],
+    'DESCRIPTION': API_DESCRIPTION,
+    'VERSION': get_version(),
+    'LICENSE': {
+        'name': 'AGPL-3.0-or-later',
+        'url': 'https://www.gnu.org/licenses/agpl-3.0.html',
+    },
+    'EXTERNAL_DOCS': {
+        'url': 'https://wger.readthedocs.io',
+        'description': 'wger documentation',
+    },
+    'TAGS': API_TAGS,
+    'SERVE_INCLUDE_SCHEMA': True,
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    'COMPONENT_SPLIT_REQUEST': True,
+    # postprocess_schema_enums is spectacular's own default and has to be
+    # repeated: assigning the list replaces it, and without it no enum becomes a
+    # named component, which renames a good part of every generated client.
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.hooks.postprocess_schema_enums',
+        'wger.utils.api_schema.strip_patch_defaults',
+        'wger.utils.api_schema.require_measurement_category',
+    ],
+    # Both are exposed as a plain "type" field on more than one component, which
+    # spectacular would otherwise name with a hash suffix (e.g. Type947Enum).
+    # The names end up as class names in generated clients, so pin them.
+    'ENUM_NAME_OVERRIDES': {
+        'DayTypeEnum': 'wger.manager.models.day.DayType.choices',
+        'ExerciseTypeEnum': 'wger.manager.models.slot_entry.ExerciseType.choices',
+        'IntensityEnum': 'wger.core.models.profile.UserProfile.INTENSITY',
+    },
+}
+
+#
+# Django Rest Framework SimpleJWT
+#
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=120),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'RS256',
+}
+
+#
+# CORS headers: allow all hosts to access the API
+#
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_URLS_REGEX = r'^/api/.*$'
+
+#
+# Ignore these URLs if they cause 404
+#
+IGNORABLE_404_URLS = (re.compile(r'^/favicon\.ico$'),)
+
+#
+# Password rules
+#
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+USER_AGENTS_CACHE = 'default'
+
+# Read timeout in seconds for requests to remote servers
+WGER_REQUEST_TIMEOUT = 60
+
+#
+# Application specific configuration options
+#
+WGER_SETTINGS = {
+    'ALLOW_GUEST_USERS': True,
+    'ALLOW_REGISTRATION': True,
+    'ALLOW_UPLOAD_VIDEOS': False,
+    'EMAIL_FROM': 'wger Workout Manager <wger@example.com>',
+    'EXERCISE_CACHE_TTL': 4 * 604800,  # one month; entries are invalidated on write
+    'DOWNLOAD_INGREDIENTS_FROM': DOWNLOAD_INGREDIENT_WGER,
+    'INGREDIENT_CACHE_TTL': 604800,  # one week
+    'INGREDIENT_IMAGE_CHECK_INTERVAL': datetime.timedelta(weeks=12),
+    'ROUTINE_CACHE_TTL': 4 * 604800,  # one month
+    'MIN_ACCOUNT_AGE_TO_TRUST': 21,
+    'SYNC_EXERCISES_CELERY': False,
+    'SYNC_EXERCISE_IMAGES_CELERY': False,
+    'SYNC_EXERCISE_VIDEOS_CELERY': False,
+    'SYNC_INGREDIENTS_CELERY': False,
+    'SYNC_OFF_DAILY_DELTA_CELERY': False,
+    'SYNC_INGREDIENTS_DUMP_URL': 'https://wger.de/media/ingredients/ingredients.jsonl.gz',
+    'EXPORT_INGREDIENTS_BULK_CELERY': False,
+    'CACHE_API_EXERCISES_CELERY': False,
+    'CACHE_API_EXERCISES_CELERY_FORCE_UPDATE': False,
+
+    # Socials
+    'TWITTER': False,
+    'MASTODON': 'https://fosstodon.org/@wger',
+    'USE_CELERY': False,
+    # CAPTCHA_PROVIDER: 'recaptcha', 'turnstile', or 'none'
+    'CAPTCHA_PROVIDER': 'none',
+    # Deprecated: USE_RECAPTCHA is kept for backwards compatibility
+    # If set to True and CAPTCHA_PROVIDER is 'none', it will use 'recaptcha'
+    'USE_RECAPTCHA': False,
+    'WGER_INSTANCE': 'https://wger.de',
+
+    # Trophy system settings
+    'TROPHIES_ENABLED': True,
+    'TROPHIES_INACTIVE_USER_DAYS': 30,  # Days of inactivity before skipping trophy evaluation
+}
+
+#
+# How long a workout session may last. Doubles as the window in which a log
+# without a session is attached to an open one instead of starting a new one.
+WGER_MAX_SESSION_LENGTH_HOURS = 5
+
+
+#
+# Social authentication / OAuth
+# List of allauth provider IDs to load, e.g. ['google', 'github', 'gitlab'].
+WGER_SOCIAL_PROVIDERS = []
+
+# Whether to link to the mobile app in the app stores in the footer and on the landing page.
+WGER_SHOW_APP_STORE_LINKS = True
+
+
+#
+# Auth Proxy Authentication
+#
+# Please read the documentation before enabling this feature:
+# https://wger.readthedocs.io/en/latest/administration/storage.html#s3-object-storage
+#
+AUTH_PROXY_HEADER = ''
+AUTH_PROXY_USER_EMAIL_HEADER = ''
+AUTH_PROXY_USER_NAME_HEADER = ''
+AUTH_PROXY_TRUSTED_IPS = []
+AUTH_PROXY_CREATE_UNKNOWN_USER = False
+
+#
+# Prometheus metrics
+#
+EXPOSE_PROMETHEUS_METRICS = False
+
+
+#
+# Django-activity stream
+#
+ACTSTREAM_SETTINGS = {
+    'USE_JSONFIELD': True,
+}
+
+# Whether the application is being run regularly or during tests
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
+
+#
+# django-recaptcha
+#
+RECAPTCHA_PUBLIC_KEY = ''
+RECAPTCHA_PRIVATE_KEY = ''
+RECAPTCHA_REQUIRED_SCORE = 0
+
+#
+# Cloudflare Turnstile
+#
+TURNSTILE_SITE_KEY = ''
+TURNSTILE_SECRET_KEY = ''
+
+#
+# Storage options
+#
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage'
+    },
+    'staticfiles': {
+        # django.contrib.staticfiles.storage.StaticFilesStorage
+        'BACKEND': 'wger.core.storage.LenientManifestStaticFilesStorage',
+    },
+}

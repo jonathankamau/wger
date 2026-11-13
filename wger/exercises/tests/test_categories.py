@@ -12,11 +12,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
-# Django
-from django.core.cache import cache
-from django.core.cache.utils import make_template_fragment_key
-from django.urls import reverse
-
 # wger
 from wger.core.tests import api_base_test
 from wger.core.tests.base_testcase import (
@@ -38,22 +33,22 @@ class ExerciseCategoryRepresentationTestCase(WgerTestCase):
         """
         Test that the representation of an object is correct
         """
-        self.assertEqual("{0}".format(ExerciseCategory.objects.get(pk=1)), 'Category')
+        self.assertEqual(str(ExerciseCategory.objects.get(pk=1)), 'Category')
 
 
 class CategoryOverviewTestCase(WgerAccessTestCase):
     """
     Test that only admins see the edit links
     """
+
     url = 'exercise:category:list'
     anonymous_fail = True
     user_success = 'admin'
     user_fail = (
         'manager1',
-        'manager2'
+        'manager2',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -96,41 +91,12 @@ class AddExerciseCategoryTestCase(WgerAddTestCase):
     data = {'name': 'A new category'}
 
 
-class ExerciseCategoryCacheTestCase(WgerTestCase):
-    """
-    Cache test case
-    """
-
-    def test_overview_cache_update(self):
-        """
-        Test that the template cache for the overview is correctly reseted when
-        performing certain operations
-        """
-
-        self.client.get(reverse('exercise:exercise:overview'))
-        self.client.get(reverse('exercise:exercise:view', kwargs={'id': 2}))
-
-        old_exercise_overview = cache.get(make_template_fragment_key('exercise-overview', [2]))
-
-        category = ExerciseCategory.objects.get(pk=2)
-        category.name = 'Cool category'
-        category.save()
-
-        self.assertFalse(cache.get(make_template_fragment_key('exercise-overview', [2])))
-
-        self.client.get(reverse('exercise:exercise:overview'))
-        self.client.get(reverse('exercise:muscle:overview'))
-        self.client.get(reverse('exercise:exercise:view', kwargs={'id': 2}))
-
-        new_exercise_overview = cache.get(make_template_fragment_key('exercise-overview', [2]))
-
-        self.assertNotEqual(old_exercise_overview, new_exercise_overview)
-
-
 class ExerciseCategoryApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the exercise category overview resource
     """
+
     pk = 2
     resource = ExerciseCategory
     private_resource = False
+    overview_cached = True

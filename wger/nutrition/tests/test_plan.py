@@ -13,179 +13,114 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard Library
+from unittest import mock
+
 # Django
-from django.urls import reverse
+from django.forms import model_to_dict
+from django.urls import (
+    resolve,
+    reverse,
+)
 
 # wger
 from wger.core.tests import api_base_test
-from wger.core.tests.base_testcase import (
-    WgerDeleteTestCase,
-    WgerEditTestCase,
-    WgerTestCase,
+from wger.core.tests.base_testcase import WgerTestCase
+from wger.nutrition.models import (
+    MealItem,
+    NutritionPlan,
 )
-from wger.nutrition.models import NutritionPlan
-
-
-class PlanRepresentationTestCase(WgerTestCase):
-    """
-    Test the representation of a model
-    """
-
-    def test_representation(self):
-        """
-        Test that the representation of an object is correct
-        """
-        p = NutritionPlan.objects.get(pk=5)
-        self.assertEqual("{0}".format(p), 'Description 1')
-
-        p.description = ''
-        p.save()
-        self.assertEqual("{0}".format(p), 'Nutrition plan')
-
-
-class PlanShareButtonTestCase(WgerTestCase):
-    """
-    Test that the share button is correctly displayed and hidden
-    """
-
-    def test_share_button(self):
-        plan = NutritionPlan.objects.get(pk=5)
-        url = plan.get_absolute_url()
-
-        response = self.client.get(url)
-        self.assertFalse(response.context['show_shariff'])
-
-        self.user_login('admin')
-        response = self.client.get(url)
-        self.assertTrue(response.context['show_shariff'])
-
-        self.user_login('test')
-        response = self.client.get(url)
-        self.assertFalse(response.context['show_shariff'])
-
-
-class PlanAccessTestCase(WgerTestCase):
-    """
-    Test accessing the workout page
-    """
-
-    def test_access_shared(self):
-        """
-        Test accessing the URL of a shared workout
-        """
-        plan = NutritionPlan.objects.get(pk=5)
-
-        self.user_login('admin')
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-
-        self.user_login('test')
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-
-        self.user_logout()
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-
-    def test_access_not_shared(self):
-        """
-        Test accessing the URL of a private workout
-        """
-        plan = NutritionPlan.objects.get(pk=4)
-
-        self.user_login('admin')
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 403)
-
-        self.user_login('test')
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-
-        self.user_logout()
-        response = self.client.get(plan.get_absolute_url())
-        self.assertEqual(response.status_code, 403)
-
-
-class DeletePlanTestCase(WgerDeleteTestCase):
-    """
-    Tests deleting a nutritional plan
-    """
-
-    object_class = NutritionPlan
-    url = 'nutrition:plan:delete'
-    pk = 2
-
-
-class EditPlanTestCase(WgerEditTestCase):
-    """
-    Tests editing an ingredient
-    """
-
-    object_class = NutritionPlan
-    url = 'nutrition:plan:edit'
-    pk = 2
-    data = {'description': 'My new description'}
-
-
-class PlanDailyCaloriesTestCase(WgerTestCase):
-    """
-    Tests the handling of the daily calories in the plan page
-    """
-
-    def test_overview_no_calories(self):
-        """
-        Tests the overview page with no daily calories set
-        """
-
-        self.user_login('test')
-
-        # Can't find goal calories text
-        response = self.client.get(reverse('nutrition:plan:view', kwargs={'id': 1}))
-        self.assertFalse(response.context['plan'].has_goal_calories)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'goal amount of calories')
-
-    def test_overview_calories(self):
-        """
-        Tests the overview page with no daily calories set
-        """
-
-        # Plan has daily calories goal
-        self.user_login('test')
-        plan = NutritionPlan.objects.get(pk=1)
-        plan.has_goal_calories = True
-        plan.save()
-
-        # Can find goal calories text
-        response = self.client.get(reverse('nutrition:plan:view', kwargs={'id': 1}))
-        self.assertTrue(response.context['plan'].has_goal_calories)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'goal amount of calories')
-
-    def test_meal_overview(self):
-        """
-        Tests the meal overview row
-        """
-
-        # Plan has daily calories goal
-        self.user_login('test')
-        plan = NutritionPlan.objects.get(pk=1)
-        plan.has_goal_calories = True
-        plan.save()
-
-        # Can find goal calories text
-        response = self.client.get(reverse('nutrition:plan:view', kwargs={'id': 1}))
-        meal = response.context['plan'].meal_set.select_related()[0]
-        self.assertTrue(meal.get_nutritional_values()['energy'])
 
 
 class PlanApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the nutritional plan overview resource
+
+    TODO: setting overview_cached to true since get_nutritional_values is
+          cached, but we don't really use it. This should be removed
     """
-    pk = 4
+
+    pk = '11111111-1111-1111-1111-000000000004'
     resource = NutritionPlan
     private_resource = True
-    special_endpoints = ('nutritional_values', )
-    data = {'description': 'The description', 'language': 1}
+    overview_cached = False
+    special_endpoints = ('nutritional_values',)
+    data = {'description': 'The description'}
+
+
+PLAN_OWNED_BY_TEST_USER = 'cc000000-0000-0000-0000-000000000002'
+
+
+class PlanCopyRollbackTestCase(WgerTestCase):
+    def test_copy_failure_rolls_back(self):
+        """
+        A failure while copying leaves no partial plan behind
+        """
+        self.user_login()
+        count = NutritionPlan.objects.count()
+
+        with mock.patch.object(MealItem, 'save', side_effect=RuntimeError):
+            with self.assertRaises(RuntimeError):
+                self.client.get(
+                    reverse('nutrition:plan:copy', kwargs={'pk': PLAN_OWNED_BY_TEST_USER}),
+                )
+
+        self.assertEqual(NutritionPlan.objects.count(), count)
+
+
+class PlanCopyTestCase(WgerTestCase):
+    def test_copy_plan(self):
+        """
+        Tests making a copy of a meal plan
+        """
+        self.user_login()
+        orig_plan = NutritionPlan.objects.get(pk=PLAN_OWNED_BY_TEST_USER)
+        response = self.client.get(
+            reverse('nutrition:plan:copy', kwargs={'pk': PLAN_OWNED_BY_TEST_USER}),
+        )
+        copied_plan_pk = resolve(response.url).kwargs['id']
+        copied_plan = NutritionPlan.objects.get(pk=copied_plan_pk)
+
+        # Convert plans to dictionaries and compare. The copy gets a fresh
+        # UUID primary key, so we exclude `id` from the comparison.
+        orig_plan_dict = model_to_dict(orig_plan, exclude=['id'])
+        copied_plan_dict = model_to_dict(copied_plan, exclude=['id'])
+        self.assertEqual(orig_plan_dict, copied_plan_dict)
+        self.assertNotEqual(orig_plan.id, copied_plan.id)
+
+        orig_plan_meals = orig_plan.meal_set.all()
+        copied_plan_meals = copied_plan.meal_set.all()
+
+        for orig_meal, copied_meal in zip(orig_plan_meals, copied_plan_meals):
+            orig_meal_dict = model_to_dict(orig_meal, exclude=['id', 'plan'])
+            copied_meal_dict = model_to_dict(copied_meal, exclude=['id', 'plan'])
+            self.assertEqual(orig_meal_dict, copied_meal_dict)
+            self.assertNotEqual(orig_meal.id, copied_meal.id)
+
+            orig_meal_items = orig_meal.mealitem_set.all()
+            copied_meal_items = copied_meal.mealitem_set.all()
+
+            for orig_meal_item, copied_meal_item in zip(orig_meal_items, copied_meal_items):
+                orig_dict = model_to_dict(orig_meal_item, exclude=['id', 'meal'])
+                copied_dict = model_to_dict(copied_meal_item, exclude=['id', 'meal'])
+                self.assertEqual(orig_dict, copied_dict)
+                self.assertNotEqual(orig_meal_item.id, copied_meal_item.id)
+
+
+class PlanDiaryPageTestCase(WgerTestCase):
+    """
+    The React frontend links each diary date of a plan as /<lang>/nutrition/<plan>/<date>,
+    so the page must also load when opened directly (new tab, reload, bookmark).
+    """
+
+    def test_diary_date_page_loads_directly(self):
+        self.user_login()
+        response = self.client.get(
+            f'/en/nutrition/{PLAN_OWNED_BY_TEST_USER}/2026-10-11', follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_diary_page_loads_directly(self):
+        self.user_login()
+        response = self.client.get(f'/en/nutrition/{PLAN_OWNED_BY_TEST_USER}/diary', follow=True)
+        self.assertEqual(response.status_code, 200)

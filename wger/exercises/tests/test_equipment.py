@@ -14,8 +14,6 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Django
-from django.core.cache import cache
-from django.core.cache.utils import make_template_fragment_key
 from django.urls import reverse
 
 # wger
@@ -26,10 +24,7 @@ from wger.core.tests.base_testcase import (
     WgerEditTestCase,
     WgerTestCase,
 )
-from wger.exercises.models import (
-    Equipment,
-    Exercise,
-)
+from wger.exercises.models import Equipment
 from wger.utils.constants import PAGINATION_OBJECTS_PER_PAGE
 
 
@@ -42,27 +37,7 @@ class EquipmentRepresentationTestCase(WgerTestCase):
         """
         Test that the representation of an object is correct
         """
-        self.assertEqual("{0}".format(Equipment.objects.get(pk=1)), 'Dumbbells')
-
-
-class EquipmentShareButtonTestCase(WgerTestCase):
-    """
-    Test that the share button is correctly displayed and hidden
-    """
-
-    def test_share_button(self):
-        url = reverse('exercise:equipment:overview')
-
-        response = self.client.get(url)
-        self.assertTrue(response.context['show_shariff'])
-
-        self.user_login('admin')
-        response = self.client.get(url)
-        self.assertTrue(response.context['show_shariff'])
-
-        self.user_login('test')
-        response = self.client.get(url)
-        self.assertTrue(response.context['show_shariff'])
+        self.assertEqual(str(Equipment.objects.get(pk=1)), 'Dumbbells')
 
 
 class AddEquipmentTestCase(WgerAddTestCase):
@@ -102,10 +77,9 @@ class EquipmentListTestCase(WgerTestCase):
     """
 
     def test_overview(self):
-
         # Add more equipments so we can test the pagination
         self.user_login('admin')
-        data = {"name": "A new entry"}
+        data = {'name': 'A new entry'}
         for i in range(0, 50):
             self.client.post(reverse('exercise:equipment:add'), data)
 
@@ -135,50 +109,12 @@ class EquipmentListTestCase(WgerTestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class EquipmentCacheTestCase(WgerTestCase):
-    """
-    Equipment cache test case
-    """
-
-    def test_equipment_overview(self):
-        """
-        Test the equipment overview cache is correctly generated on visit
-        """
-        self.assertFalse(cache.get(make_template_fragment_key('equipment-overview', [2])))
-        self.client.get(reverse('exercise:equipment:overview'))
-        self.assertTrue(cache.get(make_template_fragment_key('equipment-overview', [2])))
-
-    def test_equipment_cache_update(self):
-        """
-        Test that the template cache for the overview is correctly reseted when
-        performing certain operations
-        """
-
-        self.assertFalse(cache.get(make_template_fragment_key('equipment-overview', [2])))
-
-        self.client.get(reverse('exercise:equipment:overview'))
-
-        old_overview = cache.get(make_template_fragment_key('equipment-overview', [2]))
-        self.assertTrue(old_overview)
-
-        exercise = Exercise.objects.get(pk=2)
-        exercise.name = 'Very cool exercise 2'
-        exercise.description = 'New description'
-        exercise.exercise_base.equipment.add(Equipment.objects.get(pk=2))
-        exercise.save()
-
-        self.assertFalse(cache.get(make_template_fragment_key('equipment-overview', [2])))
-        self.client.get(reverse('exercise:equipment:overview'))
-
-        new_overview = cache.get(make_template_fragment_key('equipment-overview', [2]))
-
-        self.assertNotEqual(old_overview, new_overview)
-
-
 class EquipmentApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the equipment overview resource
     """
+
     pk = 1
     resource = Equipment
     private_resource = False
+    overview_cached = True

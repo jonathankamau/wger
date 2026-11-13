@@ -19,6 +19,7 @@ import datetime
 
 # Django
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_out
 from django.db.models.signals import (
     post_save,
     pre_save,
@@ -30,16 +31,18 @@ from wger.core.models import (
     UserCache,
     UserProfile,
 )
+from wger.measurements.models import Category
 from wger.utils.helpers import disable_for_loaddata
 
 
 @disable_for_loaddata
 def create_user_profile(sender, instance, created, **kwargs):
     """
-    Every new user gets a profile
+    Every new user gets a profile and the official body weight category
     """
     if created:
-        UserProfile.objects.create(user=instance)
+        profile = UserProfile.objects.create(user=instance)
+        Category.get_or_create_body_weight(instance, unit=profile.weight_unit)
 
 
 @disable_for_loaddata
@@ -61,10 +64,26 @@ def set_user_age(sender, instance, **kwargs):
         today = datetime.date.today()
         birthday = instance.birthdate
         instance.age = (
-            today.year - birthday.year -
-            ((today.month, today.day) < (birthday.month, birthday.day))
+            today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
         )
 
 
 post_save.connect(create_user_profile, sender=User)
 post_save.connect(create_user_cache, sender=User)
+
+
+@receiver(user_logged_out)
+def delete_temporary_user_on_logout(sender, request, user, **kwargs):
+    """
+    Temporary (guest) users are deleted when they log out.
+    """
+    if user is None or not user.is_authenticated:
+        return
+    try:
+        is_temporary = user.userprofile.is_temporary
+    except UserProfile.DoesNotExist:
+        # User was already deleted (e.g. via the account-deletion flow,
+        # which deletes the user before django_logout runs).
+        return
+    if is_temporary:
+        user.delete()

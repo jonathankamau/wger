@@ -22,10 +22,7 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin,
     PermissionRequiredMixin,
 )
-from django.forms import (
-    ModelChoiceField,
-    ModelForm,
-)
+from django.forms import ModelForm
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy
@@ -39,13 +36,11 @@ from django.views.generic import (
 from wger.nutrition.models import (
     Ingredient,
     IngredientWeightUnit,
-    WeightUnit,
 )
 from wger.utils.generic_views import (
     WgerDeleteMixin,
     WgerFormMixin,
 )
-from wger.utils.language import load_language
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +65,7 @@ class WeightUnitIngredientCreateView(
     permission_required = 'nutrition.add_ingredientweightunit'
 
     def get_success_url(self):
-        return reverse('nutrition:ingredient:view', kwargs={'id': self.kwargs['ingredient_pk']})
+        return reverse('nutrition:ingredient:view', kwargs={'pk': self.kwargs['ingredient_pk']})
 
     def form_valid(self, form):
         ingredient = get_object_or_404(Ingredient, pk=self.kwargs['ingredient_pk'])
@@ -79,15 +74,13 @@ class WeightUnitIngredientCreateView(
 
     def get_form_class(self):
         """
-        The form can only show units in the user's language
+        Return the form class for the weight unit
         """
 
         class IngredientWeightUnitForm(ModelForm):
-            unit = ModelChoiceField(queryset=WeightUnit.objects.filter(language=load_language()))
-
             class Meta:
                 model = IngredientWeightUnit
-                fields = ['unit', 'gram', 'amount']
+                fields = ('name', 'gram')
 
         return IngredientWeightUnitForm
 
@@ -107,19 +100,17 @@ class WeightUnitIngredientUpdateView(
     permission_required = 'nutrition.add_ingredientweightunit'
 
     def get_success_url(self):
-        return reverse('nutrition:ingredient:view', kwargs={'id': self.object.ingredient.id})
+        return reverse('nutrition:ingredient:view', kwargs={'pk': self.object.ingredient.id})
 
     def get_form_class(self):
         """
-        The form can only show units in the user's language
+        Return the form class for the weight unit
         """
 
         class IngredientWeightUnitForm(ModelForm):
-            unit = ModelChoiceField(queryset=WeightUnit.objects.filter(language=load_language()))
-
             class Meta:
                 model = IngredientWeightUnit
-                fields = ['unit', 'gram', 'amount']
+                fields = ('name', 'gram')
 
         return IngredientWeightUnitForm
 
@@ -135,9 +126,8 @@ class WeightUnitIngredientDeleteView(
     """
 
     model = IngredientWeightUnit
-    fields = ('unit', 'gram', 'amount')
     title = gettext_lazy('Delete?')
     permission_required = 'nutrition.add_ingredientweightunit'
 
     def get_success_url(self):
-        return reverse('nutrition:ingredient:view', kwargs={'id': self.object.ingredient.id})
+        return reverse('nutrition:ingredient:view', kwargs={'pk': self.object.ingredient.id})

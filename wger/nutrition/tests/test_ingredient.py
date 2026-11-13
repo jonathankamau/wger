@@ -14,27 +14,50 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard Library
+import base64
 import datetime
+import io
 import json
-from decimal import Decimal
+from unittest.mock import (
+    MagicMock,
+    patch,
+)
 
 # Django
-from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.test import SimpleTestCase
 from django.urls import reverse
 
+# Third Party
+from PIL import Image as PILImage
+from rest_framework import status
+
 # wger
-from wger.core.models import Language
+from wger.core.models import (
+    Language,
+    License,
+)
 from wger.core.tests import api_base_test
+from wger.core.tests.api_base_test import ApiBaseTestCase
 from wger.core.tests.base_testcase import (
+    BaseTestCase,
     WgerAddTestCase,
     WgerDeleteTestCase,
     WgerEditTestCase,
     WgerTestCase,
 )
+from wger.nutrition.api.views import (
+    IngredientSyncViewSet,
+    IngredientViewSet,
+)
+from wger.nutrition.extract_info.off import extract_info_from_off
 from wger.nutrition.models import (
     Ingredient,
+    IngredientWeightUnit,
     Meal,
+    Source,
 )
+from wger.nutrition.models.image import Image
 from wger.utils.constants import NUTRITION_TAB
 
 
@@ -47,7 +70,7 @@ class IngredientRepresentationTestCase(WgerTestCase):
         """
         Test that the representation of an object is correct
         """
-        self.assertEqual("{0}".format(Ingredient.objects.get(pk=1)), 'Test ingredient 1')
+        self.assertEqual(str(Ingredient.objects.get(pk=1)), 'Test ingredient 1')
 
 
 class DeleteIngredientTestCase(WgerDeleteTestCase):
@@ -75,11 +98,11 @@ class EditIngredientTestCase(WgerEditTestCase):
         'fat': 10,
         'carbohydrates_sugar': 5,
         'fat_saturated': 3.14,
-        'fibres': 2.1,
+        'fiber': 2.1,
         'protein': 20,
         'carbohydrates': 10,
         'license': 2,
-        'license_author': 'me!'
+        'license_author': 'me!',
     }
 
     def post_test_hook(self):
@@ -88,7 +111,11 @@ class EditIngredientTestCase(WgerEditTestCase):
         """
         if self.current_user == 'admin':
             ingredient = Ingredient.objects.get(pk=1)
-            self.assertEqual(ingredient.update_date, datetime.date.today())
+            self.assertAlmostEqual(
+                ingredient.last_update,
+                datetime.datetime.now(tz=datetime.timezone.utc),
+                delta=datetime.timedelta(minutes=1),
+            )
 
 
 class AddIngredientTestCase(WgerAddTestCase):
@@ -98,7 +125,6 @@ class AddIngredientTestCase(WgerAddTestCase):
 
     object_class = Ingredient
     url = 'nutrition:ingredient:add'
-    user_fail = False
     data = {
         'name': 'A new ingredient',
         'sodium': 2,
@@ -106,30 +132,31 @@ class AddIngredientTestCase(WgerAddTestCase):
         'fat': 10,
         'carbohydrates_sugar': 5,
         'fat_saturated': 3.14,
-        'fibres': 2.1,
+        'fiber': 2.1,
         'protein': 20,
         'carbohydrates': 10,
         'license': 2,
-        'license_author': 'me!'
+        'license_author': 'me!',
     }
 
     def post_test_hook(self):
         """
-        Test that the creation date and the status are correctly set
+        Test that the creation date is correctly set
         """
         if self.current_user == 'admin':
             ingredient = Ingredient.objects.get(pk=self.pk_after)
-            self.assertEqual(ingredient.creation_date, datetime.date.today())
-            self.assertEqual(ingredient.status, Ingredient.STATUS_ACCEPTED)
-        elif self.current_user == 'test':
-            ingredient = Ingredient.objects.get(pk=self.pk_after)
-            self.assertEqual(ingredient.status, Ingredient.STATUS_PENDING)
+            self.assertAlmostEqual(
+                ingredient.created,
+                datetime.datetime.now(tz=datetime.timezone.utc),
+                delta=datetime.timedelta(minutes=1),
+            )
 
 
 class IngredientNameShortTestCase(WgerTestCase):
     """
     Tests that ingredient cannot have name with length less than 3
     """
+
     data = {
         'name': 'Ui',
         'sodium': 2,
@@ -137,11 +164,11 @@ class IngredientNameShortTestCase(WgerTestCase):
         'fat': 10,
         'carbohydrates_sugar': 5,
         'fat_saturated': 3.14,
-        'fibres': 2.1,
+        'fiber': 2.1,
         'protein': 20,
         'carbohydrates': 10,
         'license': 2,
-        'license_author': 'me!'
+        'license_author': 'me!',
     }
 
     def test_add_ingredient_short_name(self):
@@ -172,7 +199,7 @@ class IngredientNameShortTestCase(WgerTestCase):
 
         ingredient = Ingredient.objects.get(pk=1)
         # Ingredient was not edited
-        self.assertNotEqual(ingredient.update_date, datetime.date.today())
+        self.assertNotEqual(ingredient.last_update.date(), datetime.date.today())
 
 
 class IngredientDetailTestCase(WgerTestCase):
@@ -185,7 +212,7 @@ class IngredientDetailTestCase(WgerTestCase):
         Tests the ingredient details page
         """
 
-        response = self.client.get(reverse('nutrition:ingredient:view', kwargs={'id': 6}))
+        response = self.client.get(reverse('nutrition:ingredient:view', kwargs={'pk': 6}))
         self.assertEqual(response.status_code, 200)
 
         # Correct tab is selected
@@ -194,21 +221,19 @@ class IngredientDetailTestCase(WgerTestCase):
 
         # Only authorized users see the edit links
         if editor:
-            self.assertContains(response, 'Edit ingredient')
-            self.assertContains(response, 'Delete ingredient')
-            self.assertContains(response, 'pending review')
+            self.assertContains(response, 'Edit')
+            self.assertContains(response, 'Delete')
         else:
-            self.assertNotContains(response, 'Edit ingredient')
-            self.assertNotContains(response, 'Delete ingredient')
-            self.assertNotContains(response, 'pending review')
+            self.assertNotContains(response, 'Edit')
+            self.assertNotContains(response, 'Delete')
 
         # Non-existent ingredients throw a 404.
-        response = self.client.get(reverse('nutrition:ingredient:view', kwargs={'id': 42}))
+        response = self.client.get(reverse('nutrition:ingredient:view', kwargs={'pk': 42}))
         self.assertEqual(response.status_code, 404)
 
     def test_ingredient_detail_editor(self):
         """
-        Tests the ingredient details page as a logged in user with editor rights
+        Tests the ingredient details page as a logged-in user with editor rights
         """
 
         self.user_login('admin')
@@ -216,7 +241,7 @@ class IngredientDetailTestCase(WgerTestCase):
 
     def test_ingredient_detail_non_editor(self):
         """
-        Tests the ingredient details page as a logged in user without editor rights
+        Tests the ingredient details page as a logged-in user without editor rights
         """
 
         self.user_login('test')
@@ -229,45 +254,89 @@ class IngredientDetailTestCase(WgerTestCase):
 
         self.ingredient_detail(editor=False)
 
+    @patch('wger.nutrition.models.Ingredient.sync_serving_unit_from_off_if_missing')
+    def test_ingredient_detail_does_not_trigger_lazy_serving_sync(self, mock_sync: MagicMock):
+        response = self.client.get(reverse('nutrition:ingredient:view', kwargs={'pk': 6}))
+
+        self.assertEqual(response.status_code, 200)
+        mock_sync.assert_not_called()
+
 
 class IngredientSearchTestCase(WgerTestCase):
     """
     Tests the ingredient search functions
     """
 
-    def search_ingredient(self, fail=True):
+    def search_ingredient_en(self):
         """
-        Helper function
+        Helper function - Searches in English
         """
 
-        kwargs = {'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'}
-        response = self.client.get(reverse('ingredient-search'), {'term': 'test'}, **kwargs)
+        response = self.client.get(
+            reverse('api-ingredientinfo-list'),
+            {'name__search': 'test', 'language__code': 'en'},
+        )
         self.assertEqual(response.status_code, 200)
         result = json.loads(response.content.decode('utf8'))
-        self.assertEqual(len(result['suggestions']), 2)
-        self.assertEqual(result['suggestions'][0]['value'], 'Ingredient, test, 2, organic, raw')
-        self.assertEqual(result['suggestions'][1]['value'], 'Test ingredient 1')
 
-        # Search for an ingredient pending review (0 hits, "Pending ingredient")
-        response = self.client.get(reverse('ingredient-search'), {'term': 'Pending'}, **kwargs)
+        self.assertEqual(result['count'], 2)
+
+        ingredients = {ingredient['id']: ingredient for ingredient in result['results']}
+
+        ingredient_1 = ingredients[2]
+        self.assertEqual(ingredient_1['id'], 2)
+        self.assertEqual(ingredient_1['name'], 'Ingredient, test, 2, organic, raw')
+        self.assertEqual(ingredient_1['uuid'], '44dc5966-73a2-4df7-8b15-f6d37a8990d9')
+        self.assertEqual(ingredient_1['language']['id'], 2)
+        self.assertEqual(ingredient_1['image'], None)
+        self.assertEqual(ingredient_1['thumbnails'], None)
+
+        ingredient_2 = ingredients[1]
+        self.assertEqual(ingredient_2['id'], 1)
+        self.assertEqual(ingredient_2['name'], 'Test ingredient 1')
+        self.assertEqual(ingredient_2['uuid'], '7908c204-907f-4b1e-ad4e-f482e9769ade')
+        self.assertEqual(ingredient_2['language']['id'], 2)
+        self.assertEqual(ingredient_2['image'], None)
+        self.assertEqual(ingredient_2['thumbnails'], None)
+
+    def search_ingredient_de(self):
+        """
+        Helper function - Searches in German
+        """
+
+        response = self.client.get(
+            reverse('api-ingredientinfo-list'),
+            {'name__search': 'test', 'language__code': 'de'},
+        )
         self.assertEqual(response.status_code, 200)
         result = json.loads(response.content.decode('utf8'))
-        self.assertEqual(len(result['suggestions']), 0)
+
+        self.assertEqual(result['count'], 1)
+
+        ingredient_1 = result['results'][0]
+        self.assertEqual(ingredient_1['id'], 6)
+        self.assertEqual(ingredient_1['name'], 'Testzutat 123')
+        self.assertEqual(ingredient_1['uuid'], 'dfc5c622-027b-4f17-8141-dadd1ce7e3f1')
+        self.assertEqual(ingredient_1['language']['id'], 1)
+        self.assertEqual(ingredient_1['image'], None)
+        self.assertEqual(ingredient_1['thumbnails'], None)
 
     def test_search_ingredient_anonymous(self):
         """
         Test searching for an ingredient by an anonymous user
         """
 
-        self.search_ingredient()
+        self.search_ingredient_en()
+        self.search_ingredient_de()
 
     def test_search_ingredient_logged_in(self):
         """
-        Test searching for an ingredient by a logged in user
+        Test searching for an ingredient by a logged-in user
         """
 
         self.user_login('test')
-        self.search_ingredient()
+        self.search_ingredient_en()
+        self.search_ingredient_de()
 
 
 class IngredientValuesTestCase(WgerTestCase):
@@ -282,54 +351,50 @@ class IngredientValuesTestCase(WgerTestCase):
 
         # Get the nutritional values in 1 gram of product
         response = self.client.get(
-            reverse('api-ingredient-get-values', kwargs={'pk': 1}), {
-                'amount': 1,
-                'ingredient': 1,
-                'unit': ''
-            }
+            reverse('api-ingredient-get-values', kwargs={'pk': 1}),
+            {'amount': 1, 'ingredient': 1, 'unit': ''},
         )
 
         self.assertEqual(response.status_code, 200)
         result = json.loads(response.content.decode('utf8'))
-        self.assertEqual(len(result), 9)
+        self.assertEqual(len(result), 8)
         self.assertEqual(
-            result, {
-                'sodium': '0.01',
-                'energy': '1.76',
-                'energy_kilojoule': '7.36',
-                'fat': '0.08',
-                'carbohydrates_sugar': '0.00',
-                'fat_saturated': '0.03',
-                'fibres': '0.00',
-                'protein': '0.26',
-                'carbohydrates': '0.00'
-            }
+            result,
+            {
+                'sodium': 0.00549,
+                'energy': 1.76,
+                # 'energy_kilojoule': '7.36',
+                'fat': 0.0819,
+                'carbohydrates_sugar': None,
+                'fat_saturated': 0.03244,
+                'fiber': None,
+                'protein': 0.2563,
+                'carbohydrates': 0.00125,
+            },
         )
 
         # Get the nutritional values in 1 unit of product
         response = self.client.get(
-            reverse('api-ingredient-get-values', kwargs={'pk': 1}), {
-                'amount': 1,
-                'ingredient': 1,
-                'unit': 2
-            }
+            reverse('api-ingredient-get-values', kwargs={'pk': 1}),
+            {'amount': 1, 'ingredient': 1, 'unit': 2},
         )
 
         self.assertEqual(response.status_code, 200)
         result = json.loads(response.content.decode('utf8'))
-        self.assertEqual(len(result), 9)
+        self.assertEqual(len(result), 8)
         self.assertEqual(
-            result, {
-                'sodium': '0.61',
-                'energy': '196.24',
-                'energy_kilojoule': '821.07',
-                'fat': '9.13',
-                'carbohydrates_sugar': '0.00',
-                'fat_saturated': '3.62',
-                'fibres': '0.00',
-                'protein': '28.58',
-                'carbohydrates': '0.14'
-            }
+            result,
+            {
+                'sodium': 1.22427,
+                'energy': 392.48,
+                # 'energy_kilojoule': '1642.14',
+                'fat': 18.2637,
+                'carbohydrates_sugar': None,
+                'fat_saturated': 7.23412,
+                'fiber': None,
+                'protein': 57.1549,
+                'carbohydrates': 0.27875,
+            },
         )
 
     def test_calculate_value_anonymous(self):
@@ -341,7 +406,7 @@ class IngredientValuesTestCase(WgerTestCase):
 
     def test_calculate_value_logged_in(self):
         """
-        Calculate the nutritional values as a logged in user
+        Calculate the nutritional values as a logged-in user
         """
 
         self.user_login('test')
@@ -385,47 +450,499 @@ class IngredientTestCase(WgerTestCase):
         ingredient2.protein = 30
         self.assertEqual(ingredient1, ingredient2)
 
-        meal = Meal.objects.get(pk=1)
+        meal = Meal.objects.get(pk='aa000000-0000-0000-0000-000000000001')
         self.assertFalse(ingredient1 == meal)
-
-    def test_total_energy(self):
-        """
-        Tests the custom clean() method
-        """
-        self.user_login('admin')
-
-        # Values OK
-        ingredient = Ingredient()
-        ingredient.name = 'FooBar, cooked, with salt'
-        ingredient.energy = 50
-        ingredient.protein = 0.5
-        ingredient.carbohydrates = 12
-        ingredient.fat = Decimal('0.1')
-        ingredient.language_id = 1
-        self.assertFalse(ingredient.full_clean())
-
-        # Values wrong
-        ingredient.protein = 20
-        self.assertRaises(ValidationError, ingredient.full_clean)
-
-        ingredient.protein = 0.5
-        ingredient.fat = 5
-        self.assertRaises(ValidationError, ingredient.full_clean)
-
-        ingredient.fat = 0.1
-        ingredient.carbohydrates = 20
-        self.assertRaises(ValidationError, ingredient.full_clean)
-
-        ingredient.fat = 5
-        ingredient.carbohydrates = 20
-        self.assertRaises(ValidationError, ingredient.full_clean)
 
 
 class IngredientApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the ingredient API resource
     """
+
     pk = 4
     resource = Ingredient
     private_resource = False
+    overview_cached = False
     data = {'language': 1, 'license': 2}
+
+
+class IngredientModelTestCase(WgerTestCase):
+    """
+    Tests the ingredient model functions
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.off_response = {
+            'code': '1234',
+            'lang': 'de',
+            'name': 'Foo with chocolate',
+            'product_name': 'Foo with chocolate',
+            'generic_name': 'Foo with chocolate, 250g package',
+            'brands': 'The bar company',
+            'editors_tags': ['open food facts', 'MrX'],
+            'ingredients_analysis_tags': [
+                'en:palm-oil-free',
+                'en:vegan',
+                'en:vegetarian',
+            ],
+            'nutriments': {
+                'energy-kcal_100g': 600,
+                'proteins_100g': 10,
+                'carbohydrates_100g': 30,
+                'sugars_100g': 20,
+                'fat_100g': 40,
+                'saturated-fat_100g': 11,
+                'sodium_100g': 5,
+                'fiber_100g': None,
+            },
+        }
+
+        self.off_response_no_results = None
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_success(self, mock_api: MagicMock):
+        """
+        Tests creating an ingredient from OFF
+        """
+        mock_api.return_value = self.off_response
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+
+        self.assertEqual(ingredient.name, 'Foo with chocolate')
+        self.assertEqual(ingredient.code, '1234')
+        self.assertEqual(ingredient.energy, 600)
+        self.assertEqual(ingredient.protein, 10)
+        self.assertEqual(ingredient.carbohydrates, 30)
+        self.assertEqual(ingredient.fat, 40)
+        self.assertEqual(ingredient.fat_saturated, 11)
+        self.assertEqual(ingredient.sodium, 5)
+        self.assertEqual(ingredient.fiber, None)
+        self.assertEqual(ingredient.brand, 'The bar company')
+        self.assertEqual(ingredient.license_author, 'open food facts, MrX')
+        self.assertTrue(ingredient.is_vegan)
+        self.assertTrue(ingredient.is_vegetarian)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_updates_existing_serving_unit(self, mock_api: MagicMock):
+        self.off_response['serving_size'] = '2 biscuits (30 g)'
+        mock_api.return_value = self.off_response
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+
+        self.off_response['serving_size'] = '2 biscuits (25 g)'
+        ingredient.update_or_create_serving_unit_from_off(
+            extract_info_from_off(self.off_response, ingredient.language_id)
+        )
+
+        ingredient_unit = IngredientWeightUnit.objects.get(
+            ingredient=ingredient, name='1 Portion (2 biscuits)'
+        )
+        self.assertEqual(ingredient_unit.gram, 25)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_reimport_same_gram_different_name_does_not_duplicate(self, mock_api: MagicMock):
+        """
+        When OFF changes the serving_size text but the gram value stays,
+        the existing unit is reused (matched by gram) instead of creating a duplicate.
+        """
+        self.off_response['serving_size'] = '2 biscuits (30 g)'
+        mock_api.return_value = self.off_response
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+
+        self.off_response['serving_size'] = '3 biscuits (30 g)'
+        ingredient.update_or_create_serving_unit_from_off(
+            extract_info_from_off(self.off_response, ingredient.language_id)
+        )
+
+        units = IngredientWeightUnit.objects.filter(ingredient=ingredient)
+        self.assertEqual(units.count(), 1)
+        self.assertEqual(units.first().name, '1 Portion (3 biscuits)')
+        self.assertEqual(units.first().gram, 30)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_success_long_name(self, mock_api: MagicMock):
+        """
+        Tests creating an ingredient from OFF - name gets truncated
+        """
+        self.off_response['product_name'] = """
+        The Shiba Inu (柴犬, Japanese: [ɕiba inɯ]) is a breed of hunting dog from Japan. A
+        small-to-medium breed, it is the smallest of the six original and distinct spitz
+        breeds of dog native to Japan.[1] Its name literally translates to "brushwood dog",
+        as it is used to flush game."""
+        mock_api.return_value = self.off_response
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+        self.assertEqual(len(ingredient.name), 200)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_key_missing_1(self, mock_api: MagicMock):
+        """
+        Tests creating an ingredient from OFF - missing key in nutriments
+        """
+        del self.off_response['nutriments']['energy-kcal_100g']
+        mock_api.return_value = self.off_response
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+        self.assertIsNone(ingredient)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_key_missing_2(self, mock_api: MagicMock):
+        """
+        Tests creating an ingredient from OFF - missing name
+        """
+        del self.off_response['product_name']
+        mock_api.return_value = self.off_response
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+        self.assertIsNone(ingredient)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_no_results(self, mock_api: MagicMock):
+        """
+        Tests creating an ingredient from OFF
+        """
+        mock_api.return_value = self.off_response_no_results
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+        self.assertIsNone(ingredient)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_sync_serving_unit_from_off_if_missing_creates_unit(self, mock_api: MagicMock):
+        mock_api.return_value = {
+            **self.off_response,
+            'serving_size': '2 biscuits (30 g)',
+        }
+        ingredient = Ingredient.objects.get(pk=1)
+        ingredient.source_name = Source.OPEN_FOOD_FACTS.value
+        ingredient.code = '1234'
+        ingredient.save(update_fields=['source_name', 'code'])
+        ingredient.ingredientweightunit_set.all().delete()
+
+        created, updated = ingredient.sync_serving_unit_from_off_if_missing()
+
+        self.assertEqual((created, updated), (True, False))
+        self.assertEqual(ingredient.ingredientweightunit_set.count(), 1)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_sync_serving_unit_from_off_if_missing_skips_existing_units(self, mock_api: MagicMock):
+        ingredient = Ingredient.objects.get(pk=1)
+        ingredient.source_name = Source.OPEN_FOOD_FACTS.value
+        ingredient.code = '1234'
+        ingredient.save(update_fields=['source_name', 'code'])
+        ingredient.ingredientweightunit_set.get_or_create(
+            name='Cup',
+            defaults={'gram': 15},
+        )
+
+        created, updated = ingredient.sync_serving_unit_from_off_if_missing()
+
+        self.assertEqual((created, updated), (False, False))
+        mock_api.assert_not_called()
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_sync_serving_unit_from_off_if_missing_skips_non_off_source(self, mock_api: MagicMock):
+        ingredient = Ingredient.objects.get(pk=1)
+        ingredient.source_name = Source.USDA.value
+        ingredient.code = '1234'
+        ingredient.save(update_fields=['source_name', 'code'])
+        ingredient.ingredientweightunit_set.all().delete()
+
+        created, updated = ingredient.sync_serving_unit_from_off_if_missing()
+
+        self.assertEqual((created, updated), (False, False))
+        mock_api.assert_not_called()
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_sync_serving_unit_from_off_if_missing_skips_missing_code(self, mock_api: MagicMock):
+        ingredient = Ingredient.objects.get(pk=1)
+        ingredient.source_name = Source.OPEN_FOOD_FACTS.value
+        ingredient.code = ''
+        ingredient.save(update_fields=['source_name', 'code'])
+        ingredient.ingredientweightunit_set.all().delete()
+
+        created, updated = ingredient.sync_serving_unit_from_off_if_missing()
+
+        self.assertEqual((created, updated), (False, False))
+        mock_api.assert_not_called()
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_sync_serving_unit_from_off_if_missing_handles_off_fetch_failure(
+        self, mock_api: MagicMock
+    ):
+        mock_api.return_value = None
+        ingredient = Ingredient.objects.get(pk=1)
+        ingredient.source_name = Source.OPEN_FOOD_FACTS.value
+        ingredient.code = '1234'
+        ingredient.save(update_fields=['source_name', 'code'])
+        ingredient.ingredientweightunit_set.all().delete()
+
+        created, updated = ingredient.sync_serving_unit_from_off_if_missing()
+
+        self.assertEqual((created, updated), (False, False))
+        self.assertEqual(ingredient.ingredientweightunit_set.count(), 0)
+
+    @patch('openfoodfacts.api.ProductResource.get')
+    def test_fetch_from_off_does_not_create_unit_for_non_derivable_serving_size(self, mock_api):
+        self.off_response['serving_size'] = '2 tbsp'
+        mock_api.return_value = self.off_response
+
+        ingredient = Ingredient.fetch_ingredient_from_off('1234')
+
+        self.assertIsNotNone(ingredient)
+        self.assertEqual(ingredient.ingredientweightunit_set.count(), 0)
+
+
+class IngredientInfoLazyServingUnitSyncApiTestCase(WgerTestCase):
+    """
+    Reading ingredients must not sync serving units from OFF
+
+    The sync does an HTTP request per ingredient, so wiring it into a read
+    endpoint would put an external call in the hot path of every request.
+    """
+
+    @patch('wger.nutrition.models.Ingredient.sync_serving_unit_from_off_if_missing')
+    def test_detail_does_not_trigger_lazy_sync(self, mock_sync: MagicMock):
+        self.client.get(reverse('api-ingredientinfo-detail', kwargs={'pk': 1}))
+        mock_sync.assert_not_called()
+
+    @patch('wger.nutrition.models.Ingredient.sync_serving_unit_from_off_if_missing')
+    def test_list_does_not_trigger_lazy_sync(self, mock_sync):
+        self.client.get(reverse('api-ingredientinfo-list'))
+        mock_sync.assert_not_called()
+
+
+class IngredientApiCodeSearch(BaseTestCase, ApiBaseTestCase):
+    url = '/api/v2/ingredient/'
+
+    @patch('wger.nutrition.models.Ingredient.fetch_ingredient_from_off')
+    def test_search_existing_code(self, mock_fetch_from_off: MagicMock):
+        """
+        Test that when a code already exists, no off sync happens
+        """
+        response = self.client.get(self.url + '?code=1234567890987654321')
+        mock_fetch_from_off.assert_not_called()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+    @patch('wger.nutrition.models.Ingredient.fetch_ingredient_from_off')
+    def test_search_new_code(self, mock_fetch_from_off: MagicMock):
+        """
+        Test that when a code isn't present, it will be fetched
+        """
+        # The barcode filter calls queryset.filter(pk=ingredient.pk) when OFF
+        # returns something, which fails on the default MagicMock. Simulate the
+        # "not found upstream" branch by returning None.
+        mock_fetch_from_off.return_value = None
+
+        response = self.client.get(self.url + '?code=122333444455555666666')
+        mock_fetch_from_off.assert_called_with('122333444455555666666')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+
+class ImageFromJsonSimpleTests(SimpleTestCase):
+    def test_from_json_sets_uuid_size_and_license_when_generate_uuid_false(self):
+        json_data = {
+            'uuid': '123e4567-e89b-12d3-a456-426614174000',
+            'license_title': 'CC0',
+            'license_object_url': 'https://license.example/',
+            'license_author': 'Author Name',
+            'license_author_url': 'https://author.example/',
+            'license_derivative_source_url': 'https://source.example/',
+            'size': 12345,
+        }
+
+        img = Image.from_json(
+            connect_to=None,
+            retrieved_image=None,
+            json_data=json_data,
+            generate_uuid=False,
+            save_to_db=False,
+        )
+
+        self.assertIsInstance(img, Image)
+        self.assertEqual(str(img.uuid), json_data['uuid'])
+        self.assertEqual(img.size, 12345)
+        self.assertEqual(img.license_title, json_data['license_title'])
+
+    def test_from_json_generate_uuid_true_uses_model_default_uuid(self):
+        json_data = {
+            'uuid': '123e4567-e89b-12d3-a456-426614174001',
+            'license_title': 'CC0',
+            'license_object_url': 'https://license.example/',
+            'license_author': 'Author Name',
+            'license_author_url': 'https://author.example/',
+            'license_derivative_source_url': 'https://source.example/',
+            'size': 54321,
+        }
+
+        img = Image.from_json(
+            connect_to=None,
+            retrieved_image=None,
+            json_data=json_data,
+            generate_uuid=True,
+            save_to_db=False,
+        )
+
+        self.assertIsInstance(img, Image)
+        self.assertNotEqual(str(img.uuid), json_data['uuid'])
+        self.assertEqual(img.size, 54321)
+
+
+class AttributionLinkTestCase(SimpleTestCase):
+    """
+    Tests that AbstractLicenseModel.attribution_link only emits http(s) links.
+
+    Image is used as a representative concrete subclass; attribution_link is
+    defined once on the shared AbstractLicenseModel.
+    """
+
+    def test_javascript_scheme_is_not_rendered_as_link(self):
+        """A javascript: URL must never end up inside an href attribute."""
+
+        image = Image(
+            license=License(pk=1, short_name='CC', url='javascript:alert(1)'),
+            license_title='A photo',
+            license_author='Some Author',
+            license_object_url='javascript:alert(2)',
+            license_author_url='javascript:alert(document.cookie)',
+            license_derivative_source_url='javascript:void(0)',
+        )
+
+        result = image.attribution_link
+
+        self.assertNotIn('javascript:', result)
+        # The text content is still shown, just no longer linked
+        self.assertIn('A photo', result)
+        self.assertIn('Some Author', result)
+
+    def test_http_urls_are_rendered_as_links(self):
+        """Valid http(s) URLs are still emitted as links."""
+
+        image = Image(
+            license=License(pk=1, short_name='CC', url='https://example.com/license'),
+            license_title='A photo',
+            license_author='Some Author',
+            license_object_url='https://example.com/photo',
+            license_author_url='http://example.com/author',
+        )
+
+        result = image.attribution_link
+
+        self.assertIn('href="https://example.com/photo"', result)
+        self.assertIn('href="http://example.com/author"', result)
+        self.assertIn('href="https://example.com/license"', result)
+
+
+class IngredientThrottleScopeTestCase(WgerTestCase):
+    """
+    Tests that ingredient viewsets are wired up with the right throttle scopes.
+
+    We don't exercise the rate limits themselves (the rates are config) — we
+    just assert that scopes are picked correctly per action so accidental
+    refactors can't silently strip throttling.
+    """
+
+    def test_ingredient_list_uses_list_scope(self):
+        view = IngredientViewSet()
+        view.action = 'list'
+        view.get_throttles()
+        self.assertEqual(view.throttle_scope, 'ingredient_list')
+
+    def test_ingredient_detail_uses_detail_scope(self):
+        view = IngredientViewSet()
+        view.action = 'retrieve'
+        view.get_throttles()
+        self.assertEqual(view.throttle_scope, 'ingredient_detail')
+
+    def test_ingredient_sync_uses_sync_scope(self):
+        self.assertEqual(IngredientSyncViewSet.throttle_scope, 'ingredient_sync')
+
+
+class IngredientSyncViewSetTestCase(WgerTestCase):
+    """
+    Tests for the /api/v2/ingredient-sync endpoint.
+    """
+
+    url = reverse('api-ingredient-sync-list')
+
+    def test_list_returns_cursor_pagination_shape(self):
+        """The response has `next`/`previous`, but no `count`."""
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
+        self.assertNotIn('count', response.data)
+
+    def test_list_paginates_through_all_ingredients(self):
+        """Following `next` returns disjoint pages that together cover all rows."""
+
+        total = Ingredient.objects.count()
+        self.assertGreater(total, 0, 'Fixture must contain ingredients')
+
+        seen_ids = []
+        url = self.url + '?page_size=5'
+        while url:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            seen_ids.extend(item['id'] for item in response.data['results'])
+            url = response.data['next']
+
+        # No duplicates and every ingredient seen exactly once.
+        self.assertEqual(len(seen_ids), len(set(seen_ids)))
+        self.assertEqual(set(seen_ids), set(Ingredient.objects.values_list('id', flat=True)))
+
+    def test_page_size_query_param_is_capped(self):
+        """`?page_size=` is honored but capped at `max_page_size`."""
+
+        # Way above max_page_size=1000 — must be capped, not error
+        response = self.client.get(self.url + '?page_size=999999')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertLessEqual(len(response.data['results']), 1000)
+
+    def test_filterset_supports_incremental_sync(self):
+        """`last_update__gt` filter narrows the result set for incremental syncs."""
+
+        # Pick a timestamp newer than all fixture rows -> empty result
+        future = '2999-01-01T00:00:00Z'
+        response = self.client.get(f'{self.url}?last_update__gt={future}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'], [])
+        self.assertIsNone(response.data['next'])
+
+    def test_malformed_cursor_is_rejected_cleanly(self):
+        """A cursor whose position is not a valid `id` returns 404, not a 500."""
+
+        # base64 of "p=not-a-number" — a non-numeric position for the integer
+        # ordering field, as produced by truncated or hand-crafted cursors.
+        bad_cursor = base64.b64encode(b'p=not-a-number').decode('ascii')
+        response = self.client.get(self.url, {'cursor': bad_cursor})
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unprocessable_image_does_not_break_page(self):
+        """An image that cannot be thumbnailed yields `thumbnails: None`, not a 500."""
+
+        # An extreme aspect ratio makes easy_thumbnails scale one dimension down
+        # to zero, which raises a ValueError from Pillow during thumbnailing
+        source = PILImage.new('RGB', (1, 800))
+        buffer = io.BytesIO()
+        source.save(buffer, format='PNG')
+
+        image = Image(ingredient=Ingredient.objects.get(pk=1), size=buffer.getbuffer().nbytes)
+        image.image.save('bad.png', ContentFile(buffer.getvalue()), save=False)
+        image.width = source.width
+        image.height = source.height
+        image.save()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        entry = next(i for i in response.data['results'] if i['id'] == 1)
+        self.assertIsNone(entry['thumbnails'])

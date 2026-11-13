@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -21,8 +19,13 @@ from django.db.models.signals import (
     post_save,
 )
 
+# Third Party
+from easy_thumbnails.files import get_thumbnailer
+
 # wger
 from wger.nutrition.models import (
+    Image,
+    LogItem,
     Meal,
     MealItem,
     NutritionPlan,
@@ -43,3 +46,32 @@ post_save.connect(reset_nutritional_values_canonical_form, sender=Meal)
 post_delete.connect(reset_nutritional_values_canonical_form, sender=Meal)
 post_save.connect(reset_nutritional_values_canonical_form, sender=MealItem)
 post_delete.connect(reset_nutritional_values_canonical_form, sender=MealItem)
+
+
+def fetch_ingredient_image(sender, instance: MealItem | LogItem, raw: bool = False, **kwargs):
+    """
+    Fetch the image of ingredients that are used in a plan or the diary
+    """
+    if raw:
+        return
+
+    instance.ingredient.fetch_image_in_background()
+
+
+post_save.connect(fetch_ingredient_image, sender=MealItem)
+post_save.connect(fetch_ingredient_image, sender=LogItem)
+
+
+def auto_delete_file_on_delete(sender, instance: Image, **kwargs):
+    """
+    Delete the image along with its thumbnails
+    """
+    if not instance.image:
+        return
+
+    thumbnailer = get_thumbnailer(instance.image)
+    thumbnailer.delete_thumbnails()
+    instance.image.delete(save=False)
+
+
+post_delete.connect(auto_delete_file_on_delete, sender=Image)

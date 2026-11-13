@@ -1,0 +1,407 @@
+# This file is part of wger Workout Manager.
+#
+# wger Workout Manager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# wger Workout Manager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+
+# Django
+from django.contrib.auth import get_user_model
+from django.test import (
+    Client,
+    TestCase,
+    override_settings,
+)
+from django.urls import reverse
+
+# Third Party
+from allauth.account.models import EmailAddress
+
+
+User = get_user_model()
+
+TRUSTED_IP = '192.0.2.1'
+UNTRUSTED_IP = '198.51.100.5'
+
+PROXY_HEADER_KEY = 'HTTP_X_REMOTE_USER'
+PROXY_EMAIL_HEADER_KEY = 'HTTP_X_REMOTE_USER_EMAIL'
+PROXY_NAME_HEADER_KEY = 'HTTP_X_REMOTE_USER_NAME'
+USERNAME = 'admin'
+NEW_USER_VALUE = 'auth_proxy_user'
+
+
+class AuthProxyMiddlewareTests(TestCase):
+    fixtures = (
+        'test-languages',
+        'gym_config',
+    )
+
+    def setUp(self):
+        self.client = Client()
+        self.existing_user = User.objects.create_user(
+            username=USERNAME,
+            password='password123',
+        )
+        self.protected_url = reverse('core:dashboard')
+        self.login_url = reverse('core:user:login')
+
+    # Helper to make requests with specific IP and header
+    def make_request(
+        self,
+        ip_addr: str,
+        proxy_header_value: str | None = None,
+        email_header_value: str | None = None,
+        name_header_value: str | None = None,
+    ):
+        headers = {}
+        if proxy_header_value:
+            headers[PROXY_HEADER_KEY] = proxy_header_value
+
+        if email_header_value:
+            headers[PROXY_EMAIL_HEADER_KEY] = email_header_value
+
+        if name_header_value:
+            headers[PROXY_NAME_HEADER_KEY] = name_header_value
+
+        return self.client.get(self.protected_url, REMOTE_ADDR=ip_addr, follow=True, **headers)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_success_trusted_ip_existing_user(self):
+        response = self.make_request(TRUSTED_IP, USERNAME)
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the correct user is logged into the session
+        self.assertEqual(int(self.client.session.get('_auth_user_id', 0)), self.existing_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_CREATE_UNKNOWN_USER=True,
+        AUTH_PROXY_USER_EMAIL_HEADER=PROXY_EMAIL_HEADER_KEY,
+        AUTH_PROXY_USER_NAME_HEADER=PROXY_NAME_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_success_trusted_ip_new_user_created(self):
+        self.assertFalse(User.objects.filter(username=NEW_USER_VALUE).exists())
+        response = self.make_request(
+            TRUSTED_IP,
+            proxy_header_value=NEW_USER_VALUE,
+            email_header_value='admin@google.com',
+            name_header_value='Admin User',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Verify the user was created with the correct values
+        new_user = User.objects.filter(username=NEW_USER_VALUE).first()
+        self.assertIsNotNone(new_user)
+        self.assertEqual(new_user.email, 'admin@google.com')
+        self.assertEqual(new_user.first_name, 'Admin User')
+        self.assertEqual(int(self.client.session['_auth_user_id']), new_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_CREATE_UNKNOWN_USER=True,
+        AUTH_PROXY_USER_EMAIL_HEADER=PROXY_EMAIL_HEADER_KEY,
+        AUTH_PROXY_USER_NAME_HEADER=PROXY_NAME_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_new_user_gets_verified_emailaddress(self):
+        """
+        A user auto-created by the trusted proxy gets a verified allauth
+        EmailAddress row: the proxy is the trusted identity source, so login
+        by email works without a separate confirmation step.
+        """
+        self.make_request(
+            TRUSTED_IP,
+            proxy_header_value=NEW_USER_VALUE,
+            email_header_value='admin@google.com',
+            name_header_value='Admin User',
+        )
+        new_user = User.objects.get(username=NEW_USER_VALUE)
+        email_address = EmailAddress.objects.get(user=new_user)
+        self.assertEqual(email_address.email, 'admin@google.com')
+        self.assertTrue(email_address.primary)
+        self.assertTrue(email_address.verified)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_CREATE_UNKNOWN_USER=True,
+        AUTH_PROXY_USER_NAME_HEADER=PROXY_NAME_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_new_user_without_email_gets_no_emailaddress(self):
+        """A proxy user created without an email header gets no row and no crash."""
+        self.make_request(
+            TRUSTED_IP,
+            proxy_header_value=NEW_USER_VALUE,
+            name_header_value='Admin User',
+        )
+        new_user = User.objects.get(username=NEW_USER_VALUE)
+        self.assertFalse(EmailAddress.objects.filter(user=new_user).exists())
+
+    @override_settings(
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_failure_untrusted_ip_header_present(self):
+        """Should redirect to login because the middleware shouldn't authenticate"""
+        response = self.make_request(UNTRUSTED_IP, USERNAME)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.request['PATH_INFO'].startswith(self.login_url))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_failure_trusted_ip_header_missing(self):
+        """Should redirect to login"""
+        response = self.make_request(TRUSTED_IP, proxy_header_value=None)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.request['PATH_INFO'].startswith(self.login_url))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_CREATE_UNKNOWN_USER=False,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_failure_trusted_ip_new_user_creation_disabled(self):
+        self.assertFalse(User.objects.filter(username=NEW_USER_VALUE).exists())
+        response = self.make_request(TRUSTED_IP, NEW_USER_VALUE)
+
+        # Should redirect to login
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.request['PATH_INFO'].startswith(self.login_url))
+
+        # Verify user was NOT created
+        self.assertFalse(User.objects.filter(username=NEW_USER_VALUE).exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER='HTTP_X_DIFFERENT_USER',
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_alternate_header_name(self):
+        # Request using the *correctly* configured header name
+        response = self.client.get(
+            self.protected_url,
+            REMOTE_ADDR=TRUSTED_IP,
+            HTTP_X_DIFFERENT_USER=USERNAME,
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.existing_user.pk)
+
+        # Clear session before next request
+        self.client.logout()
+
+        # Request using the *default/wrong* header name should fail
+        response_wrong1 = self.client.get(
+            self.protected_url,
+            REMOTE_ADDR=TRUSTED_IP,
+            HTTP_X_REMOTE_USER=USERNAME,
+            follow=True,
+        )
+        response_wrong2 = self.client.get(self.protected_url, follow=True)
+        self.assertEqual(response_wrong1.status_code, 200)
+        self.assertEqual(response_wrong2.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=['10.0.0.0/24', TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_success_trusted_ip_in_subnet(self):
+        """Client IP inside trusted CIDR subnet should authenticate."""
+        response = self.make_request('10.0.0.50', USERNAME)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(int(self.client.session.get('_auth_user_id', 0)), self.existing_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=['10.0.0.0/24', TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_failure_untrusted_ip_outside_subnet(self):
+        """Client IP outside trusted CIDR subnet should not authenticate."""
+        response = self.make_request('10.0.1.50', USERNAME)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.request['PATH_INFO'].startswith(self.login_url))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=['invalid_subnet_format', '10.0.0.0/24', TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_graceful_handling_of_invalid_subnet_format(self):
+        """Invalid subnet entries should be ignored without crashing."""
+        response = self.make_request('10.0.0.50', USERNAME)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(int(self.client.session.get('_auth_user_id', 0)), self.existing_user.pk)
+
+        self.client.logout()
+
+        response_exact = self.make_request(TRUSTED_IP, USERNAME)
+        self.assertEqual(response_exact.status_code, 200)
+        self.assertEqual(int(self.client.session.get('_auth_user_id', 0)), self.existing_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_external_next_is_not_followed(self):
+        """An external ``next`` URL must not be honored after proxy auth."""
+        response = self.client.get(
+            self.login_url,
+            {'next': 'https://evil.example.com/'},
+            REMOTE_ADDR=TRUSTED_IP,
+            **{PROXY_HEADER_KEY: USERNAME},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], self.protected_url)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_safe_local_next_is_followed(self):
+        """A same-host ``next`` URL is still honored after proxy auth."""
+        safe_next = f'http://testserver{self.protected_url}'
+        response = self.client.get(
+            self.login_url,
+            {'next': safe_next},
+            REMOTE_ADDR=TRUSTED_IP,
+            **{PROXY_HEADER_KEY: USERNAME},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], safe_next)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_session_user_is_replaced_on_mismatch(self):
+        """
+        The proxy is the authority: hitting the login page with a session that
+        belongs to a different user replaces it with the header user
+        """
+        other_user = User.objects.create_user(username='someone_else', password='password123')
+        self.client.force_login(other_user)
+
+        response = self.client.get(
+            self.login_url,
+            REMOTE_ADDR=TRUSTED_IP,
+            **{PROXY_HEADER_KEY: USERNAME},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.existing_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        AUTH_PROXY_CREATE_UNKNOWN_USER=True,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_existing_account_is_adopted_not_duplicated(self):
+        """
+        A header naming an existing user logs into that account, it does not
+        create a second one. Whoever controls the header controls every
+        account, including staff ones, which is why the header may only be
+        trusted from the proxy.
+        """
+        self.existing_user.is_staff = True
+        self.existing_user.save()
+        count_before = User.objects.count()
+
+        response = self.make_request(TRUSTED_IP, USERNAME)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), count_before)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.existing_user.pk)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_forwarded_for_does_not_grant_trust(self):
+        """
+        Only the peer address decides whether the header is trusted, a
+        client-supplied X-Forwarded-For must not be enough
+        """
+        response = self.client.get(
+            self.protected_url,
+            REMOTE_ADDR=UNTRUSTED_IP,
+            follow=True,
+            **{PROXY_HEADER_KEY: USERNAME, 'HTTP_X_FORWARDED_FOR': TRUSTED_IP},
+        )
+
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertContains(response, 'login', status_code=200)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_inactive_user_is_refused(self):
+        """
+        A deactivated account cannot log in through the proxy, even if the
+        identity provider still lets the person through
+        """
+        self.existing_user.is_active = False
+        self.existing_user.save()
+
+        response = self.client.get(
+            self.login_url,
+            REMOTE_ADDR=TRUSTED_IP,
+            follow=True,
+            **{PROXY_HEADER_KEY: USERNAME},
+        )
+
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(
+        AUTH_PROXY_TRUSTED_IPS=[TRUSTED_IP],
+        AUTH_PROXY_HEADER=PROXY_HEADER_KEY,
+        WGER_SETTINGS={'ALLOW_GUEST_USERS': False},
+    )
+    def test_deactivation_ends_proxy_session(self):
+        """
+        Deactivating an account ends a proxy session that already exists
+        """
+        self.client.get(self.login_url, REMOTE_ADDR=TRUSTED_IP, **{PROXY_HEADER_KEY: USERNAME})
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.existing_user.pk)
+
+        self.existing_user.is_active = False
+        self.existing_user.save()
+
+        response = self.client.get(self.protected_url)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)

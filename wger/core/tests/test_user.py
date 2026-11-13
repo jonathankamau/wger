@@ -11,20 +11,31 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
+# Standard Library
+import datetime
 
 # Django
 from django.contrib.auth.models import User
+from django.http import HttpRequest
 from django.urls import (
     reverse,
     reverse_lazy,
 )
+from django.utils import timezone
+from django.utils.formats import date_format
+
+# Third Party
+from allauth.account.models import EmailAddress
 
 # wger
+from wger.core.demo import create_temporary_user
 from wger.core.tests.base_testcase import (
     WgerAccessTestCase,
     WgerEditTestCase,
     WgerTestCase,
 )
+from wger.manager.models import WorkoutSession
+from wger.nutrition.models import NutritionPlan
 
 
 class StatusUserTestCase(WgerTestCase):
@@ -60,7 +71,7 @@ class StatusUserTestCase(WgerTestCase):
         user.save()
         self.assertFalse(user.is_active)
 
-        response = self.client.get(reverse('core:user:activate', kwargs={'pk': user.pk}))
+        response = self.client.post(reverse('core:user:activate', kwargs={'pk': user.pk}))
         user = User.objects.get(pk=2)
 
         self.assertIn(response.status_code, (302, 403))
@@ -102,7 +113,7 @@ class StatusUserTestCase(WgerTestCase):
         user.save()
         self.assertTrue(user.is_active)
 
-        response = self.client.get(reverse('core:user:deactivate', kwargs={'pk': user.pk}))
+        response = self.client.post(reverse('core:user:deactivate', kwargs={'pk': user.pk}))
         user = User.objects.get(pk=2)
 
         self.assertIn(response.status_code, (302, 403))
@@ -134,6 +145,99 @@ class StatusUserTestCase(WgerTestCase):
         Tests deactivating a user a logged out user
         """
         self.deactivate(fail=True)
+
+    def test_activate_get_does_not_mutate(self):
+        """
+        Regression test: GET must only render a confirmation form, since
+        Django's CSRF protection does not apply to GET requests. The state
+        change must require POST.
+        """
+        user = User.objects.get(pk=2)
+        user.is_active = False
+        user.save()
+
+        self.user_login(self.user_success[0])
+        response = self.client.get(reverse('core:user:activate', kwargs={'pk': user.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.get(pk=2).is_active)
+
+    def test_deactivate_get_does_not_mutate(self):
+        """
+        Regression test: GET must only render a confirmation form, since
+        Django's CSRF protection does not apply to GET requests. The state
+        change must require POST.
+        """
+        user = User.objects.get(pk=2)
+        user.is_active = True
+        user.save()
+
+        self.user_login(self.user_success[0])
+        response = self.client.get(reverse('core:user:deactivate', kwargs={'pk': user.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.get(pk=2).is_active)
+
+
+class TrainerCannotDeactivatePrivilegedUsersTestCase(WgerTestCase):
+    """
+    A user with only ``gym.gym_trainer`` must not be able to (de)activate other
+    privileged accounts (managers, general managers, fellow trainers), that
+    would let a low-privileged role lock out the very administrators that
+    supervise them.
+    """
+
+    TRAINER = 'trainer1'  # gym 1, gym_trainer only
+    MANAGER_PK = 9  # manager1, gym 1, gym_manager
+    GENERAL_MANAGER_PK = 12  # general_manager1, gym 1
+    FELLOW_TRAINER_PK = 5  # trainer2, gym 1
+    REGULAR_MEMBER_PK = 14  # member1, gym 1
+
+    def _set_active(self, pk, active):
+        user = User.objects.get(pk=pk)
+        user.is_active = active
+        user.save()
+
+    def test_trainer_cannot_deactivate_manager(self):
+        self.user_login(self.TRAINER)
+        response = self.client.get(reverse('core:user:deactivate', kwargs={'pk': self.MANAGER_PK}))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(User.objects.get(pk=self.MANAGER_PK).is_active)
+
+    def test_trainer_cannot_activate_manager(self):
+        self._set_active(self.MANAGER_PK, False)
+        self.user_login(self.TRAINER)
+        response = self.client.get(reverse('core:user:activate', kwargs={'pk': self.MANAGER_PK}))
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.get(pk=self.MANAGER_PK).is_active)
+
+    def test_trainer_cannot_deactivate_general_manager(self):
+        self.user_login(self.TRAINER)
+        response = self.client.get(
+            reverse('core:user:deactivate', kwargs={'pk': self.GENERAL_MANAGER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(User.objects.get(pk=self.GENERAL_MANAGER_PK).is_active)
+
+    def test_trainer_cannot_deactivate_fellow_trainer(self):
+        self.user_login(self.TRAINER)
+        response = self.client.get(
+            reverse('core:user:deactivate', kwargs={'pk': self.FELLOW_TRAINER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(User.objects.get(pk=self.FELLOW_TRAINER_PK).is_active)
+
+    def test_trainer_can_still_deactivate_regular_member(self):
+        """
+        Sanity check: the legitimate flow (trainer disables a misbehaving
+        member of their own gym) must keep working.
+        """
+        self.user_login(self.TRAINER)
+        response = self.client.post(
+            reverse('core:user:deactivate', kwargs={'pk': self.REGULAR_MEMBER_PK})
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(User.objects.get(pk=self.REGULAR_MEMBER_PK).is_active)
 
 
 class EditUserTestCase(WgerEditTestCase):
@@ -259,3 +363,128 @@ class UserDetailPageTestCase2(WgerAccessTestCase):
         'member1',
         'member2',
     )
+
+
+class UserDetailPageSessionTableTestCase(WgerTestCase):
+    """
+    Test the workout session table on the user detail page
+    """
+
+    def test_session_date_and_times_are_rendered(self):
+        """The session table shows the day and the start/end times of a session"""
+
+        session = WorkoutSession.objects.get(pk='bbbbbbbb-bbbb-bbbb-bbbb-000000000005')
+        start = timezone.localtime(session.datetime_start)
+        end = timezone.localtime(session.datetime_end)
+
+        self.user_login('trainer1')
+        response = self.client.get(reverse('core:user:overview', kwargs={'pk': 2}))
+
+        self.assertContains(response, date_format(start))
+        self.assertContains(response, f'{start:%H:%M} - {end:%H:%M}')
+
+    def test_session_without_end_shows_no_times(self):
+        """An open session (no end) falls back to the placeholder"""
+
+        WorkoutSession.objects.filter(pk='bbbbbbbb-bbbb-bbbb-bbbb-000000000005').update(
+            datetime_end=None
+        )
+
+        self.user_login('trainer1')
+        response = self.client.get(reverse('core:user:overview', kwargs={'pk': 2}))
+
+        self.assertContains(response, '-/-')
+
+
+class UserDetailPageMacroUnitTestCase(WgerTestCase):
+    """
+    Tests that nutrition plan macros on the user detail page are labeled in grams
+    """
+
+    def test_macros_labeled_in_grams_for_imperial_user(self):
+        """
+        Tests that the macro labels stay 'g' for users with imperial units
+        """
+        member = User.objects.get(pk=2)
+        member.userprofile.weight_unit = 'lb'
+        member.userprofile.save()
+        NutritionPlan.objects.create(user=member)
+
+        self.user_login('trainer1')
+        response = self.client.get(reverse('core:user:overview', kwargs={'pk': member.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'oz')
+
+
+class UserTrustworthinessTestCase(WgerTestCase):
+    request = HttpRequest()
+
+    def test_temporary_user_no_permissions(self):
+        """
+        Tests that temporary users do not pass the "is trustworthy" check and do not have
+        any permissions.
+        """
+
+        # Get a temporary user
+        user = create_temporary_user(self.request)
+
+        # User does not pass trustworthiness check
+        self.assertFalse(user.userprofile.is_trustworthy)
+
+    def test_is_trustworthy_new(self):
+        """
+        Tests that new accounts are not considered trustworthy
+        """
+
+        # Get a temporary user
+        user = create_temporary_user(self.request)
+        user.userprofile.is_temporary = False
+        EmailAddress.objects.create(user=user, email=user.email, verified=True)
+        user.date_joined = datetime.datetime.now()
+
+        # User does not pass trustworthiness check
+        self.assertFalse(user.userprofile.is_trustworthy)
+
+    def test_is_trustworthy_old_no_email(self):
+        """
+        Tests that users without verified email are not considered trustworthy
+        """
+
+        # Get a temporary user
+        user = create_temporary_user(self.request)
+        user.userprofile.is_temporary = False
+        EmailAddress.objects.create(user=user, email=user.email, verified=False)
+        user.date_joined = datetime.datetime.now() - datetime.timedelta(days=30)
+
+        # User does not pass trustworthiness check
+        self.assertFalse(user.userprofile.is_trustworthy)
+
+    def test_is_trustworthy_old_email(self):
+        """
+        Tests that old accounts with verified email are considered trustworthy
+        """
+
+        # Get a temporary user
+        user = create_temporary_user(self.request)
+        user.userprofile.is_temporary = False
+        EmailAddress.objects.create(user=user, email=user.email, verified=True)
+        user.date_joined = datetime.datetime.now() - datetime.timedelta(days=30)
+
+        # User pass trustworthiness check
+        self.assertTrue(user.userprofile.is_trustworthy)
+
+    def test_is_trustworthy_admin(self):
+        """
+        Tests that superusers are always trustworthy even if email is unverified
+        """
+
+        # Get a temporary user
+        user = create_temporary_user(self.request)
+        user.is_superuser = True
+        user.userprofile.is_temporary = False
+        EmailAddress.objects.create(user=user, email=user.email, verified=False)
+        user.date_joined = datetime.datetime.now()
+
+        # User pass trustworthiness check
+        self.assertTrue(user.userprofile.is_trustworthy)

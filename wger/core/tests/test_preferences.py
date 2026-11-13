@@ -20,14 +20,80 @@ import logging
 # Django
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 
 # wger
+from wger.core.forms import timezone_choices
 from wger.core.tests.base_testcase import WgerTestCase
+from wger.measurements.models import Measurement
 from wger.utils.constants import TWOPLACES
-from wger.weight.models import WeightEntry
 
 
 logger = logging.getLogger(__name__)
+
+
+class TimezonePreferenceTestCase(WgerTestCase):
+    """
+    Test setting the timezone through the preferences form
+    """
+
+    FORM_DATA = {
+        'first_name': '',
+        'last_name': '',
+        'notification_language': 2,
+        'weight_unit': 'kg',
+        'birthdate': '02/25/1987',
+        'height': 180,
+    }
+
+    def post_preferences(self, time_zone):
+        self.user_login('test')
+        return self.client.post(
+            reverse('core:user:preferences'),
+            {**self.FORM_DATA, 'time_zone': time_zone},
+        )
+
+    def test_setting_the_zone(self):
+        response = self.post_preferences('Pacific/Auckland')
+
+        self.assertEqual(response.status_code, 302)
+        profile = User.objects.get(username='test').userprofile
+        self.assertEqual(profile.time_zone, 'Pacific/Auckland')
+
+    def test_clearing_the_zone(self):
+        profile = User.objects.get(username='test').userprofile
+        profile.time_zone = 'Pacific/Auckland'
+        profile.save()
+
+        response = self.post_preferences('')
+
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.time_zone, '')
+
+    def test_a_zone_outside_the_dropdown_survives_the_form(self):
+        """An API-set zone the dropdown does not offer is kept, not silently cleared"""
+
+        profile = User.objects.get(username='test').userprofile
+        profile.time_zone = 'Etc/GMT+5'
+        profile.save()
+
+        self.user_login('test')
+        response = self.client.get(reverse('core:user:preferences'))
+        self.assertContains(response, 'Etc/GMT+5')
+
+        response = self.post_preferences('Etc/GMT+5')
+
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.time_zone, 'Etc/GMT+5')
+
+    def test_the_dropdown_offers_grouped_iana_names(self):
+        choices = dict(timezone_choices())
+
+        self.assertIn(('Europe/Berlin', 'Berlin'), choices['Europe'])
+        self.assertNotIn('Etc', choices)
+        self.assertEqual(choices['UTC'], 'UTC')
 
 
 class PreferencesTestCase(WgerTestCase):
@@ -35,67 +101,131 @@ class PreferencesTestCase(WgerTestCase):
     Tests the preferences page
     """
 
+    def setUp(self):
+        super().setUp()
+        self.form_data = {
+            'first_name': '',
+            'last_name': '',
+            'notification_language': 2,
+            'weight_unit': 'kg',
+            'birthdate': '02/25/1987',
+            'height': 180,
+        }
+
     def test_preferences(self):
         """
-        Helper function to test the preferences page
+        Submitting the preferences form persists the UserProfile settings as
+        well as the first/last name on the related User.
         """
 
         self.user_login('test')
         response = self.client.get(reverse('core:user:preferences'))
-
-        profile = User.objects.get(username='test').userprofile
-        self.assertFalse(profile.show_comments)
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed('preferences.html')
 
         # Change some preferences
         response = self.client.post(
-            reverse('core:user:preferences'), {
-                'show_comments': True,
-                'show_english_ingredients': True,
-                'email': 'my-new-email@example.com',
-                'workout_reminder_active': True,
-                'workout_reminder': '30',
-                'workout_duration': 12,
-                'notification_language': 2,
-                'num_days_weight_reminder': 10,
-                'weight_unit': 'kg',
-                'birthdate': '02/25/1987',
-            }
+            reverse('core:user:preferences'),
+            {**self.form_data, 'first_name': 'Test', 'last_name': 'User'},
         )
 
         self.assertEqual(response.status_code, 302)
         response = self.client.get(reverse('core:user:preferences'))
-        profile = User.objects.get(username='test').userprofile
-        self.assertTrue(profile.show_english_ingredients)
-        self.assertTrue(profile.workout_reminder_active)
-        self.assertEqual(profile.workout_reminder, 30)
-        self.assertEqual(profile.workout_duration, 12)
-        self.assertEqual(User.objects.get(username='test').email, 'my-new-email@example.com')
+        user = User.objects.get(username='test')
+        self.assertEqual(user.first_name, 'Test')
+        self.assertEqual(user.last_name, 'User')
 
         # Change some preferences
         response = self.client.post(
-            reverse('core:user:preferences'), {
-                'show_comments': False,
-                'show_english_ingredients': True,
-                'email': '',
-                'workout_reminder_active': True,
-                'workout_reminder': 22,
-                'workout_duration': 10,
-                'notification_language': 2,
-                'num_days_weight_reminder': 10,
+            reverse('core:user:preferences'),
+            {
+                **self.form_data,
                 'weight_unit': 'lb',
-                'birthdate': '02/25/1987',
-            }
+                'height': 170,
+            },
         )
 
         self.assertEqual(response.status_code, 302)
         response = self.client.get(reverse('core:user:preferences'))
         profile = response.context['user'].userprofile
-        self.assertFalse(profile.show_comments)
-        self.assertTrue(profile.show_english_ingredients)
-        self.assertEqual(response.context['user'].email, '')
+        self.assertEqual(profile.weight_unit, 'lb')
+        self.assertEqual(profile.height, 170)
+
+    def test_height_is_optional(self):
+        """The preferences form saves without a height."""
+        self.user_login('test')
+        response = self.client.post(
+            reverse('core:user:preferences'),
+            {**self.form_data, 'height': ''},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNone(User.objects.get(username='test').userprofile.height)
+
+    def test_change_password_link_for_password_user(self):
+        """Accounts with a usable password see the change-password link."""
+        self.user_login('test')
+        response = self.client.get(reverse('core:user:preferences'))
+        self.assertContains(response, reverse('core:user:change-password'))
+        self.assertNotContains(response, reverse('account_set_password'))
+
+    def test_set_password_link_for_passwordless_user(self):
+        """Accounts without a usable password see a set-password link instead."""
+        user = User.objects.create(username='socialprefs', email='socialprefs@example.com')
+        user.set_unusable_password()
+        user.save()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('core:user:preferences'))
+        self.assertContains(response, reverse('account_set_password'))
+        self.assertNotContains(response, reverse('core:user:change-password'))
+
+    def test_email_is_not_editable_from_preferences(self):
+        """
+        Email management was moved to allauth's EmailView: the preferences
+        page no longer renders an email field and links to it instead.
+        """
+        self.user_login('test')
+        response = self.client.get(reverse('core:user:preferences'))
+        self.assertNotContains(response, 'name="email"')
+        self.assertContains(response, reverse('account_email'))
+
+    def test_account_email_page_renders(self):
+        """The allauth email page uses wger's template and is reachable."""
+        self.user_login('test')
+        response = self.client.get(reverse('account_email'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'account/email_change.html')
+
+    def test_preferences_links_to_2fa(self):
+        """The preferences page links to allauth's MFA management page."""
+
+        self.user_login('test')
+        response = self.client.get(reverse('core:user:preferences'))
+        self.assertContains(response, reverse('mfa_index'))
+
+    def test_mfa_page_renders_inside_wger_chrome(self):
+        """
+        allauth's MFA pages render through wger's base template (the
+        allauth/layouts/base.html override), not allauth's bare layout.
+        """
+
+        self.user_login('test')
+        response = self.client.get(reverse('mfa_index'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'mfa/index.html')
+        self.assertTemplateUsed(response, 'base.html')
+
+    def test_mfa_webauthn_page_renders(self):
+        """
+        The WebAuthn authenticator list uses ``{% load humanize %}``, so
+        django.contrib.humanize must be in INSTALLED_APPS.
+        """
+
+        self.user_login('test')
+        response = self.client.get(reverse('mfa_list_webauthn'))
+        self.assertEqual(response.status_code, 200)
 
     def test_address(self):
         """
@@ -105,24 +235,62 @@ class PreferencesTestCase(WgerTestCase):
         # Member2 has a contract
         user = User.objects.get(username='member2')
         self.assertEqual(
-            user.userprofile.address, {
+            user.userprofile.address,
+            {
                 'phone': '01234-567890',
                 'zip_code': '00000',
                 'street': 'Gassenstr. 14',
                 'city': 'The City',
-            }
+            },
         )
 
         # Test has no contracts
         user = User.objects.get(username='test')
         self.assertEqual(
-            user.userprofile.address, {
+            user.userprofile.address,
+            {
                 'phone': '',
                 'zip_code': '',
                 'street': '',
                 'city': '',
-            }
+            },
         )
+
+    def test_invalid_field_shows_error_and_saves_nothing(self):
+        """
+        A validation error on the preferences form shows a banner and persists
+        nothing — neither the UserProfile fields nor the first/last name.
+        """
+        self.user_login('test')
+
+        user_before = User.objects.get(username='test')
+        snapshot = {
+            'first_name': user_before.first_name,
+            'last_name': user_before.last_name,
+            'height': user_before.userprofile.height,
+            'birthdate': user_before.userprofile.birthdate,
+        }
+
+        response = self.client.post(
+            reverse('core:user:preferences'),
+            {
+                **self.form_data,
+                'first_name': 'Brand',
+                'last_name': 'New',
+                'birthdate': '01/01/2000',
+                'height': 999,  # above the valid 140-230 range
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'alert-danger')
+        self.assertContains(response, 'Please correct the errors below.')
+
+        user_after = User.objects.get(username='test')
+        self.assertEqual(user_after.first_name, snapshot['first_name'])
+        self.assertEqual(user_after.last_name, snapshot['last_name'])
+        self.assertEqual(user_after.userprofile.height, snapshot['height'])
+        self.assertEqual(user_after.userprofile.birthdate, snapshot['birthdate'])
 
 
 class UserBodyweightTestCase(WgerTestCase):
@@ -135,74 +303,55 @@ class UserBodyweightTestCase(WgerTestCase):
         Tests that a new weight entry is created
         """
         user = User.objects.get(pk=2)
-        count_before = WeightEntry.objects.filter(user=user).count()
+        count_before = Measurement.body_weight_for(user).count()
 
         entry = user.userprofile.user_bodyweight(80)
-        count_after = WeightEntry.objects.filter(user=user).count()
+        count_after = Measurement.body_weight_for(user).count()
         self.assertEqual(count_before, count_after - 1)
-        self.assertEqual(entry.date, datetime.date.today())
+        self.assertEqual(entry.date.date(), timezone.now().date())
 
     def test_bodyweight_new_2(self):
         """
         Tests that a new weight entry is created
         """
         user = User.objects.get(pk=2)
-        count_before = WeightEntry.objects.filter(user=user).count()
-        last_entry = WeightEntry.objects.filter(user=user).latest()
-        last_entry.date = datetime.date.today() - datetime.timedelta(weeks=1)
+        count_before = Measurement.body_weight_for(user).count()
+        last_entry = Measurement.body_weight_for(user).latest('date')
+        last_entry.date = timezone.now() - datetime.timedelta(weeks=1)
         last_entry.save()
 
         entry = user.userprofile.user_bodyweight(80)
-        count_after = WeightEntry.objects.filter(user=user).count()
+        count_after = Measurement.body_weight_for(user).count()
         self.assertEqual(count_before, count_after - 1)
-        self.assertEqual(entry.date, datetime.date.today())
+        self.assertEqual(entry.date.date(), timezone.now().date())
+
+    def test_bodyweight_new_3(self):
+        """
+        Tests that a new weight entry is created even if others exist today
+        """
+        user = User.objects.get(pk=2)
+        count_before = Measurement.body_weight_for(user).count()
+        last_entry = Measurement.body_weight_for(user).latest('date')
+        last_entry.date = timezone.now() - datetime.timedelta(hours=1)
+        last_entry.save()
+
+        entry = user.userprofile.user_bodyweight(80)
+        count_after = Measurement.body_weight_for(user).count()
+        self.assertEqual(count_before, count_after - 1)
+        self.assertEqual(entry.date.date(), timezone.now().date())
 
     def test_bodyweight_no_entries(self):
         """
         Tests that a new weight entry is created if there are no weight entries
         """
         user = User.objects.get(pk=2)
-        WeightEntry.objects.filter(user=user).delete()
+        Measurement.body_weight_for(user).delete()
 
-        count_before = WeightEntry.objects.filter(user=user).count()
+        count_before = Measurement.body_weight_for(user).count()
         entry = user.userprofile.user_bodyweight(80)
-        count_after = WeightEntry.objects.filter(user=user).count()
+        count_after = Measurement.body_weight_for(user).count()
         self.assertEqual(count_before, count_after - 1)
-        self.assertEqual(entry.date, datetime.date.today())
-
-    def test_bodyweight_edit(self):
-        """
-        Tests that the last weight entry is edited
-        """
-        user = User.objects.get(pk=2)
-        last_entry = WeightEntry.objects.filter(user=user).latest()
-        last_entry.date = datetime.date.today() - datetime.timedelta(days=3)
-        last_entry.save()
-
-        count_before = WeightEntry.objects.filter(user=user).count()
-        entry = user.userprofile.user_bodyweight(100)
-        count_after = WeightEntry.objects.filter(user=user).count()
-        self.assertEqual(count_before, count_after)
-        self.assertEqual(entry.pk, last_entry.pk)
-        self.assertEqual(entry.date, last_entry.date)
-        self.assertEqual(entry.weight, 100)
-
-    def test_bodyweight_edit_2(self):
-        """
-        Tests that the last weight entry is edited
-        """
-        user = User.objects.get(pk=2)
-        last_entry = WeightEntry.objects.filter(user=user).latest()
-        last_entry.date = datetime.date.today()
-        last_entry.save()
-
-        count_before = WeightEntry.objects.filter(user=user).count()
-        entry = user.userprofile.user_bodyweight(100)
-        count_after = WeightEntry.objects.filter(user=user).count()
-        self.assertEqual(count_before, count_after)
-        self.assertEqual(entry.pk, last_entry.pk)
-        self.assertEqual(entry.date, last_entry.date)
-        self.assertEqual(entry.weight, 100)
+        self.assertEqual(entry.date.date(), timezone.now().date())
 
 
 class PreferencesCalculationsTestCase(WgerTestCase):
@@ -216,13 +365,9 @@ class PreferencesCalculationsTestCase(WgerTestCase):
         """
         self.user_login('test')
         user = User.objects.get(pk=2)
-        entry = WeightEntry()
-        entry.date = datetime.datetime.today()
-        entry.user = user
-        entry.weight = 100
-        entry.save()
+        entry = user.userprofile.user_bodyweight(100)
         self.assertEqual(user.userprofile.weight, 100)
-        entry.weight = 150
+        entry.value = 150
         entry.save()
         self.assertEqual(user.userprofile.weight, 150)
 
@@ -232,7 +377,7 @@ class PreferencesCalculationsTestCase(WgerTestCase):
         """
         self.user_login('test')
         user = User.objects.get(pk=2)
-        WeightEntry.objects.filter(user=user).delete()
+        Measurement.body_weight_for(user).delete()
         self.assertEqual(user.userprofile.weight, 0)
 
     def test_bmi(self):
@@ -246,8 +391,8 @@ class PreferencesCalculationsTestCase(WgerTestCase):
         bmi = user.userprofile.calculate_bmi()
         self.assertEqual(
             bmi,
-            user.userprofile.weight.quantize(TWOPLACES) /
-            decimal.Decimal(1.80 * 1.80).quantize(TWOPLACES)
+            user.userprofile.weight.quantize(TWOPLACES)
+            / decimal.Decimal(1.80 * 1.80).quantize(TWOPLACES),
         )
 
     def test_basal_metabolic_rate(self):
@@ -257,13 +402,17 @@ class PreferencesCalculationsTestCase(WgerTestCase):
 
         self.user_login('test')
 
+        # Test User (pk=2)
+        # 180 cm, 20 years
+        # Last weight entry is 83 kg
+
         # Male
         user = User.objects.get(pk=2)
         bmr = user.userprofile.calculate_basal_metabolic_rate()
         self.assertEqual(bmr, 1860)
 
         # Female
-        user.userprofile.gender = "2"
+        user.userprofile.gender = '2'
         bmr = user.userprofile.calculate_basal_metabolic_rate()
         self.assertEqual(bmr, 1694)
 
@@ -281,29 +430,25 @@ class PreferencesCalculationsTestCase(WgerTestCase):
         user = User.objects.get(pk=2)
 
         self.assertEqual(
-            user.userprofile.calculate_activities(),
-            decimal.Decimal(1.57).quantize(TWOPLACES)
+            user.userprofile.calculate_activities(), decimal.Decimal(1.57).quantize(TWOPLACES)
         )
 
         # Gender has no influence
-        user.userprofile.gender = "2"
+        user.userprofile.gender = '2'
         self.assertEqual(
-            user.userprofile.calculate_activities(),
-            decimal.Decimal(1.57).quantize(TWOPLACES)
+            user.userprofile.calculate_activities(), decimal.Decimal(1.57).quantize(TWOPLACES)
         )
 
         # Change some of the parameters
         user.userprofile.work_intensity = '3'
         self.assertEqual(
-            user.userprofile.calculate_activities(),
-            decimal.Decimal(1.80).quantize(TWOPLACES)
+            user.userprofile.calculate_activities(), decimal.Decimal(1.80).quantize(TWOPLACES)
         )
 
         user.userprofile.work_intensity = '2'
         user.userprofile.sport_intensity = '2'
         self.assertEqual(
-            user.userprofile.calculate_activities(),
-            decimal.Decimal(1.52).quantize(TWOPLACES)
+            user.userprofile.calculate_activities(), decimal.Decimal(1.52).quantize(TWOPLACES)
         )
 
 

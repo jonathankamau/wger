@@ -16,27 +16,23 @@
 
 # Django
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-
-# wger
-from wger.core.models import Language
-from wger.utils.cache import delete_template_fragment_cache
 
 
 class ExerciseCategory(models.Model):
     """
     Model for an exercise category
     """
+
     name = models.CharField(
         max_length=100,
-        verbose_name=_('Name'),
+        verbose_name='Name',
     )
 
     # Metaclass to set some other properties
     class Meta:
-        verbose_name_plural = _("Exercise Categories")
+        verbose_name_plural = 'Exercise Categories'
         ordering = [
-            "name",
+            'name',
         ]
 
     def __str__(self):
@@ -50,23 +46,3 @@ class ExerciseCategory(models.Model):
         Category has no owner information
         """
         return False
-
-    def save(self, *args, **kwargs):
-        """
-        Reset all cached infos
-        """
-
-        super(ExerciseCategory, self).save(*args, **kwargs)
-
-        # Cached template fragments
-        for language in Language.objects.all():
-            delete_template_fragment_cache('exercise-overview', language.id)
-
-    def delete(self, *args, **kwargs):
-        """
-        Reset all cached infos
-        """
-        for language in Language.objects.all():
-            delete_template_fragment_cache('exercise-overview', language.id)
-
-        super(ExerciseCategory, self).delete(*args, **kwargs)

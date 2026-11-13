@@ -1,41 +1,25 @@
 {
   "name": "wger",
-  "version": "2.1.dev1",
+  "version": "2.6-alpha1",
   "description": "Self hosted FLOSS fitness/workout and weight tracker",
-  "directories": {
-    "doc": "docs"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/wger-project/wger/wger.git"
-  },
-  "author": "",
+  "repository": "github:wger-project/wger",
+  "author": "wger team <hello@wger.de>",
   "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/wger-project/wger/issues"
   },
   "homepage": "https://github.com/wger-project/wger",
   "dependencies": {
-    "Sortable": "RubaXa/Sortable#1.14.0",
-    "bootstrap": "4.6.0",
-    "components-font-awesome": "5.9.0",
-    "d3": "^7.1.1",
-    "datatables": "^1.10.18",
-    "devbridge-autocomplete": "^1.4.11",
-    "jquery": "^3.6.0",
-    "masonry-layout": "^4.2.2",
-    "metrics-graphics": "^2.15.6",
-    "popper.js": "^1.16.1",
-    "shariff": "^3.2.1",
-    "tinymce": "^5.10.0",
-    "yarn": "^1.22.17"
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "5.3.8",
+    "datatables.net-bs5": "^3.1.1",
+    "htmx.org": "^4.0.0"
+  },
+  "devDependencies": {
+    "@wger-project/react-components": "26.11.7"
   },
   "scripts": {
-    "build:css:sass": "sass wger/core/static/scss/main.scss:wger/core/static/yarn/bootstrap-compiled.css",
-    "build:angular": "cd angular && ng build --configuration production --output-path ../wger/core/static/angular --output-hashing none --localize",
-    "build:angular:i18n": "cd angular && ng extract-i18n --output-path src/locale/"
+    "build:css:sass": "sass wger/core/static/scss/main.scss wger/core/static/bootstrap-compiled.css"
   },
-  "engines": {
-    "yarn": ">= 1.0.0"
-  }
+  "packageManager": "npm@10.5.0"
 }

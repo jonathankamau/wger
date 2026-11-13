@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load i18n static wger_extras django_bootstrap_breadcrumbs %}
+
+{% block title %}{{ view_language }}{% endblock %}
+
+
+
+{% block breadcrumbs %}
+    {{ block.super }}
+
+    {% breadcrumb "Languages" "core:language:overview" %}
+    {% breadcrumb view_language "core:language:view" view_language.pk %}
+{% endblock %}
+
+
+
+{% block content %}
+    <table class="table">
+        <thead>
+        <tr>
+            <th>{% translate "Language short name" %}</th>
+            <th>{% translate "Language full name" %}</th>
+            <th>{% translate "Language full name in English" %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>{{ view_language.short_name }}</td>
+            <td>{{ view_language.full_name }}</td>
+            <td>{{ view_language.full_name_en }}</td>
+        </tr>
+        </tbody>
+    </table>
+{% endblock %}
+
+
+
+{#          #}
+{# Side bar #}
+{#          #}
+{% block sidebar %}
+    <img src="{% static view_language.static_path %}"
+         width="200"
+         alt="{% translate view_language.full_name %}"
+         title="{% translate view_language.full_name %}"
+         style="border: 1px black solid">
+{% endblock %}
+
+
+
+{#         #}
+{# Options #}
+{#         #}
+{% block options %}
+    <div class="btn-group">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary btn-sm dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    aria-haspopup="true" aria-expanded="false">
+                <span class="{% fa_class 'cog' %}"></span>
+                {% translate "Options" %}
+            </button>
+            <div class="dropdown-menu">
+                {% translate 'Edit' as text %}
+                {% url 'core:language:edit' view_language.id as url %}
+                {% modal_link url=url text=text css_class="dropdown-item" %}
+
+                <div role="separator" class="dropdown-divider"></div>
+
+                {% translate 'Delete' as text %}
+                {% url 'core:language:delete' view_language.id as url %}
+                {% modal_link url=url text=text css_class="dropdown-item" %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

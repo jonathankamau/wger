@@ -16,12 +16,14 @@
 
 # Standard Library
 import logging
+import re
+from urllib.parse import quote
 
 # Django
+from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
-    authenticate,
     login as django_login,
     logout as django_logout,
 )
@@ -31,12 +33,7 @@ from django.contrib.auth.mixins import (
     PermissionRequiredMixin,
 )
 from django.contrib.auth.models import User
-from django.contrib.auth.views import (
-    LoginView,
-    PasswordChangeView,
-    PasswordResetConfirmView,
-    PasswordResetView,
-)
+from django.contrib.auth.views import PasswordChangeView
 from django.http import (
     HttpResponseForbidden,
     HttpResponseNotFound,
@@ -44,6 +41,7 @@ from django.http import (
 )
 from django.shortcuts import (
     get_object_or_404,
+    redirect,
     render,
 )
 from django.template.context_processors import csrf
@@ -51,19 +49,26 @@ from django.urls import (
     reverse,
     reverse_lazy,
 )
-from django.utils import translation
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import (
     gettext as _,
     gettext_lazy,
 )
+from django.views import generic
+from django.views.decorators.http import require_POST
 from django.views.generic import (
     DetailView,
     ListView,
-    RedirectView,
     UpdateView,
 )
 
 # Third Party
+from allauth.account.mixins import RedirectAuthenticatedUserMixin
+from allauth.account.views import (
+    LoginView as AllauthLoginView,
+    SignupView as AllauthSignupView,
+)
+from allauth.mfa.utils import is_mfa_enabled
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (
     ButtonHolder,
@@ -75,49 +80,66 @@ from crispy_forms.layout import (
 from rest_framework.authtoken.models import Token
 
 # wger
-from wger.config.models import GymConfig
 from wger.core.forms import (
     PasswordConfirmationForm,
-    RegistrationForm,
-    RegistrationFormNoCaptcha,
-    UserLoginForm,
+    UsernameConfirmationForm,
     UserPersonalInformationForm,
     UserPreferencesForm,
 )
-from wger.core.models import Language
+from wger.gym.helpers import (
+    holds_gym_permission,
+    holds_permissions_beyond,
+    is_same_gym,
+    may_change_activation,
+    outranks,
+)
 from wger.gym.models import (
     AdminUserNote,
     Contract,
-    GymUserConfig,
 )
 from wger.manager.models import (
-    Workout,
+    Routine,
     WorkoutLog,
     WorkoutSession,
 )
+from wger.measurements.models import Measurement
 from wger.nutrition.models import NutritionPlan
-from wger.utils.api_token import create_token
+from wger.utils.api_token import (
+    blacklist_jwt_refresh_tokens,
+    count_active_jwt_refresh_tokens,
+    create_token,
+)
 from wger.utils.generic_views import (
     WgerFormMixin,
     WgerMultiplePermissionRequiredMixin,
 )
-from wger.weight.models import WeightEntry
+from wger.utils.headless_long_lived import (
+    list_long_lived_sessions,
+    mint_long_lived_refresh_token,
+    revoke_all_long_lived_sessions,
+    revoke_long_lived_session,
+)
+from wger.utils.oidc_auth import is_provider_configured
 
 
 logger = logging.getLogger(__name__)
 
 
-def login(request):
-    """
-    Small wrapper around the django login view
-    """
+# Session key used to carry a freshly minted refresh token across the
+# post-redirect step on the api-key page. The token is shown once and then
+# immediately popped.
+_NEW_REFRESH_TOKEN_SESSION_KEY = '_wger_new_long_lived_refresh_token'
 
-    next_url = "?next=" + request.GET.get('next') if request.GET.get('next') else ''
 
-    form = UserLoginForm
-    form.helper.form_action = reverse('core:user:login') + next_url
+# Custom URL scheme registered by the flutter app in Info.plist, AndroidManifest.xml, etc.
+_APP_AUTH_SCHEME = 'wger'
+_APP_AUTH_HOST = 'app-auth'
 
-    return LoginView.as_view(template_name='user/login.html', authentication_form=form)
+# Hard cap on the echoed ?state= value. The app generates 256 bits of
+# entropy (~43 base64url chars); anything wildly larger is junk we refuse
+# to reflect into the redirect URL.
+_APP_AUTH_STATE_MAX_LEN = 128
+_APP_AUTH_STATE_ALLOWED = re.compile(r'\A[A-Za-z0-9_\-]+\Z')
 
 
 @login_required()
@@ -134,34 +156,37 @@ def delete(request, user_pk=None):
 
         # Forbidden if the user has not enough rights, doesn't belong to the
         # gym or is an admin as well. General admins can delete all users.
-        if not request.user.has_perm('gym.manage_gyms') \
-                and (not request.user.has_perm('gym.manage_gym')
-                     or request.user.userprofile.gym_id != user.userprofile.gym_id
-                     or user.has_perm('gym.manage_gym')
-                     or user.has_perm('gym.gym_trainer')
-                     or user.has_perm('gym.manage_gyms')):
+        if not request.user.has_perm('gym.manage_gyms') and (
+            not request.user.has_perm('gym.manage_gym')
+            or not is_same_gym(request.user, user)
+            or holds_gym_permission(user, 'manage_gym', 'gym_trainer', 'manage_gyms')
+        ):
             return HttpResponseForbidden()
     else:
         user = request.user
 
-    form = PasswordConfirmationForm(user=request.user)
+    # Accounts without a usable password (e.g. social logins) can't confirm with
+    # a password, so they confirm by typing the username instead.
+    data = request.POST or None
+    if request.user.has_usable_password():
+        form = PasswordConfirmationForm(user=request.user, data=data)
+    else:
+        form = UsernameConfirmationForm(
+            user=request.user, confirm_username=user.username, data=data
+        )
 
-    if request.method == 'POST':
-        form = PasswordConfirmationForm(data=request.POST, user=request.user)
-        if form.is_valid():
+    if request.method == 'POST' and form.is_valid():
+        user.delete()
+        messages.success(request, _('Account "{0}" was successfully deleted').format(user.username))
 
-            user.delete()
-            messages.success(
-                request,
-                _('Account "{0}" was successfully deleted').format(user.username)
-            )
-
-            if not user_pk:
-                django_logout(request)
-                return HttpResponseRedirect(reverse('software:features'))
-            else:
-                gym_pk = request.user.userprofile.gym_id
-                return HttpResponseRedirect(reverse('gym:gym:user-list', kwargs={'pk': gym_pk}))
+        if not user_pk:
+            django_logout(request)
+            return HttpResponseRedirect(reverse('software:features'))
+        else:
+            gym_pk = request.user.userprofile.gym_id
+            if gym_pk is None:
+                return HttpResponseRedirect(reverse('core:dashboard'))
+            return HttpResponseRedirect(reverse('gym:gym:user-list', kwargs={'pk': gym_pk}))
     form.helper.form_action = request.path
     context = {'form': form, 'user_delete': user}
 
@@ -169,38 +194,51 @@ def delete(request, user_pk=None):
 
 
 @login_required()
+@require_POST
 def trainer_login(request, user_pk):
     """
-    Allows a trainer to 'log in' as the selected user
+    Allows a trainer to 'log in' as the selected user.
+
+    POST-only: rebinding the session is a state change and must go through
+    Django's CSRF protection, which only applies to unsafe HTTP methods.
     """
     user = get_object_or_404(User, pk=user_pk)
     orig_user_pk = request.user.pk
+    trainer_identity_pk = request.session.get('trainer.identity')
 
-    # No changing if identity is not set
-    if not request.user.has_perm('gym.gym_trainer') \
-            and not request.session.get('trainer.identity'):
-        return HttpResponseForbidden()
+    # If the request user is not a trainer themselves they may only act within
+    # an established trainer session and only ever to switch back to that
+    # original trainer.
+    if not request.user.has_perm('gym.gym_trainer'):
+        if not trainer_identity_pk:
+            return HttpResponseForbidden()
+        original_trainer = get_object_or_404(User, pk=trainer_identity_pk)
+        if not original_trainer.has_perm('gym.gym_trainer'):
+            return HttpResponseForbidden()
+        if user.pk != trainer_identity_pk:
+            return HttpResponseForbidden()
 
-    # Changing between trainers or managers is not allowed
-    if request.user.has_perm('gym.gym_trainer') \
-            and (user.has_perm('gym.gym_trainer')
-                 or user.has_perm('gym.manage_gym')
-                 or user.has_perm('gym.manage_gyms')):
+    # Direct trainer-login: target must not itself be a privileged account,
+    # nor hold permissions the trainer lacks (e.g. exercise editors)
+    if request.user.has_perm('gym.gym_trainer') and (
+        user.has_perm('gym.gym_trainer')
+        or user.has_perm('gym.manage_gym')
+        or user.has_perm('gym.manage_gyms')
+        or holds_permissions_beyond(user, request.user)
+    ):
         return HttpResponseForbidden()
 
     # Changing is only allowed between the same gym
-    if request.user.userprofile.gym != user.userprofile.gym:
+    if not is_same_gym(request.user, user):
         return HttpResponseNotFound(
-            'There are no users in gym "{}" with user ID "{}".'.format(
-                request.user.userprofile.gym,
-                user_pk,
-            )
+            f'There are no users in gym "{request.user.userprofile.gym}" with user ID "{user_pk}".'
         )
 
     # Check if we're switching back to our original account
     own = False
     if (
-        user.has_perm('gym.gym_trainer') or user.has_perm('gym.manage_gym')
+        user.has_perm('gym.gym_trainer')
+        or user.has_perm('gym.manage_gym')
         or user.has_perm('gym.manage_gyms')
     ):
         own = True
@@ -208,15 +246,19 @@ def trainer_login(request, user_pk):
     # Note: when logging without authenticating, it is necessary to set the
     # authentication backend
     if own:
-        del (request.session['trainer.identity'])
+        del request.session['trainer.identity']
     django_login(request, user, 'django.contrib.auth.backends.ModelBackend')
 
     if not own:
         request.session['trainer.identity'] = orig_user_pk
-        if request.GET.get('next'):
-            return HttpResponseRedirect(request.GET['next'])
-        else:
-            return HttpResponseRedirect(reverse('core:index'))
+        next_url = request.POST.get('next') or request.GET.get('next')
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return HttpResponseRedirect(next_url)
+        return HttpResponseRedirect(reverse('core:index'))
     else:
         return HttpResponseRedirect(
             reverse('gym:gym:user-list', kwargs={'pk': user.userprofile.gym_id})
@@ -234,65 +276,24 @@ def logout(request):
     return HttpResponseRedirect(reverse('core:user:login'))
 
 
-def registration(request):
+class WgerSignupView(AllauthSignupView):
     """
-    A form to allow for registration of new users
+    allauth's signup view, with two wger carve-outs: registration disabled
+    globally redirects to the features page (instead of allauth's "signup
+    closed" page), and temporary (guest) users may still reach the
+    registration page so they can create a real account.
+
+    The wger-specific profile setup (notification language, default gym) lives
+    in WgerAccountAdapter.save_user().
     """
 
-    # If global user registration is deactivated, redirect
-    if not settings.WGER_SETTINGS['ALLOW_REGISTRATION']:
-        return HttpResponseRedirect(reverse('software:features'))
-
-    template_data = {}
-    template_data.update(csrf(request))
-
-    # Don't show captcha if the global parameter is false
-    FormClass = RegistrationForm if settings.WGER_SETTINGS['USE_RECAPTCHA'] \
-        else RegistrationFormNoCaptcha
-
-    # Redirect regular users, in case they reached the registration page
-    if request.user.is_authenticated and not request.user.userprofile.is_temporary:
-        return HttpResponseRedirect(reverse('core:dashboard'))
-
-    if request.method == 'POST':
-        form = FormClass(data=request.POST)
-
-        # If the data is valid, log in and redirect
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password1']
-            email = form.cleaned_data['email']
-            user = User.objects.create_user(username, email, password)
-            user.save()
-
-            # Pre-set some values of the user's profile
-            language = Language.objects.get(short_name=translation.get_language())
-            user.userprofile.notification_language = language
-
-            # Set default gym, if needed
-            gym_config = GymConfig.objects.get(pk=1)
-            if gym_config.default_gym:
-                user.userprofile.gym = gym_config.default_gym
-
-                # Create gym user configuration object
-                config = GymUserConfig()
-                config.gym = gym_config.default_gym
-                config.user = user
-                config.save()
-
-            user.userprofile.save()
-
-            user = authenticate(username=username, password=password)
-            django_login(request, user)
-            messages.success(request, _('You were successfully registered'))
-            return HttpResponseRedirect(reverse('core:dashboard'))
-    else:
-        form = FormClass()
-
-    template_data['form'] = form
-    template_data['title'] = _('Register')
-
-    return render(request, 'form.html', template_data)
+    def dispatch(self, request, *args, **kwargs):
+        if not settings.WGER_SETTINGS['ALLOW_REGISTRATION']:
+            return HttpResponseRedirect(reverse('software:features'))
+        if request.user.is_authenticated and request.user.userprofile.is_temporary:
+            # Skip RedirectAuthenticatedUserMixin's "already logged in" redirect
+            return super(RedirectAuthenticatedUserMixin, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
 
 @login_required
@@ -300,59 +301,89 @@ def preferences(request):
     """
     An overview of all user preferences
     """
-    template_data = {}
-    template_data.update(csrf(request))
-    redirect = False
+    context = {}
+    context.update(csrf(request))
 
-    # Process the preferences form
     if request.method == 'POST':
-
         form = UserPreferencesForm(data=request.POST, instance=request.user.userprofile)
         form.user = request.user
 
-        # Save the data if it validates
         if form.is_valid():
             form.save()
-            redirect = True
+            messages.success(request, _('Settings successfully updated'))
+            return HttpResponseRedirect(reverse('core:user:preferences'))
+
+        messages.error(request, _('Please correct the errors below.'))
     else:
         data = {
             'first_name': request.user.first_name,
             'last_name': request.user.last_name,
-            'email': request.user.email
         }
-
         form = UserPreferencesForm(initial=data, instance=request.user.userprofile)
 
-    # Process the email form
-    if request.method == 'POST':
-        email_form = UserPersonalInformationForm(data=request.POST, instance=request.user)
+    context['form'] = form
+    context['email_verified'] = request.user.userprofile.is_verified
+    context['mfa_enabled'] = is_mfa_enabled(request.user)
+    context['has_usable_password'] = request.user.has_usable_password()
+    context['oidc_provider_configured'] = is_provider_configured()
 
-        if email_form.is_valid() and redirect:
-            email_form.save()
-            redirect = True
-        else:
-            redirect = False
+    return render(request, 'user/preferences.html', context)
 
-    template_data['form'] = form
 
-    if redirect:
-        messages.success(request, _('Settings successfully updated'))
-        return HttpResponseRedirect(reverse('core:user:preferences'))
-    else:
-        return render(request, 'user/preferences.html', template_data)
+class UserActivationConfirmMixin:
+    """
+    GET renders a confirmation form; only POST applies the activation state
+    change. (De)activating a user is a state change and must go through
+    Django's CSRF protection, which only applies to unsafe HTTP methods
+    (e.g. POST), not GET.
+    """
+
+    confirm_title = ''
+    success_message = ''
+    new_is_active = None
+
+    def get(self, request, pk):
+        edit_user = get_object_or_404(User, pk=pk)
+        form = forms.Form()
+        form.helper = FormHelper()
+        form.helper.form_method = 'post'
+        form.helper.form_action = request.path
+        form.helper.layout = Layout(
+            ButtonHolder(Submit('submit', self.confirm_title, css_class='btn-warning btn-block'))
+        )
+        return render(
+            request,
+            'confirm.html',
+            {
+                'title': self.confirm_title,
+                'confirm_message': str(edit_user),
+                'form': form,
+            },
+        )
+
+    def post(self, request, pk):
+        edit_user = get_object_or_404(User, pk=pk)
+        edit_user.is_active = self.new_is_active
+        edit_user.save()
+        messages.success(request, self.success_message)
+        return HttpResponseRedirect(reverse('core:user:overview', kwargs={'pk': pk}))
 
 
 class UserDeactivateView(
     LoginRequiredMixin,
     WgerMultiplePermissionRequiredMixin,
-    RedirectView,
+    UserActivationConfirmMixin,
+    generic.View,
 ):
     """
     Deactivates a user
     """
-    permanent = False
+
     model = User
     permission_required = ('gym.manage_gym', 'gym.manage_gyms', 'gym.gym_trainer')
+    confirm_title = gettext_lazy('Deactivate this user?')
+    success_message = gettext_lazy('The user was successfully deactivated')
+    new_is_active = False
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -363,31 +394,33 @@ class UserDeactivateView(
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
 
-        if (request.user.has_perm('gym.manage_gym') or request.user.has_perm('gym.gym_trainer')) \
-                and edit_user.userprofile.gym_id != request.user.userprofile.gym_id:
+        if (
+            request.user.has_perm('gym.manage_gym') or request.user.has_perm('gym.gym_trainer')
+        ) and not is_same_gym(request.user, edit_user):
+            return HttpResponseForbidden()
+
+        # Gym staff must not lock out the accounts above them
+        if not may_change_activation(request.user, edit_user):
             return HttpResponseForbidden()
 
         return super(UserDeactivateView, self).dispatch(request, *args, **kwargs)
-
-    def get_redirect_url(self, pk):
-        edit_user = get_object_or_404(User, pk=pk)
-        edit_user.is_active = False
-        edit_user.save()
-        messages.success(self.request, _('The user was successfully deactivated'))
-        return reverse('core:user:overview', kwargs=({'pk': pk}))
 
 
 class UserActivateView(
     LoginRequiredMixin,
     WgerMultiplePermissionRequiredMixin,
-    RedirectView,
+    UserActivationConfirmMixin,
+    generic.View,
 ):
     """
     Activates a previously deactivated user
     """
-    permanent = False
+
     model = User
     permission_required = ('gym.manage_gym', 'gym.manage_gyms', 'gym.gym_trainer')
+    confirm_title = gettext_lazy('Activate this user?')
+    success_message = gettext_lazy('The user was successfully activated')
+    new_is_active = True
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -398,18 +431,16 @@ class UserActivateView(
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
 
-        if (request.user.has_perm('gym.manage_gym') or request.user.has_perm('gym.gym_trainer')) \
-                and edit_user.userprofile.gym_id != request.user.userprofile.gym_id:
+        if (
+            request.user.has_perm('gym.manage_gym') or request.user.has_perm('gym.gym_trainer')
+        ) and not is_same_gym(request.user, edit_user):
+            return HttpResponseForbidden()
+
+        # Gym staff must not reactivate the accounts above them
+        if not may_change_activation(request.user, edit_user):
             return HttpResponseForbidden()
 
         return super(UserActivateView, self).dispatch(request, *args, **kwargs)
-
-    def get_redirect_url(self, pk):
-        edit_user = get_object_or_404(User, pk=pk)
-        edit_user.is_active = True
-        edit_user.save()
-        messages.success(self.request, _('The user was successfully activated'))
-        return reverse('core:user:overview', kwargs=({'pk': pk}))
 
 
 class UserEditView(
@@ -438,9 +469,15 @@ class UserEditView(
         if not user.is_authenticated:
             return HttpResponseForbidden()
 
-        if user.has_perm('gym.manage_gym') \
-                and not user.has_perm('gym.manage_gyms') \
-                and user.userprofile.gym != self.get_object().userprofile.gym:
+        if (
+            user.has_perm('gym.manage_gym')
+            and not user.has_perm('gym.manage_gyms')
+            and not is_same_gym(user, self.get_object())
+        ):
+            return HttpResponseForbidden()
+
+        # A new email address hands over the account through the password reset
+        if not outranks(user, self.get_object()):
             return HttpResponseForbidden()
 
         return super(UserEditView, self).dispatch(request, *args, **kwargs)
@@ -463,6 +500,10 @@ def api_key(request):
     Allows the user to generate an API key for the REST API
     """
 
+    # A trainer logged in as a member must not get credentials that outlive the session
+    if request.session.get('trainer.identity'):
+        return HttpResponseForbidden()
+
     context = {}
     context.update(csrf(request))
 
@@ -471,21 +512,104 @@ def api_key(request):
     except Token.DoesNotExist:
         token = None
 
-    if request.GET.get('new_key'):
-        token = create_token(request.user, request.GET.get('new_key'))
+    if request.method == 'POST' and request.POST.get('new_key'):
+        token = create_token(request.user, request.POST.get('new_key'))
 
-        # Redirect to get rid of the GET parameter
+        # Redirect so a refresh doesn't try to rotate again
+        return HttpResponseRedirect(reverse('core:user:api-key'))
+
+    if request.method == 'POST' and request.POST.get('delete_key'):
+        Token.objects.filter(user=request.user).delete()
+        messages.success(request, _('API key was deleted'))
+        return HttpResponseRedirect(reverse('core:user:api-key'))
+
+    if request.method == 'POST' and request.POST.get('revoke_jwt_sessions'):
+        blacklist_jwt_refresh_tokens(request.user)
+        messages.success(request, _('All API sessions were revoked'))
+        return HttpResponseRedirect(reverse('core:user:api-key'))
+
+    # Long-lived refresh tokens (headless JWT, backed by a dedicated session).
+    if request.method == 'POST' and request.POST.get('new_refresh_token'):
+        new_refresh_token = mint_long_lived_refresh_token(
+            request.user,
+            settings.HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN,
+        )
+        # Carry the freshly minted token across the post-redirect step so the
+        # next render can show it exactly once.
+        request.session[_NEW_REFRESH_TOKEN_SESSION_KEY] = new_refresh_token
+        return HttpResponseRedirect(reverse('core:user:api-key'))
+
+    if request.method == 'POST' and request.POST.get('revoke_refresh_token'):
+        if revoke_long_lived_session(request.user, request.POST['revoke_refresh_token']):
+            messages.success(request, _('Refresh token was revoked'))
+        return HttpResponseRedirect(reverse('core:user:api-key'))
+
+    if request.method == 'POST' and request.POST.get('revoke_all_refresh_tokens'):
+        count = revoke_all_long_lived_sessions(request.user)
+        if count:
+            messages.success(
+                request,
+                _('Revoked {count} refresh token(s)').format(count=count),
+            )
         return HttpResponseRedirect(reverse('core:user:api-key'))
 
     context['token'] = token
+    context['active_jwt_sessions'] = count_active_jwt_refresh_tokens(request.user)
+    context['new_refresh_token'] = request.session.pop(_NEW_REFRESH_TOKEN_SESSION_KEY, None)
+    context['long_lived_sessions'] = list_long_lived_sessions(request.user)
+    context['refresh_token_lifetime_days'] = settings.HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN // 86400
 
     return render(request, 'user/api_key.html', context)
+
+
+@login_required
+def app_auth_handoff(request):
+    """
+    Browser-side endpoint that mints a long-lived headless refresh token for
+    the authenticated user and redirects to a custom URL scheme so the wger
+    mobile app can pick it up.
+
+    The user must already be authenticated; @login_required redirects through
+    the normal allauth login flow first.
+
+    A ``?state=<nonce>`` query parameter is echoed back into the redirect
+    fragment so the app can verify the response came from a handoff it started
+    itself. The value is treated as opaque but constrained to base64url characters
+    and a sane length to prevent abuse of the reflection.
+    """
+
+    # A trainer logged in as a member must not get credentials that outlive the session
+    if request.session.get('trainer.identity'):
+        return HttpResponseForbidden()
+
+    token = mint_long_lived_refresh_token(
+        request.user,
+        settings.HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN,
+    )
+
+    state = request.GET.get('state', '')
+    if state and (len(state) > _APP_AUTH_STATE_MAX_LEN or not _APP_AUTH_STATE_ALLOWED.match(state)):
+        state = ''
+
+    # Token goes in the URL fragment, not the query string, so it never lands
+    # in server access logs or referer headers. Refresh-token rotation is
+    # the backstop against the one remaining leak surface (browser history).
+    fragment = f'token={quote(token, safe="")}'
+    if state:
+        fragment += f'&state={quote(state, safe="")}'
+    return_uri = f'{_APP_AUTH_SCHEME}://{_APP_AUTH_HOST}#{fragment}'
+    return render(
+        request,
+        'user/app_auth_handoff.html',
+        {'return_uri': return_uri},
+    )
 
 
 class UserDetailView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, DetailView):
     """
     User overview for gyms
     """
+
     model = User
     permission_required = ('gym.manage_gym', 'gym.manage_gyms', 'gym.gym_trainer')
     template_name = 'user/overview.html'
@@ -503,9 +627,11 @@ class UserDetailView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, De
         if not user.is_authenticated:
             return HttpResponseForbidden()
 
-        if (user.has_perm('gym.manage_gym') or user.has_perm('gym.gym_trainer')) \
-                and not user.has_perm('gym.manage_gyms') \
-                and user.userprofile.gym != self.get_object().userprofile.gym:
+        if (
+            (user.has_perm('gym.manage_gym') or user.has_perm('gym.gym_trainer'))
+            and not user.has_perm('gym.manage_gyms')
+            and not is_same_gym(user, self.get_object())
+        ):
             return HttpResponseForbidden()
 
         return super(UserDetailView, self).dispatch(request, *args, **kwargs)
@@ -516,30 +642,37 @@ class UserDetailView(LoginRequiredMixin, WgerMultiplePermissionRequiredMixin, De
         """
         context = super(UserDetailView, self).get_context_data(**kwargs)
         out = []
-        workouts = Workout.objects.filter(user=self.object).all()
-        for workout in workouts:
-            logs = WorkoutLog.objects.filter(workout=workout)
+        routines = Routine.objects.filter(user=self.object).all()
+        for routine in routines:
+            logs = WorkoutLog.objects.filter(routine=routine)
             out.append(
                 {
-                    'workout': workout,
+                    'routine': routine,
                     'logs': logs.dates('date', 'day').count(),
-                    'last_log': logs.last()
+                    'last_log': logs.last(),
                 }
             )
-        context['workouts'] = out
-        context['weight_entries'] = WeightEntry.objects.filter(user=self.object)\
-            .order_by('-date')[:5]
-        context['nutrition_plans'] = NutritionPlan.objects.filter(user=self.object)\
-            .order_by('-creation_date')[:5]
-        context['session'] = WorkoutSession.objects.filter(user=self.object).order_by('-date')[:10]
+        context['routine_data'] = out
+        profile_unit = self.object.userprofile.weight_unit
+        context['weight_entries'] = [
+            {'date': entry.date, 'value': entry.value_in(profile_unit)}
+            for entry in Measurement.body_weight_for(self.object).order_by('-date')[:5]
+        ]
+        context['nutrition_plans'] = NutritionPlan.objects.filter(user=self.object).order_by(
+            '-creation_date'
+        )[:5]
+        context['session'] = WorkoutSession.objects.filter(user=self.object).order_by(
+            '-datetime_start'
+        )[:10]
         context['admin_notes'] = AdminUserNote.objects.filter(member=self.object)[:5]
         context['contracts'] = Contract.objects.filter(member=self.object)[:5]
 
         page_user = self.object  # type: User
         request_user = self.request.user  # type: User
-        same_gym_id = request_user.userprofile.gym_id == page_user.userprofile.gym_id
-        context['enable_login_button'] = request_user.has_perm('gym.gym_trainer') and same_gym_id
-        context['gym_name'] = request_user.userprofile.gym.name
+        context['enable_login_button'] = request_user.has_perm('gym.gym_trainer') and is_same_gym(
+            request_user, page_user
+        )
+        context['gym_name'] = None  # request_user.userprofile.gym.name
         return context
 
 
@@ -547,8 +680,9 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
     Overview of all users in the instance
     """
+
     model = User
-    permission_required = ('gym.manage_gyms', )
+    permission_required = ('gym.manage_gyms',)
     template_name = 'user/list.html'
 
     def get_queryset(self):
@@ -558,7 +692,7 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         out = {'admins': [], 'members': []}
 
         for u in User.objects.select_related('usercache', 'userprofile__gym').all():
-            out['members'].append({'obj': u, 'last_log': u.usercache.last_activity})
+            out['members'].append({'obj': u, 'last_log': None})  # u.usercache.last_activity
 
         return out
 
@@ -576,15 +710,15 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 _('Last activity'),
                 _('Gym'),
             ],
-            'users': context['object_list']['members']
+            'users': context['object_list']['members'],
         }
         return context
 
 
 class WgerPasswordChangeView(PasswordChangeView):
-    template_name = 'form.html'
+    template_name = 'form_content.html'
     success_url = reverse_lazy('core:user:preferences')
-    title = gettext_lazy("Change password")
+    title = gettext_lazy('Change password')
 
     def get_form(self, form_class=None):
         form = super(WgerPasswordChangeView, self).get_form(form_class)
@@ -593,35 +727,44 @@ class WgerPasswordChangeView(PasswordChangeView):
         form.helper.layout = Layout(
             'old_password',
             Row(
-                Column('new_password1', css_class='form-group col-6 mb-0'),
-                Column('new_password2', css_class='form-group col-6 mb-0'),
-                css_class='form-row'
-            ), ButtonHolder(Submit('submit', _("Save"), css_class='btn-success btn-block'))
+                Column('new_password1', css_class='col-6'),
+                Column('new_password2', css_class='col-6'),
+                css_class='form-row',
+            ),
+            ButtonHolder(Submit('submit', _('Save'), css_class='btn-success btn-block')),
         )
         return form
 
 
-class WgerPasswordResetView(PasswordResetView):
-    template_name = 'form.html'
-    email_template_name = 'registration/password_reset_email.html'
-    success_url = reverse_lazy('core:user:password_reset_done')
-    from_email = settings.WGER_SETTINGS['EMAIL_FROM']
+class WgerLoginView(AllauthLoginView):
+    """
+    allauth's login view, with one wger carve-out: temporary (guest) users are
+    still allowed to reach the login page so they can sign in as a real
+    account. allauth would otherwise redirect every authenticated user away.
+    """
 
-    def get_form(self, form_class=None):
-        form = super(WgerPasswordResetView, self).get_form(form_class)
-        form.helper = FormHelper()
-        form.helper.form_class = 'wger-form'
-        form.helper.add_input(Submit('submit', _("Save"), css_class='btn-success btn-block'))
-        return form
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            if request.user.userprofile.is_temporary:
+                # Skip RedirectAuthenticatedUserMixin's "already logged in"
+                # redirect so temp users can sign in as a real account.
+                return super(RedirectAuthenticatedUserMixin, self).dispatch(
+                    request, *args, **kwargs
+                )
 
+            # Real authenticated user: respect ?next= or send them to the dashboard.
+            next_url = request.GET.get('next')
+            if next_url and url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(next_url)
+            return redirect(reverse('core:dashboard'))
 
-class WgerPasswordResetConfirmView(PasswordResetConfirmView):
-    template_name = 'form.html'
-    success_url = reverse_lazy('core:user:login')
+        return super().dispatch(request, *args, **kwargs)
 
-    def get_form(self, form_class=None):
-        form = super(WgerPasswordResetConfirmView, self).get_form(form_class)
-        form.helper = FormHelper()
-        form.helper.form_class = 'wger-form'
-        form.helper.add_input(Submit('submit', _("Save"), css_class='btn-success btn-block'))
-        return form
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['use_social_auth'] = bool(settings.WGER_SOCIAL_PROVIDERS)
+        return context

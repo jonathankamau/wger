@@ -20,7 +20,15 @@ from django.apps import AppConfig
 
 class ExerciseConfig(AppConfig):
     name = 'wger.exercises'
-    verbose_name = "Exercise"
+    verbose_name = 'Exercise'
 
     def ready(self):
-        import wger.exercises.signals
+        import wger.exercises.signals  # noqa: F401
+        from actstream import registry
+
+        registry.register(self.get_model('Alias'))
+        registry.register(self.get_model('Translation'))
+        registry.register(self.get_model('Exercise'))
+        registry.register(self.get_model('ExerciseComment'))
+        registry.register(self.get_model('ExerciseImage'))
+        registry.register(self.get_model('ExerciseVideo'))

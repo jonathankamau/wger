@@ -130,7 +130,6 @@ class DeleteView(WgerDeleteMixin, LoginRequiredMixin, PermissionRequiredMixin, D
     """
 
     model = ContractType
-    fields = ('name', 'description')
     permission_required = 'gym.delete_contracttype'
 
     def dispatch(self, request, *args, **kwargs):
@@ -165,6 +164,7 @@ class ListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
     Overview of all available contract options
     """
+
     model = ContractType
     permission_required = 'gym.add_contracttype'
     template_name = 'contract_type/list.html'

@@ -9,16 +9,17 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
 
-  - package-ecosystem: "npm"
-    directory: "/angular"
-    schedule:
-      interval: "daily"
-
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -26,6 +27,6 @@ updates:
       interval: "daily"
 
   - package-ecosystem: "docker"
-    directory: "/extras/docker/development/"
+    directory: "/extras/docker/production/"
     schedule:
       interval: "daily"

@@ -15,24 +15,24 @@
 # You should have received a copy of the GNU Affero General Public License
 
 # Django
-from django.conf.urls import (
-    include,
-    url,
-)
-from django.contrib.auth import views
+from django.conf.urls import include
 from django.urls import path
-from django.views.generic import TemplateView
+from django.views.generic import (
+    RedirectView,
+    TemplateView,
+)
 
 # wger
-from wger.core.forms import UserLoginForm
 from wger.core.views import (
     languages,
     license,
     misc,
+    oidc,
     repetition_units,
     user,
     weight_units,
 )
+from wger.core.views.react import ReactView
 
 
 # sub patterns for languages
@@ -62,107 +62,41 @@ patterns_language = [
         languages.LanguageCreateView.as_view(),
         name='add',
     ),
+    path('browser_language/', languages.use_browser_language, name='browser_language'),
 ]
 
 # sub patterns for user
 patterns_user = [
+    path('login', user.WgerLoginView.as_view(), name='login'),
+    path('logout', user.logout, name='logout'),
+    path('delete', user.delete, name='delete'),
+    path('<int:user_pk>/delete', user.delete, name='delete'),
+    path('<int:user_pk>/trainer-login', user.trainer_login, name='trainer-login'),
+    path('registration', user.WgerSignupView.as_view(), name='registration'),
+    path('preferences', user.preferences, name='preferences'),
+    path('api-key', user.api_key, name='api-key'),
     path(
-        'login',
-        views.LoginView.as_view(template_name='user/login.html', authentication_form=UserLoginForm),
-        name='login',
+        'connected-applications',
+        oidc.overview,
+        name='connected-applications',
     ),
-    path(
-        'logout',
-        user.logout,
-        name='logout',
-    ),
-    path(
-        'delete',
-        user.delete,
-        name='delete',
-    ),
-    path(
-        '<int:user_pk>/delete',
-        user.delete,
-        name='delete',
-    ),
-    path(
-        '<int:user_pk>/trainer-login',
-        user.trainer_login,
-        name='trainer-login',
-    ),
-    path(
-        'registration',
-        user.registration,
-        name='registration',
-    ),
-    path(
-        'preferences',
-        user.preferences,
-        name='preferences',
-    ),
-    path(
-        'api-key',
-        user.api_key,
-        name='api-key',
-    ),
-    path(
-        'demo-entries',
-        misc.demo_entries,
-        name='demo-entries',
-    ),
-    path(
-        '<int:pk>/activate',
-        user.UserActivateView.as_view(),
-        name='activate',
-    ),
-    path(
-        '<int:pk>/deactivate',
-        user.UserDeactivateView.as_view(),
-        name='deactivate',
-    ),
-    path(
-        '<int:pk>/edit',
-        user.UserEditView.as_view(),
-        name='edit',
-    ),
-    path(
-        '<int:pk>/overview',
-        user.UserDetailView.as_view(),
-        name='overview',
-    ),
-    path(
-        'list',
-        user.UserListView.as_view(),
-        name='list',
-    ),
-
-    # Password reset is implemented by Django, no need to cook our own soup here
-    # (besides the templates)
+    path('app-auth/', user.app_auth_handoff, name='app-auth-handoff'),
+    path('demo-entries', misc.demo_entries, name='demo-entries'),
+    path('<int:pk>/activate', user.UserActivateView.as_view(), name='activate'),
+    path('<int:pk>/deactivate', user.UserDeactivateView.as_view(), name='deactivate'),
+    path('<int:pk>/edit', user.UserEditView.as_view(), name='edit'),
+    path('<int:pk>/overview', user.UserDetailView.as_view(), name='overview'),
+    path('list', user.UserListView.as_view(), name='list'),
     path(
         'password/change',
         user.WgerPasswordChangeView.as_view(),
         name='change-password',
     ),
+    # The password reset is handled by allauth, keep the old URL for bookmarks
     path(
         'password/reset/',
-        user.WgerPasswordResetView.as_view(),
+        RedirectView.as_view(pattern_name='account_reset_password'),
         name='password_reset',
-    ),
-    path(
-        'password/reset/done/',
-        views.PasswordResetDoneView.as_view(),
-        name='password_reset_done',
-    ),
-    url(
-        r'^password/reset/check/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,33})$',
-        user.WgerPasswordResetConfirmView.as_view(),
-        name='password_reset_confirm',
-    ),
-    path(
-        'password/reset/complete/',
-        views.PasswordResetCompleteView.as_view(),
-        name='password_reset_complete',
     ),
 ]
 
@@ -194,7 +128,7 @@ patterns_license = [
 patterns_repetition_units = [
     path(
         'list',
-        repetition_units.ListView.as_view(),
+        repetition_units.UnitListView.as_view(),
         name='list',
     ),
     path(
@@ -204,12 +138,12 @@ patterns_repetition_units = [
     ),
     path(
         '<int:pk>/edit',
-        repetition_units.UpdateView.as_view(),
+        repetition_units.UnitUpdateView.as_view(),
         name='edit',
     ),
     path(
         '<int:pk>/delete',
-        repetition_units.DeleteView.as_view(),
+        repetition_units.UnitDeleteView.as_view(),
         name='delete',
     ),
 ]
@@ -218,22 +152,22 @@ patterns_repetition_units = [
 patterns_weight_units = [
     path(
         'list',
-        weight_units.ListView.as_view(),
+        weight_units.UnitListView.as_view(),
         name='list',
     ),
     path(
         'add',
-        weight_units.AddView.as_view(),
+        weight_units.UnitAddView.as_view(),
         name='add',
     ),
     path(
-        '<int:pk>)/edit',
-        weight_units.UpdateView.as_view(),
+        '<int:pk>/edit',
+        weight_units.UnitUpdateView.as_view(),
         name='edit',
     ),
     path(
         '<int:pk>/delete',
-        weight_units.DeleteView.as_view(),
+        weight_units.UnitDeleteView.as_view(),
         name='delete',
     ),
 ]
@@ -242,30 +176,20 @@ patterns_weight_units = [
 # Actual patterns
 #
 urlpatterns = [
-
     # The landing page
     path('', misc.index, name='index'),
-
-    # The dashboard
-    path('dashboard', misc.dashboard, name='dashboard'),
-
-    # Others
+    path('dashboard', ReactView.as_view(login_required=True), name='dashboard'),
     path(
         'imprint',
-        TemplateView.as_view(template_name="misc/about.html"),
+        TemplateView.as_view(template_name='misc/about.html'),
         name='imprint',
     ),
-    path(
-        'feedback',
-        misc.FeedbackClass.as_view(),
-        name='feedback',
-    ),
-    path('language/', include((patterns_language, 'language'), namespace="language")),
-    path('user/', include((patterns_user, 'user'), namespace="user")),
-    path('license/', include((patterns_license, 'license'), namespace="license")),
+    path('language/', include((patterns_language, 'language'), namespace='language')),
+    path('user/', include((patterns_user, 'user'), namespace='user')),
+    path('license/', include((patterns_license, 'license'), namespace='license')),
     path(
         'repetition-unit/',
-        include((patterns_repetition_units, 'repetition-unit'), namespace="repetition-unit")
+        include((patterns_repetition_units, 'repetition-unit'), namespace='repetition-unit'),
     ),
-    path('weight-unit/', include((patterns_weight_units, 'weight-unit'), namespace="weight-unit")),
+    path('weight-unit/', include((patterns_weight_units, 'weight-unit'), namespace='weight-unit')),
 ]

@@ -46,9 +46,10 @@ coverage.xml
 
 # Django stuff:
 *.log
-settings*.py
+settings/*_extra.py
 *.sqlite
 /CACHE
+
 
 # Sphinx documentation
 docs/_build/
@@ -58,14 +59,37 @@ target/
 
 # IDE
 .idea/
+.vscode/
 
 # External Libraries
 wger/core/static/yarn
 node_modules
+/.yarn/install-state.gz
 
 # Virtual envs
+.venv
 venv
-venv-wget
+venv-wger
+.python-version
 
-# Dummy file for translations
-/wger/i18n.tpl
+# Dummy translation files to copy to react or flutter repo
+/wger/i18n.tsx
+/wger/i18n.dart
+/wger/app_en.arb
+
+# Other files and folders
+/coverage.lcov
+/media/
+/static/
+/db/
+/extras/docker/open-food-facts/dump/*.tar.gz
+/extras/docker/open-food-facts/dump/off/*
+/extras/authors/commits_cache/
+/extras/authors/*-AUTHORS.md
+/extras/authors/*.rst
+/extras/scripts/*.json
+/extras/open-food-facts/dump/
+/.claude/
+
+# macOS
+.DS_Store

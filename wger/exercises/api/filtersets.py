@@ -1,0 +1,208 @@
+# This file is part of wger Workout Manager.
+#
+# wger Workout Manager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# wger Workout Manager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Django
+from django.contrib.postgres.search import (
+    TrigramSimilarity,
+    TrigramWordSimilarity,
+)
+from django.db.models import (
+    Case,
+    Exists,
+    FloatField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Value,
+    When,
+)
+
+# Third Party
+from django_filters import rest_framework as filters
+from rest_framework.filters import OrderingFilter
+
+# wger
+from wger.exercises.models import (
+    Exercise,
+    Translation,
+)
+from wger.utils.db import is_postgres_db
+from wger.utils.language import load_language
+
+
+class RelevanceOrderingFilter(OrderingFilter):
+    """
+    Keeps the relevance ordering of the name search.
+
+    Without this the default ordering of the viewset replaces it. An ordering the
+    client asks for explicitly still wins.
+    """
+
+    def get_ordering(self, request, queryset, view):
+        searching = request.query_params.get('name__search')
+        if searching and not request.query_params.get(self.ordering_param):
+            return None
+
+        return super().get_ordering(request, queryset, view)
+
+
+class ExerciseListFilterSet(filters.FilterSet):
+    """Filter exercises by equipment and muscles, including missing relations."""
+
+    equipment__isnull = filters.BooleanFilter(
+        field_name='equipment',
+        lookup_expr='isnull',
+        distinct=True,
+    )
+
+    muscles__isnull = filters.BooleanFilter(
+        field_name='muscles',
+        lookup_expr='isnull',
+        distinct=True,
+    )
+    muscles_secondary__isnull = filters.BooleanFilter(
+        field_name='muscles_secondary',
+        lookup_expr='isnull',
+        distinct=True,
+    )
+
+    class Meta:
+        model = Exercise
+        fields = ('category', 'muscles', 'muscles_secondary', 'equipment')
+
+
+class ExerciseFilterSet(ExerciseListFilterSet):
+    """
+    Filters for the regular exercises endpoints to support fulltext name search
+    and language filtering, similar to IngredientFilterSet.
+    """
+
+    name__search = filters.CharFilter(method='search_name_fulltext')
+    name__exact = filters.CharFilter(method='search_name_exact')
+    language__code = filters.CharFilter(
+        method='search_language_code',
+        help_text=(
+            'Filter by language code. Multiple values may be separated by commas. '
+            'Unknown codes fall back to English.'
+        ),
+    )
+
+    def _languages_from_params(self):
+        if languages_param := self.data.get('language__code'):
+            return [load_language(code) for code in set(languages_param.split(','))]
+        return None
+
+    def _filter_by_translation(self, queryset: QuerySet, q_expr: Q) -> QuerySet:
+        translation_subquery = Translation.objects.filter(exercise=OuterRef('pk')).filter(q_expr)
+        if languages := self._languages_from_params():
+            translation_subquery = translation_subquery.filter(language__in=languages)
+        return queryset.filter(Exists(translation_subquery)).distinct()
+
+    def _order_by_relevance(self, queryset: QuerySet, value: str) -> QuerySet:
+        """
+        Sorts the exercises by their best matching translation.
+
+        The name lives on the translation, so the scores come from a subquery. Exact
+        and prefix matches score above the word similarity, which is at most 1, and
+        shorter names win ties, e.g. "Leg Curl" over "Alternating Biceps Curls".
+        """
+
+        matches = Translation.objects.filter(exercise=OuterRef('pk'))
+        if languages := self._languages_from_params():
+            matches = matches.filter(language__in=languages)
+
+        matches = matches.annotate(
+            match_score=Case(
+                When(name__iexact=value, then=Value(3.0)),
+                When(name__istartswith=value, then=Value(2.0)),
+                default=TrigramWordSimilarity(value, 'name'),
+                output_field=FloatField(),
+            ),
+            name_similarity=TrigramSimilarity('name', value),
+        ).order_by('-match_score', '-name_similarity')
+
+        return queryset.annotate(
+            match_score=Subquery(matches.values('match_score')[:1]),
+            name_similarity=Subquery(matches.values('name_similarity')[:1]),
+        ).order_by('-match_score', '-name_similarity')
+
+    def search_name_fulltext(self, queryset: QuerySet, name: str, value: str):
+        """
+        Searches for exercise matches with the given name.
+
+        If the database is postgres a fuzzy full-text search is used, otherwise a simple
+        exact match,
+        """
+
+        if not value:
+            return queryset
+
+        if not is_postgres_db():
+            return self.search_name_exact(queryset, name, value)
+
+        # Whole-name similarity (pg_trgm.similarity_threshold, 0.3) keeps typos such as
+        # "bech press" working, word similarity (pg_trgm.word_similarity_threshold, 0.6)
+        # matches single words inside the long compound names most exercises have.
+        queryset = self._filter_by_translation(
+            queryset=queryset,
+            q_expr=(
+                Q(name__trigram_similar=value)
+                | Q(name__trigram_word_similar=value)
+                | Q(alias__alias__icontains=value)
+            ),
+        )
+
+        return self._order_by_relevance(queryset, value)
+
+    def search_name_exact(self, queryset: QuerySet, name: str, value: str):
+        """
+        Searches for exact exercise matches with the given name
+        """
+
+        if not value:
+            return queryset
+
+        return self._filter_by_translation(
+            queryset=queryset,
+            q_expr=Q(name__icontains=value) | Q(alias__alias__icontains=value),
+        )
+
+    def search_language_code(self, queryset: QuerySet, name: str, value: str):
+        if not value:
+            return queryset
+
+        # If a name filter is active, it already restricts translations, so
+        # applying it again here would produce a redundant WHERE clause.
+        if self.data.get('name__search') or self.data.get('name__exact'):
+            return queryset
+
+        languages = [load_language(code) for code in set(value.split(','))]
+        if not languages:
+            return queryset
+        return queryset.filter(translations__language__in=languages).distinct()
+
+    class Meta:
+        model = Exercise
+        fields = {
+            'id': ['exact', 'in'],
+            'uuid': ['exact'],
+            'category': ['exact', 'in'],
+            'muscles': ['exact', 'in'],
+            'muscles_secondary': ['exact', 'in'],
+            'equipment': ['exact', 'in'],
+            'variation_group': ['exact', 'in'],
+        }

@@ -1,0 +1,112 @@
+#  This file is part of wger Workout Manager <https://github.com/wger-project>.
+#  Copyright (C) 2013 - 2021 wger Team
+#
+#  wger Workout Manager is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  wger Workout Manager is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Standard Library
+import pathlib
+import uuid
+
+# Django
+from django.db import models
+
+# wger
+from wger.utils.helpers import BaseImageMixin
+from wger.utils.models import AbstractLicenseModel
+
+# Local
+from .ingredient import Ingredient
+
+
+def ingredient_image_upload_dir(instance, filename):
+    """
+    Returns the upload target for ingredient images.
+
+    Sharded by the first two pairs of hex chars from the UUID so the directory
+    tree stays balanced even at millions of files.
+    """
+    ext = pathlib.Path(filename).suffix
+    u = str(instance.uuid)
+    return f'ingredients/{u[0:2]}/{u[2:4]}/{u}{ext}'
+
+
+class Image(AbstractLicenseModel, models.Model, BaseImageMixin):
+    """
+    Model for an ingredient image
+    """
+
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        verbose_name='UUID',
+    )
+    """Globally unique ID, to identify the image across installations"""
+
+    ingredient = models.OneToOneField(
+        'Ingredient',
+        null=True,
+        on_delete=models.CASCADE,
+    )
+    """Image for this ingredient"""
+
+    image = models.ImageField(
+        verbose_name='Image',
+        help_text='Only PNG and JPEG formats are supported',
+        upload_to=ingredient_image_upload_dir,
+        height_field='height',
+        width_field='width',
+    )
+    """Uploaded image"""
+
+    created = models.DateTimeField(auto_now_add=True)
+    """The date when this image was first created """
+
+    last_update = models.DateTimeField(auto_now=True)
+    """The date when this image was last synchronized """
+
+    size = models.IntegerField()
+    """The size of the image in bytes"""
+
+    height = models.IntegerField(editable=False)
+    """Height of the image"""
+
+    width = models.IntegerField(editable=False)
+    """Width of the image"""
+
+    @classmethod
+    def from_json(
+        cls,
+        connect_to: Ingredient,
+        retrieved_image,
+        json_data: dict,
+        generate_uuid: bool = False,
+        save_to_db: bool = True,
+    ):
+        image = super().from_json(
+            connect_to,
+            retrieved_image,
+            json_data,
+            generate_uuid,
+            has_license_information=True,
+        )
+
+        image.ingredient = connect_to
+        image.size = json_data['size']
+
+        if save_to_db:
+            image.save_image(retrieved_image, json_data)
+            image.save()
+
+        return image

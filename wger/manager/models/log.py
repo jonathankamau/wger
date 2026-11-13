@@ -14,11 +14,17 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard Library
+import datetime
+
 # Django
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator
-from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.db import (
+    models,
+    transaction,
+)
+from django.utils import timezone
 
 # wger
 from wger.core.models import (
@@ -26,13 +32,17 @@ from wger.core.models import (
     WeightUnit,
 )
 from wger.exercises.models import Exercise
-from wger.utils.cache import reset_workout_log
-from wger.utils.fields import Html5DateField
-
-# Local
-from ..consts import RIR_OPTIONS
-from .session import WorkoutSession
-from .workout import Workout
+from wger.manager.consts import (
+    REP_UNIT_REPETITIONS,
+    WEIGHT_UNIT_KG,
+)
+from wger.manager.managers import WorkoutLogManager
+from wger.manager.models.session import WorkoutSession
+from wger.manager.validators import (
+    NullMinValueValidator,
+    validate_rir,
+)
+from wger.utils.uuid import uuid7
 
 
 class WorkoutLog(models.Model):
@@ -40,84 +50,201 @@ class WorkoutLog(models.Model):
     A log entry for an exercise
     """
 
+    objects = WorkoutLogManager()
+
+    id = models.UUIDField(
+        default=uuid7,
+        null=False,
+        primary_key=True,
+    )
+
+    date = models.DateTimeField(
+        verbose_name='Date',
+        default=timezone.now,
+    )
+
     user = models.ForeignKey(
         User,
-        verbose_name=_('User'),
+        verbose_name='User',
         editable=False,
         on_delete=models.CASCADE,
     )
+
+    next_log = models.ForeignKey(
+        'self',
+        editable=True,
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
+    )
+    """
+    If this is a log entry for a dropset or similar, this field will contain the
+    next log entry in the series
+    """
+
+    session = models.ForeignKey(
+        'WorkoutSession',
+        verbose_name='Session',
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='logs',
+    )
+    """
+    The session this log belongs to.
+
+    If none is given, one will be automatically created on save.
+    """
+
     exercise = models.ForeignKey(
         Exercise,
-        verbose_name=_('Exercise'),
-        on_delete=models.CASCADE,
-    )
-    workout = models.ForeignKey(
-        Workout,
-        verbose_name=_('Workout'),
+        verbose_name='Exercise',
         on_delete=models.CASCADE,
     )
 
-    repetition_unit = models.ForeignKey(
+    routine = models.ForeignKey(
+        'Routine',
+        verbose_name='Workout',
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    slot_entry = models.ForeignKey(
+        'SlotEntry',
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    iteration = models.PositiveIntegerField(
+        null=True,
+    )
+
+    repetitions_unit = models.ForeignKey(
         RepetitionUnit,
-        verbose_name=_('Unit'),
-        default=1,
+        verbose_name='Repetitions unit',
+        default=REP_UNIT_REPETITIONS,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     """
-    The unit of the log. This can be e.g. a repetition, a minute, etc.
+    The repetition unit of the log. This can be e.g. a repetition, a minute, etc.
     """
 
-    reps = models.IntegerField(
-        verbose_name=_('Repetitions'),
-        validators=[MinValueValidator(0)],
-    )
-    """
-    Amount of repetitions, minutes, etc.
-
-    Note that since adding the unit field, the name is no longer correct, but is
-    kept for compatibility reasons (specially for the REST API).
-    """
-
-    weight = models.DecimalField(
+    repetitions = models.DecimalField(
+        max_digits=6,
         decimal_places=2,
-        max_digits=5,
-        verbose_name=_('Weight'),
-        validators=[MinValueValidator(0)],
+        validators=[NullMinValueValidator(0)],
+        blank=True,
+        null=True,
     )
+    """
+    Logged amount of repetitions
+    """
+
+    repetitions_target = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        verbose_name='Repetitions target',
+        validators=[NullMinValueValidator(0)],
+        null=True,
+        blank=True,
+    )
+    """
+    Target amount of repetitions
+    """
 
     weight_unit = models.ForeignKey(
         WeightUnit,
-        verbose_name=_('Unit'),
-        default=1,
+        verbose_name='Weight unit',
+        default=WEIGHT_UNIT_KG,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     """
     The weight unit of the log. This can be e.g. kg, lb, km/h, etc.
     """
 
-    date = Html5DateField(verbose_name=_('Date'))
-
-    rir = models.CharField(
-        verbose_name=_('RiR'),
-        max_length=3,
+    weight = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        validators=[NullMinValueValidator(0)],
         blank=True,
         null=True,
-        choices=RIR_OPTIONS,
     )
     """
-    Reps in reserve, RiR. The amount of reps that could realistically still be
+    Logged amount of weight
+    """
+
+    weight_target = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        verbose_name='Weight target',
+        validators=[NullMinValueValidator(0)],
+        null=True,
+        blank=True,
+    )
+    """
+    Target amount of weight
+    """
+
+    rir = models.DecimalField(
+        max_digits=2,
+        decimal_places=1,
+        validators=[NullMinValueValidator(0), validate_rir],
+        null=True,
+        blank=True,
+    )
+    """
+    Reps in Reserve, RiR. The amount of reps that could realistically still be
     done in the set.
+    """
+
+    rir_target = models.DecimalField(
+        max_digits=2,
+        decimal_places=1,
+        validators=[NullMinValueValidator(0), validate_rir],
+        null=True,
+        blank=True,
+    )
+    """
+    Target Reps in Reserve
+    """
+
+    rest = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+    """
+    Logged rest time
+    """
+
+    rest_target = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+    """
+    Target rest time
+    """
+
+    notes = models.TextField(
+        verbose_name='Notes',
+        blank=True,
+        null=True,
+    )
+    """
+    Optional notes for this set, e.g. form cues, how it felt, etc.
     """
 
     # Metaclass to set some other properties
     class Meta:
-        ordering = ["date", "reps"]
+        ordering = ['date', 'repetitions', 'weight']
 
     def __str__(self):
         """
         Return a more human-readable representation
         """
-        return "Log entry: {0} - {1} kg on {2}".format(self.reps, self.weight, self.date)
+        return f'Log entry: {self.repetitions} - {self.weight} kg on {self.date}'
 
     def get_owner_object(self):
         """
@@ -125,35 +252,97 @@ class WorkoutLog(models.Model):
         """
         return self
 
-    def get_workout_session(self, date=None):
-        """
-        Returns the corresponding workout session
+    def clean(self):
+        super().clean()
+        if self.repetitions is None and self.weight is None:
+            raise ValidationError('Both repetitions and weight cannot be null at the same time.')
 
-        :return the WorkoutSession object or None if nothing was found
-        """
-        if not date:
-            date = self.date
+        if self.repetitions is not None and self.repetitions_unit is None:
+            raise ValidationError('Repetitions unit must be present if repetitions have a value.')
 
-        try:
-            return WorkoutSession.objects.filter(user=self.user).get(date=date)
-        except WorkoutSession.DoesNotExist:
-            return None
+        if self.weight is not None and self.weight_unit is None:
+            raise ValidationError('Weight unit must be present if weight has a value.')
+
+    def assign_session(self):
+        """
+        Attach this log to a session, creating one if nothing fits
+
+        In order: a session the log falls into, then the most recent session that
+        is still open and started no longer than a session may last ago, otherwise
+        a new one.
+        """
+        log_date = self.date
+        if isinstance(log_date, datetime.date) and not isinstance(log_date, datetime.datetime):
+            log_date = timezone.make_aware(datetime.datetime.combine(log_date, datetime.time()))
+        elif timezone.is_naive(log_date):
+            log_date = timezone.make_aware(log_date)
+
+        # Looking up and creating has to happen as one step, otherwise a batch
+        # upload creates a session per log. There is no row yet that could be
+        # locked, so the user row stands in for it.
+        with transaction.atomic():
+            User.objects.select_for_update().filter(pk=self.user_id).first()
+
+            session = WorkoutSession.objects.filter(
+                user=self.user,
+                routine=self.routine,
+                datetime_start__lte=log_date,
+                datetime_end__gte=log_date,
+            ).first()
+
+            if not session:
+                session = (
+                    WorkoutSession.objects.filter(
+                        user=self.user,
+                        routine=self.routine,
+                        datetime_end__isnull=True,
+                        datetime_start__gte=log_date - WorkoutSession.max_duration(),
+                        datetime_start__lte=log_date,
+                    )
+                    .order_by('-datetime_start')
+                    .first()
+                )
+
+            # The day is only a default for new sessions, existing ones keep theirs
+            day = None
+            if self.slot_entry and self.slot_entry.slot.day.routine_id == self.routine_id:
+                day = self.slot_entry.slot.day
+
+            self.session = session or WorkoutSession.objects.create(
+                user=self.user,
+                datetime_start=log_date,
+                routine=self.routine,
+                day=day,
+            )
 
     def save(self, *args, **kwargs):
         """
-        Reset cache
+        Plumbing
         """
-        reset_workout_log(self.user_id, self.date.year, self.date.month, self.date.day)
+        self.clean()
 
-        # If the user selected "Until Failure", do only 1 "repetition",
-        # everythin else doesn't make sense.
-        if self.repetition_unit == 2:
-            self.reps = 1
-        super(WorkoutLog, self).save(*args, **kwargs)
+        # If the routine does not belong to this user, do not save
+        if self.routine and self.routine.user != self.user:
+            return
 
-    def delete(self, *args, **kwargs):
-        """
-        Reset cache
-        """
-        reset_workout_log(self.user_id, self.date.year, self.date.month, self.date.day)
-        super(WorkoutLog, self).delete(*args, **kwargs)
+        # Same check for slot_entry's owning routine
+        if self.slot_entry and self.slot_entry.slot.day.routine.user != self.user:
+            return
+
+        # If a session was explicitly provided but belongs to a different
+        # user, drop the reference so we don't accidentally tie this log
+        # to someone else's session. The auto-create branch below will
+        # then provide the correct one.
+        if self.session_id and self.session.user_id != self.user_id:
+            self.session = None
+
+        # Auto-create a session only if the client didn't provide one.
+        if not self.session_id:
+            self.assign_session()
+
+        # If the user of next_log is not this user, remove foreign key
+        if self.next_log and self.next_log.user != self.user:
+            self.next_log = None
+
+        # Save to db
+        super().save(*args, **kwargs)

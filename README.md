@@ -1,73 +1,75 @@
-﻿# wger
-<img src="https://raw.githubusercontent.com/wger-project/wger/master/wger/core/static/images/logos/logo.png" width="100" height="100" />
+# wger
 
-wger (ˈvɛɡɐ) Workout Manager is a free, open source web application that helps
-you manage your personal workouts, weight and diet plans and can also be used
-as a simple gym management utility. It offers a REST API as well, for easy
-integration with other projects and tools.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wger-project/wger/master/wger/core/static/images/logos/logo.png" width="100" height="100" alt="wger logo">
 
-For a live system, refer to the project's site: <https://wger.de/>
-
-![Workout plan](https://raw.githubusercontent.com/wger-project/wger/master/wger/software/static/images/workout.png)
-
-
-## Mobile app
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
-      alt="Get it on Google Play"
-      height="80">](https://play.google.com/store/apps/details?id=de.wger.flutter)
+![AGPLv3 License](https://img.shields.io/badge/License-AGPLv3-blue.svg)
+![Build Status](https://img.shields.io/github/actions/workflow/status/wger-project/wger/ci.yml?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/wger-project/wger/badge.svg?branch=master)](https://coveralls.io/github/wger-project/wger?branch=master)
+![Translation Status](https://hosted.weblate.org/widget/wger/svg-badge.svg)
+</p>
 
 
-## Installation
+wger (ˈvɛɡɐ) is a free workout and fitness manager.
 
-These are the basic steps to install and run the application locally on a Linux
-system. There are more detailed instructions, other deployment options as well
-as an administration guide available at <https://wger.readthedocs.io> or locally
-in your code repository in the docs folder.
+- 🏋️ **Custom Workout Routines** – Create flexible routines with automatic weight progression rules.
+- 📊 **Comprehensive Tracking** – Track diet plans, body weight, and custom measurements.
+- 🍽️ **Nutrition Management** – Log your calories with a food database
+  from [Open Food Facts](https://openfoodfacts.org).
+- 📸 **Progress Gallery** – Upload and track your fitness progress with photos.
+- 📚 **Exercise Wiki** – Access and contribute to the built-in exercises.
+- 📱 **Cross-Platform Apps** – Available on
+  [Android](https://play.google.com/store/apps/details?id=de.wger.flutter),
+  [iOS](https://apps.apple.com/us/app/wger-workout-manager/id6502226792),
+  [F-Droid](https://f-droid.org/en/packages/de.wger.flutter/),
+  and [Flathub](https://flathub.org/apps/de.wger.flutter).
+- 🐳 **Self-Hostable** – Deploy easily with Docker for full control.
+- 🌍 **Multilingual Support** – Translated by the community via Weblate.
+- 🔗 **Powerful API** – REST API for third-party integrations or automations.
+- 👥 **Multi-User Support** – Includes basic gym management features.
+- 🆓 **100% Free & Open Source** – Licensed under AGPL-3.0 or later.
 
-Please consult the commands' help for further information and available
-parameters.
+
+For a live system, visit: <https://wger.de>
+
+<p align="center" style="line-height:0; margin:0; padding:0;">
+  <a href="https://play.google.com/store/apps/details?id=de.wger.flutter" target="_blank" style="text-decoration:none; border:none; outline:none;"><img src="https://raw.githubusercontent.com/wger-project/wger/master/wger/core/static/images/logos/play-store/badge.svg" alt="Get it on Google Play" height="50" style="margin-right:8px; vertical-align:middle; border:none; outline:none; display:inline-block;"></a>
+  <a href="https://apps.apple.com/us/app/wger-workout-manager/id6502226792" target="_blank" style="text-decoration:none; border:none; outline:none;"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="64" style="margin-right:8px; vertical-align:middle; border:none; outline:none; display:inline-block; background:none;"></a>
+  <a href="https://f-droid.org/packages/de.wger.flutter/" target="_blank" style="text-decoration:none; border:none; outline:none;"><img src="https://raw.githubusercontent.com/wger-project/wger/master/wger/core/static/images/logos/fdroid/get-it-on.png" alt="Get it on F-Droid" height="50" style="margin-right:8px; vertical-align:middle; border:none; outline:none; display:inline-block; background:none;"></a>
+  <a href="https://flathub.org/apps/de.wger.flutter" target="_blank" style="text-decoration:none; border:none; outline:none;"><img src="https://raw.githubusercontent.com/wger-project/wger/master/wger/core/static/images/logos/flathub/black.svg" alt="Get it on Flathub" height="50" style="vertical-align:middle; border:none; outline:none; display:inline-block; background:none;"></a>
+</p>
 
 
-### Production
 
-If you want to host your own instance, take a look at the provided docker
-compose file. This config will persist your database and uploaded images:
+## Self-hosting
 
-<https://github.com/wger-project/docker>
+Hosting your own instance is basically just a `docker compose up -d` away. For
+more detailed setup instructions take a look at the provided
+[docker compose file](https://github.com/wger-project/docker) and the
+[corresponding documentation](https://wger.readthedocs.io/en/latest/installation/docker.html).
 
-### Demo
+## Developing and contributing
 
-If you just want to try it out:
+Our goal is to build an awesome and flexible fitness and nutrition manager,
+along with a comprehensive list of exercises and ingredients, all released
+under a free license.
 
-```shell script
-    docker run -ti --name wger.demo --publish 8000:80 wger/demo
-```
+For this, we’d love your help! Whether it’s code, translations, exercises or
+reporting issues and ideas, check out our
+[contribution guide](https://wger.readthedocs.io/en/latest/contributing.html)
+to get started.
 
-Then just open <http://localhost:8000> and log in as **admin**, password **adminadmin**
+A huge thank you to everyone who has contributed so far! ❤️ See the full list
+in [AUTHORS.md](AUTHORS.md).
 
-Please note that this image will overwrite your data when you pull a new version,
-it is only intended as an easy to setup demo
+## Documentation
 
-### Development version
+Consult the online documentation at
 
-We provide a docker compose file that sets everything up for development and
-persists the database on a volume. From the root folder just call
+* <https://wger.readthedocs.io>
 
-````shell script
-docker-compose -f extras/docker/compose/docker-compose.yml up
-````
-
-Log in as: **admin**, password **adminadmin**
-
-For more info, check the [README in wger/extras/docker/compose](
- ./extras/docker/compose/README.md
-).
-
-#### Local installation
-
-If you prefer a local installation, consult the
-[development documentation](https://wger.readthedocs.io/en/latest/development.html)
-
+for installation instructions, API documentation, development guidelines, and
+other information
 
 ## Contact
 
@@ -76,34 +78,25 @@ didn't behave as you expected. We can't fix what we don't know about, so please
 report liberally. If you're not sure if something is a bug or not, feel free to
 file a bug anyway.
 
-* **discord:** <https://discord.gg/rPWFv6W>
-* **issue tracker:** <https://github.com/wger-project/wger/issues>
-* **twitter:** <https://twitter.com/wger_project>
-
+* **Discord:** <https://discord.gg/rPWFv6W>
+* **Mastodon:** <https://fosstodon.org/@wger>
+* **Issue tracker:** <https://github.com/wger-project/wger/issues>
 
 ## Sources
 
 All the code and the content is available on github:
 
-<https://github.com/wger-project/wger>
-
+* <https://github.com/wger-project>
 
 ## Translation
+
 Translate the app to your language on [Weblate](https://hosted.weblate.org/engage/wger/).
 
-[![translation status](https://hosted.weblate.org/widgets/wger/-/web/multi-blue.svg)](https://hosted.weblate.org/engage/wger/)
-
+[![translation status](https://hosted.weblate.org/widgets/wger/-/multi-blue.svg)](https://hosted.weblate.org/engage/wger/)
 
 ## License
 
-The application is licensed under the Affero GNU General Public License 3 or
-later (AGPL 3+).
+* Application Code: [AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html)
+* Exercise/Ingredient Data: Creative Commons (see individual entries)
+* Documentation: [CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
-The initial exercise and ingredient data is licensed additionally under one of
-the Creative Commons licenses, see the individual exercises for more details.
-
-The documentation is released under a CC-BY-SA: either version 4 of the License,
-or (at your option) any later version.
-
-Some images were taken from Wikipedia, see the SOURCES file in their respective
-folders for more details.

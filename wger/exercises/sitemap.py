@@ -18,15 +18,15 @@
 from django.contrib.sitemaps import Sitemap
 
 # wger
-from wger.exercises.models import Exercise
+from wger.exercises.models import Translation
 
 
 class ExercisesSitemap(Sitemap):
-    changefreq = "monthly"
+    changefreq = 'monthly'
     priority = 0.5
 
     def items(self):
-        return Exercise.objects.accepted()
+        return Translation.objects.all()
 
     def lastmod(self, obj):
-        return obj.creation_date
+        return obj.last_update

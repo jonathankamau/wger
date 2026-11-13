@@ -37,7 +37,6 @@ class AddContractTestCase(WgerAddTestCase):
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -51,13 +50,13 @@ class AccessContractTestCase(WgerAccessTestCase):
     """
     Test accessing the detail page of a contract
     """
+
     url = reverse('gym:contract:view', kwargs={'pk': 1})
     user_success = ('manager1', 'manager2')
     user_fail = (
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -71,13 +70,13 @@ class AccessContractOverviewTestCase(WgerAccessTestCase):
     """
     Test accessing the contract list page
     """
+
     url = reverse('gym:contract:list', kwargs={'user_pk': 4})
     user_success = ('manager1', 'manager2')
     user_fail = (
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',
@@ -100,7 +99,6 @@ class EditContractTestCase(WgerEditTestCase):
         'admin',
         'general_manager1',
         'manager3',
-        'manager4',
         'test',
         'member1',
         'member2',

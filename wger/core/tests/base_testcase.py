@@ -17,8 +17,6 @@ import decimal
 import logging
 import os
 import pathlib
-import shutil
-import tempfile
 
 # Django
 from django.conf import settings
@@ -37,10 +35,13 @@ from wger.utils.constants import TWOPLACES
 STATUS_CODES_FAIL = (302, 403, 404)
 
 
-def get_reverse(url, kwargs={}):
+def get_reverse(url, kwargs=None):
     """
     Helper function to get the reverse URL
     """
+    if kwargs is None:
+        kwargs = {}
+
     try:
         url = reverse(url, kwargs=kwargs)
     except NoReverseMatch:
@@ -61,6 +62,23 @@ def get_user_list(users):
         return [users]
 
 
+def get_field_snapshot(entry) -> dict:
+    """
+    Helper function that returns the field values of a model instance
+
+    Comparing two model instances only compares their PKs, so the values have
+    to be read out to detect that an object was modified.
+    """
+    snapshot = {
+        field.attname: getattr(entry, field.attname) for field in entry._meta.concrete_fields
+    }
+
+    for field in entry._meta.many_to_many:
+        snapshot[field.name] = set(getattr(entry, field.name).values_list('pk', flat=True))
+
+    return snapshot
+
+
 def delete_testcase_add_methods(cls):
     """
     Helper function that dynamically adds test methods.
@@ -73,23 +91,24 @@ def delete_testcase_add_methods(cls):
     """
 
     for user in get_user_list(cls.user_fail):
-
-        def test_unauthorized(self):
+        # The user is bound as a default argument, a closure over the loop
+        # variable would make every method use the last user
+        def test_unauthorized(self, user=user):
             self.user_login(user)
-            self.delete_object(fail=False)
+            self.delete_object(fail=True)
 
         setattr(cls, f'test_unauthorized_{user}', test_unauthorized)
 
     for user in get_user_list(cls.user_success):
 
-        def test_authorized(self):
+        def test_authorized(self, user=user):
             self.user_login(user)
             self.delete_object(fail=False)
 
         setattr(cls, f'test_authorized_{user}', test_authorized)
 
 
-class BaseTestCase(object):
+class BaseTestCase:
     """
     Base test case.
 
@@ -98,11 +117,11 @@ class BaseTestCase(object):
     """
 
     fixtures = (
-        'days_of_week',
         'gym_config',
         'groups',
         'setting_repetition_units',
         'setting_weight_units',
+        'initial_trophies',
         'test-languages',
         'test-licenses',
         'test-gyms',
@@ -114,17 +133,18 @@ class BaseTestCase(object):
         'test-gym-user-documents',
         'test-contracts',
         'test-apikeys',
-        'test-weight-data',
         'test-equipment',
+        'test-categories',
+        'test-muscles',
         'test-exercises',
         'test-exercise-images',
-        'test-weight-units',
+        'test-exercise-videos',
         'test-ingredients',
         'test-nutrition-data',
         'test-nutrition-diary',
-        'test-workout-data',
+        'test-routine-data',
         'test-workout-session',
-        'test-schedules',
+        'test-workout-log-data',
         'test-gallery-images',
         'test-measurement-categories',
         'test-measurements',
@@ -146,19 +166,20 @@ class BaseTestCase(object):
         # Set logging level
         logging.disable(logging.INFO)
 
-        # Set MEDIA_ROOT
-        self.media_root = tempfile.mkdtemp()
-        settings.MEDIA_ROOT = self.media_root
+        # Disable django-axes
+        # https://django-axes.readthedocs.io/en/latest/3_usage.html#authenticating-users
+        settings.AXES_ENABLED = False
+
+        settings.WGER_SETTINGS['DOWNLOAD_INGREDIENTS_FROM'] = False
+        settings.WGER_SETTINGS['USE_CELERY'] = False
 
     def tearDown(self):
         """
         Reset settings
         """
-        del os.environ['RECAPTCHA_TESTING']
-        cache.clear()
 
-        # Clear MEDIA_ROOT folder
-        shutil.rmtree(self.media_root)
+        # del os.environ['RECAPTCHA_TESTING']
+        cache.clear()
 
 
 class WgerTestCase(BaseTestCase, TestCase):
@@ -198,7 +219,7 @@ class WgerTestCase(BaseTestCase, TestCase):
         current_field_class = field.__class__.__name__
 
         # Standard types, simply compare
-        if current_field_class in ('unicode', 'str', 'int', 'float', 'time', 'date'):
+        if current_field_class in ('unicode', 'str', 'int', 'float', 'time', 'date', 'datetime'):
             self.assertEqual(field, value)
 
         # boolean, convert
@@ -217,7 +238,6 @@ class WgerTestCase(BaseTestCase, TestCase):
 
         # Uploaded image or file, compare the filename
         elif current_field_class in ('ImageFieldFile', 'FieldFile'):
-
             # We can only compare the extensions, since the names can be changed
             # Ideally we would check that the byte length is the same
             self.assertEqual(pathlib.Path(field.name).suffix, pathlib.Path(value.name).suffix)
@@ -247,7 +267,7 @@ class WgerDeleteTestCase(WgerTestCase):
 
     def delete_object(self, fail=False):
         """
-        Helper function to test deleting a workout
+        Helper function to test deleting an object
         """
 
         # Only perform the checks on derived classes
@@ -277,7 +297,9 @@ class WgerDeleteTestCase(WgerTestCase):
             self.assertEqual(response.status_code, 302)
             self.assertEqual(count_before - 1, count_after)
             self.assertRaises(
-                self.object_class.DoesNotExist, self.object_class.objects.get, pk=self.pk
+                self.object_class.DoesNotExist,
+                self.object_class.objects.get,
+                pk=self.pk,
             )
 
             # TODO: the redirection page might not have a language prefix (e.g. /user/login
@@ -303,7 +325,7 @@ class WgerDeleteTestCase(WgerTestCase):
 
     def test_delete_object_other(self):
         """
-        Tests deleting the object as the unauthorized, logged in users
+        Tests deleting the object as the unauthorized, logged-in users
         """
         if self.user_fail and not isinstance(self.user_success, tuple):
             for user in get_user_list(self.user_fail):
@@ -342,10 +364,10 @@ class WgerEditTestCase(WgerTestCase):
         # Fetch the edit page
         response = self.client.get(get_reverse(self.url, kwargs={'pk': self.pk}))
         entry_before = self.object_class.objects.get(pk=self.pk)
+        values_before = get_field_snapshot(entry_before)
 
         if fail:
             self.assertIn(response.status_code, STATUS_CODES_FAIL)
-            self.assertTemplateUsed('login.html')
 
         else:
             self.assertEqual(response.status_code, 200)
@@ -367,8 +389,10 @@ class WgerEditTestCase(WgerTestCase):
         # Check the results
         if fail:
             self.assertIn(response.status_code, STATUS_CODES_FAIL)
-            self.assertTemplateUsed('login.html')
-            self.assertEqual(entry_before, entry_after)
+
+            # A successful POST also redirects, so the status code alone proves
+            # nothing. The object itself must be unchanged.
+            self.assertEqual(values_before, get_field_snapshot(entry_after))
 
         else:
             self.assertEqual(response.status_code, 302)
@@ -512,7 +536,7 @@ class WgerAddTestCase(WgerTestCase):
 
         if self.user_fail:
             for user in get_user_list(self.user_fail):
-                self.user_login(self.user_fail)
+                self.user_login(user)
                 self.add_object(fail=True)
 
 
@@ -526,7 +550,6 @@ class WgerAccessTestCase(WgerTestCase):
     anonymous_fail = True
 
     def access(self, fail=True):
-
         # Only perform the checks on derived classes
         if self.__class__.__name__ == 'WgerAccessTestCase':
             return

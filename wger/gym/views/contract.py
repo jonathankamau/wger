@@ -37,6 +37,7 @@ from django.views.generic import (
 )
 
 # wger
+from wger.gym.helpers import is_same_gym
 from wger.gym.models import Contract
 from wger.utils.generic_views import WgerFormMixin
 
@@ -50,7 +51,7 @@ class AddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Create
     """
 
     model = Contract
-    fields = [
+    fields = (
         'contract_type',
         'options',
         'amount',
@@ -65,7 +66,7 @@ class AddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Create
         'phone',
         'profession',
         'note',
-    ]
+    )
     title = gettext_lazy('Add contract')
     permission_required = 'gym.add_contract'
     member = None
@@ -106,7 +107,7 @@ class AddView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Create
 
         user = get_object_or_404(User, pk=self.kwargs['user_pk'])
         self.member = user
-        if user.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(user, request.user):
             return HttpResponseForbidden()
         return super(AddView, self).dispatch(request, *args, **kwargs)
 
@@ -136,7 +137,7 @@ class DetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             return HttpResponseForbidden()
 
         contract = self.get_object()
-        if contract.member.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(contract.member, request.user):
             return HttpResponseForbidden()
         return super(DetailView, self).dispatch(request, *args, **kwargs)
 
@@ -147,7 +148,7 @@ class UpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Upd
     """
 
     model = Contract
-    fields = [
+    fields = (
         'contract_type',
         'options',
         'amount',
@@ -162,7 +163,7 @@ class UpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Upd
         'phone',
         'profession',
         'note',
-    ]
+    )
     permission_required = 'gym.change_contract'
 
     def dispatch(self, request, *args, **kwargs):
@@ -174,7 +175,7 @@ class UpdateView(WgerFormMixin, LoginRequiredMixin, PermissionRequiredMixin, Upd
             return HttpResponseForbidden()
 
         contract = self.get_object()
-        if contract.member.userprofile.gym_id != request.user.userprofile.gym_id:
+        if not is_same_gym(contract.member, request.user):
             return HttpResponseForbidden()
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
 
@@ -191,6 +192,7 @@ class ListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
     Overview of all available admin notes
     """
+
     model = Contract
     permission_required = 'gym.add_contract'
     template_name = 'contract/list.html'
@@ -210,7 +212,7 @@ class ListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             return HttpResponseForbidden()
 
         self.member = get_object_or_404(User, id=self.kwargs['user_pk'])
-        if request.user.userprofile.gym_id != self.member.userprofile.gym_id:
+        if not is_same_gym(request.user, self.member):
             return HttpResponseForbidden()
 
         return super(ListView, self).dispatch(request, *args, **kwargs)

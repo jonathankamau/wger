@@ -17,11 +17,15 @@ import datetime
 
 # Django
 from django.contrib.auth.models import (
+    Group,
     Permission,
     User,
 )
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+
+# Third Party
+from allauth.account.models import EmailAddress
 
 # wger
 from wger.core.models import UserProfile
@@ -51,13 +55,14 @@ class GymAddUserTestCase(WgerTestCase):
             self.assertEqual(response.status_code, 200)
 
         response = self.client.post(
-            reverse('gym:gym:add-user', kwargs={'gym_pk': 1}), {
+            reverse('gym:gym:add-user', kwargs={'gym_pk': 1}),
+            {
                 'first_name': 'Cletus',
                 'last_name': 'Spuckle',
                 'username': 'cletus',
                 'email': 'cletus@spuckle-megacorp.com',
                 'role': 'admin',
-            }
+            },
         )
         count_after = User.objects.all().count()
         if fail:
@@ -87,6 +92,18 @@ class GymAddUserTestCase(WgerTestCase):
         """
         self.user_login('general_manager1')
         self.add_user()
+
+    def test_add_user_registers_email_with_allauth(self):
+        """
+        A member created by an admin gets an allauth EmailAddress row, so they
+        can log in by email and receive the confirmation link.
+        """
+        self.user_login('admin')
+        self.add_user()
+        new_user = User.objects.get(pk=self.client.session['gym.user']['user_pk'])
+        email_address = EmailAddress.objects.get(user=new_user)
+        self.assertEqual(email_address.email, 'cletus@spuckle-megacorp.com')
+        self.assertFalse(email_address.verified)
 
     def test_add_user_unauthorized(self):
         """
@@ -127,9 +144,7 @@ class GymAddUserTestCase(WgerTestCase):
             self.assertEqual(response['Content-Type'], 'text/csv')
             today = datetime.date.today()
             filename = 'User-data-{t.year}-{t.month:02d}-{t.day:02d}-cletus.csv'.format(t=today)
-            self.assertEqual(
-                response['Content-Disposition'], 'attachment; filename={}'.format(filename)
-            )
+            self.assertEqual(response['Content-Disposition'], f'attachment; filename={filename}')
             self.assertGreaterEqual(len(response.content), 90)
             self.assertLessEqual(len(response.content), 120)
 
@@ -158,7 +173,7 @@ class TrainerLoginTestCase(WgerTestCase):
         """
         Test the trainer login as an anonymous user
         """
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.client.session.get('trainer.identity'))
 
@@ -167,7 +182,7 @@ class TrainerLoginTestCase(WgerTestCase):
         Test the trainer login as a logged in user without rights
         """
         self.user_login('test')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
         self.assertEqual(response.status_code, 403)
         self.assertFalse(self.client.session.get('trainer.identity'))
 
@@ -176,7 +191,7 @@ class TrainerLoginTestCase(WgerTestCase):
         Test the trainer login as a logged in user with enough rights
         """
         self.user_login('admin')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self.client.session.get('trainer.identity'))
 
@@ -188,7 +203,7 @@ class TrainerLoginTestCase(WgerTestCase):
         profile.gym_id = 2
         profile.save()
         self.user_login('admin')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertEqual(response.status_code, 404)
         self.assertFalse(self.client.session.get('trainer.identity'))
 
@@ -202,7 +217,7 @@ class TrainerLoginTestCase(WgerTestCase):
         user.user_permissions.add(permission)
 
         self.user_login('admin')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertEqual(response.status_code, 403)
         self.assertFalse(self.client.session.get('trainer.identity'))
 
@@ -216,9 +231,48 @@ class TrainerLoginTestCase(WgerTestCase):
         user.user_permissions.add(permission)
 
         self.user_login('admin')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertEqual(response.status_code, 403)
         self.assertFalse(self.client.session.get('trainer.identity'))
+
+    def test_chained_hop_into_manager_is_blocked(self):
+        """
+        After a trainer legitimately switches into a regular user, the
+        session flag ``trainer.identity`` is set. Calling trainer-login
+        again must not let the (now non-trainer) session climb into a
+        gym manager account just because that flag is present.
+        """
+
+        # Step 1: legitimate hop — trainer1 (user 4) into test (user 2)
+        self.user_login('trainer1')
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.client.session.get('trainer.identity'))
+
+        # Step 2: chained hop — now-as-test, target manager1 (user 9, has manage_gym)
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 9}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_open_redirect_external_next_blocked(self):
+        """
+        The ?next= parameter must only redirect to the same origin.
+        """
+        for evil in ('https://evil.example/', '//evil.example/x', '%2F%2Fevil.example'):
+            self.user_login('admin')
+            response = self.client.post(
+                reverse('core:user:trainer-login', kwargs={'user_pk': 2}) + f'?next={evil}'
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertNotIn('evil.example', response['Location'])
+            self.user_logout()
+
+    def test_safe_next_passes_through(self):
+        self.user_login('admin')
+        response = self.client.post(
+            reverse('core:user:trainer-login', kwargs={'user_pk': 2}) + '?next=/exercise/overview'
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/exercise/overview')
 
     def test_gyms_manager(self):
         """
@@ -230,9 +284,501 @@ class TrainerLoginTestCase(WgerTestCase):
         user.user_permissions.add(permission)
 
         self.user_login('admin')
-        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertEqual(response.status_code, 403)
         self.assertFalse(self.client.session.get('trainer.identity'))
+
+    def test_exercise_admin(self):
+        """
+        Test changing the identity to a user maintaining the exercise database
+        """
+        for group in ('exercises_admin', 'exercises_editor'):
+            User.objects.get(pk=2).groups.set([Group.objects.get(name=group)])
+
+            self.user_login('trainer1')
+            response = self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+            self.assertEqual(response.status_code, 403)
+            self.assertFalse(self.client.session.get('trainer.identity'))
+            self.user_logout()
+
+    def test_get_does_not_rebind_session(self):
+        """
+        ``trainer_login`` must reject unsafe HTTP methods
+        """
+        self.user_login('admin')
+        response = self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        self.assertEqual(response.status_code, 405)
+        self.assertFalse(self.client.session.get('trainer.identity'))
+
+
+class ResetPasswordTargetRoleTestCase(WgerTestCase):
+    """
+    Only accounts with fewer privileges than the caller can have their password reset
+    """
+
+    def reset(self, username: str, target_pk: int) -> int:
+        """
+        Resets the target's password as the given user and returns the status code
+
+        Also checks that the password only changed when the request succeeded.
+        """
+        old_hash = User.objects.get(pk=target_pk).password
+        self.user_login(username)
+
+        response = self.client.post(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': target_pk})
+        )
+
+        changed = User.objects.get(pk=target_pk).password != old_hash
+        self.assertEqual(changed, response.status_code == 200)
+        return response.status_code
+
+    def test_manager_cannot_reset_admin(self):
+        self.assertEqual(self.reset('manager1', 1), 403)
+
+    def test_manager_cannot_reset_fellow_manager(self):
+        self.assertEqual(self.reset('manager1', 10), 403)
+
+    def test_manager_cannot_reset_trainer(self):
+        self.assertEqual(self.reset('manager1', 4), 403)
+
+    def test_manager_cannot_reset_deactivated_trainer(self):
+        User.objects.filter(pk=4).update(is_active=False)
+        self.assertEqual(self.reset('manager1', 4), 403)
+
+    def test_manager_can_reset_member(self):
+        self.assertEqual(self.reset('manager1', 14), 200)
+
+    def test_manager_cannot_reset_exercise_admin(self):
+        User.objects.get(pk=14).groups.add(Group.objects.get(name='exercises_admin'))
+        self.assertEqual(self.reset('manager1', 14), 403)
+
+    def test_general_manager_cannot_reset_admin(self):
+        self.assertEqual(self.reset('general_manager1', 1), 403)
+
+    def test_general_manager_cannot_reset_general_manager(self):
+        self.assertEqual(self.reset('general_manager1', 13), 403)
+
+    def test_general_manager_cannot_reset_superuser(self):
+        User.objects.filter(pk=19).update(is_superuser=True)
+        self.assertEqual(self.reset('general_manager1', 19), 403)
+
+    def test_general_manager_can_reset_trainer(self):
+        self.assertEqual(self.reset('general_manager1', 7), 200)
+
+    def test_superuser_can_reset_general_manager(self):
+        User.objects.filter(pk=1).update(is_superuser=True)
+        self.assertEqual(self.reset('admin', 12), 200)
+
+
+class EditUserTargetRoleTestCase(WgerTestCase):
+    """
+    Changing the email of another account needs more privileges than that account
+    """
+
+    def edit(self, username: str, target_pk: int) -> int:
+        """
+        Sets the target's email as the given user and returns the status code
+        """
+        old_email = User.objects.get(pk=target_pk).email
+        self.user_login(username)
+
+        response = self.client.post(
+            reverse('core:user:edit', kwargs={'pk': target_pk}),
+            {'first_name': 'New', 'last_name': 'Name', 'email': 'new-address@example.com'},
+        )
+
+        changed = User.objects.get(pk=target_pk).email != old_email
+        self.assertEqual(changed, response.status_code == 302)
+        return response.status_code
+
+    def test_manager_cannot_edit_admin(self):
+        self.assertEqual(self.edit('manager1', 1), 403)
+
+    def test_manager_cannot_edit_trainer(self):
+        self.assertEqual(self.edit('manager1', 4), 403)
+
+    def test_manager_can_edit_member(self):
+        self.assertEqual(self.edit('manager1', 14), 302)
+
+    def test_manager_cannot_edit_exercise_admin(self):
+        User.objects.get(pk=14).groups.add(Group.objects.get(name='exercises_admin'))
+        self.assertEqual(self.edit('manager1', 14), 403)
+
+    def test_general_manager_cannot_edit_general_manager(self):
+        self.assertEqual(self.edit('general_manager1', 13), 403)
+
+    def test_general_manager_can_edit_manager(self):
+        self.assertEqual(self.edit('general_manager1', 11), 302)
+
+
+class DeleteUserTargetRoleTestCase(WgerTestCase):
+    """
+    Managers can only delete accounts without a gym role, also deactivated ones
+    """
+
+    def delete(self, username: str, target_pk: int) -> int:
+        """
+        Deletes the target as the given user and returns the status code
+
+        Also checks that the account is only gone when the request succeeded.
+        """
+        self.user_login(username)
+        response = self.client.post(
+            reverse('core:user:delete', kwargs={'user_pk': target_pk}),
+            {'password': self.current_password},
+        )
+
+        deleted = not User.objects.filter(pk=target_pk).exists()
+        self.assertEqual(deleted, response.status_code == 302)
+        return response.status_code
+
+    def test_manager_cannot_delete_deactivated_manager(self):
+        User.objects.filter(pk=10).update(is_active=False)
+        self.assertEqual(self.delete('manager1', 10), 403)
+
+    def test_manager_cannot_delete_deactivated_trainer(self):
+        User.objects.filter(pk=4).update(is_active=False)
+        self.assertEqual(self.delete('manager1', 4), 403)
+
+    def test_manager_cannot_delete_deactivated_general_manager(self):
+        User.objects.filter(pk=12).update(is_active=False)
+        self.assertEqual(self.delete('manager1', 12), 403)
+
+    def test_manager_cannot_delete_deactivated_admin(self):
+        User.objects.filter(pk=1).update(is_active=False)
+        self.assertEqual(self.delete('manager1', 1), 403)
+
+    def test_manager_cannot_delete_deactivated_superuser(self):
+        User.objects.filter(pk=21).update(is_superuser=True, is_active=False)
+        self.assertEqual(self.delete('manager1', 21), 403)
+
+    def test_manager_can_delete_deactivated_member(self):
+        User.objects.filter(pk=14).update(is_active=False)
+        self.assertEqual(self.delete('manager1', 14), 302)
+
+
+class ActivationTargetRoleTestCase(WgerTestCase):
+    """
+    Gym staff can't (de)activate accounts above them
+    """
+
+    def set_active(self, username: str, target_pk: int, active: bool) -> int:
+        """
+        (De)activates the target as the given user and returns the status code
+
+        Also checks that the flag only changed when the request succeeded.
+        """
+        User.objects.filter(pk=target_pk).update(is_active=not active)
+        self.user_login(username)
+
+        url_name = 'core:user:activate' if active else 'core:user:deactivate'
+        response = self.client.post(reverse(url_name, kwargs={'pk': target_pk}))
+
+        changed = User.objects.get(pk=target_pk).is_active == active
+        self.assertEqual(changed, response.status_code == 302)
+        return response.status_code
+
+    def test_manager_cannot_deactivate_admin(self):
+        self.assertEqual(self.set_active('manager1', 1, False), 403)
+
+    def test_manager_cannot_deactivate_general_manager(self):
+        self.assertEqual(self.set_active('manager1', 12, False), 403)
+
+    def test_manager_cannot_deactivate_superuser(self):
+        User.objects.filter(pk=21).update(is_superuser=True)
+        self.assertEqual(self.set_active('manager1', 21, False), 403)
+
+    def test_manager_cannot_activate_general_manager(self):
+        self.assertEqual(self.set_active('manager1', 12, True), 403)
+
+    def test_manager_can_deactivate_fellow_manager(self):
+        self.assertEqual(self.set_active('manager1', 10, False), 302)
+
+    def test_manager_can_deactivate_trainer(self):
+        self.assertEqual(self.set_active('manager1', 4, False), 302)
+
+    def test_trainer_cannot_deactivate_admin(self):
+        self.assertEqual(self.set_active('trainer1', 1, False), 403)
+
+    def test_trainer_cannot_deactivate_superuser(self):
+        User.objects.filter(pk=21).update(is_superuser=True)
+        self.assertEqual(self.set_active('trainer1', 21, False), 403)
+
+    def test_trainer_cannot_activate_superuser(self):
+        User.objects.filter(pk=21).update(is_superuser=True)
+        self.assertEqual(self.set_active('trainer1', 21, True), 403)
+
+    def test_trainer_cannot_deactivate_direct_manager(self):
+        content_type = ContentType.objects.get_for_model(Gym)
+        permission = Permission.objects.get(content_type=content_type, codename='manage_gym')
+        User.objects.get(pk=14).user_permissions.add(permission)
+        self.assertEqual(self.set_active('trainer1', 14, False), 403)
+
+    def test_trainer_can_deactivate_member(self):
+        self.assertEqual(self.set_active('trainer1', 14, False), 302)
+
+    def test_general_manager_can_deactivate_manager(self):
+        self.assertEqual(self.set_active('general_manager1', 9, False), 302)
+
+    def test_superuser_can_deactivate_general_manager(self):
+        User.objects.filter(pk=1).update(is_superuser=True)
+        self.assertEqual(self.set_active('admin', 12, False), 302)
+
+
+class EditUserPermissionTargetRoleTestCase(WgerTestCase):
+    """
+    The gym roles of an account can only be edited when the user could grant all of them
+    """
+
+    def edit_roles(self, username: str, target_pk: int, roles: list[str]) -> int:
+        self.user_login(username)
+        response = self.client.post(
+            reverse('gym:gym:edit-user-permission', kwargs={'user_pk': target_pk}),
+            {'role': roles},
+        )
+        return response.status_code
+
+    def test_manager_cannot_demote_general_manager(self):
+        status = self.edit_roles('manager1', 12, ['user'])
+
+        self.assertEqual(status, 403)
+        self.assertTrue(User.objects.get(pk=12).groups.filter(name='general_gym_manager').exists())
+
+    def test_manager_can_remove_trainer_role(self):
+        status = self.edit_roles('manager1', 4, ['user'])
+
+        self.assertEqual(status, 302)
+        self.assertFalse(User.objects.get(pk=4).groups.filter(name='gym_trainer').exists())
+
+
+class GymScopeGuardsTestCase(WgerTestCase):
+    """
+    Test the gym-scope guards
+    """
+
+    VICTIM_USER_PK = 2  # 'test'
+
+    def _set_gym(self, user_pk, gym_id):
+        profile = UserProfile.objects.get(user_id=user_pk)
+        profile.gym_id = gym_id
+        profile.save()
+
+    def _both_gyms_none(self, attacker_pk):
+        self._set_gym(attacker_pk, None)
+        self._set_gym(self.VICTIM_USER_PK, None)
+
+    def test_reset_password_blocked_when_both_gyms_none(self):
+        """
+        A manager with gym=None must not reset another gym=None user's
+        password.
+        """
+        self._both_gyms_none(attacker_pk=9)  # manager1
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_reset_password_blocked_attacker_none_victim_real_gym(self):
+        """
+        Sanity check: an attacker with gym=None must not be able to reset
+        the password of a user that is in a real gym either.
+        """
+        self._set_gym(9, None)  # manager1; victim keeps fixture gym=1
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_reset_password_allowed_same_gym(self):
+        """
+        Sanity check: the legitimate same-gym flow must keep working.
+        """
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_reset_password_get_does_not_mutate(self):
+        """
+        Regression test: GET must only render a confirmation form, since
+        Django's CSRF protection does not apply to GET requests. The actual
+        password reset must require POST.
+        """
+        victim = User.objects.get(pk=self.VICTIM_USER_PK)
+        old_password_hash = victim.password
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.get(pk=self.VICTIM_USER_PK).password, old_password_hash)
+
+    def test_reset_password_post_mutates(self):
+        """
+        Sanity check: POST must perform the actual password reset.
+        """
+        victim = User.objects.get(pk=self.VICTIM_USER_PK)
+        old_password_hash = victim.password
+        self.user_login('manager1')
+
+        response = self.client.post(
+            reverse('gym:gym:reset-user-password', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(User.objects.get(pk=self.VICTIM_USER_PK).password, old_password_hash)
+
+    def test_permissions_edit_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=9)
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('gym:gym:edit-user-permission', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_user_edit_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=9)
+        self.user_login('manager1')
+
+        response = self.client.get(reverse('core:user:edit', kwargs={'pk': self.VICTIM_USER_PK}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_user_overview_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=9)
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('core:user:overview', kwargs={'pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_trainer_login_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=4)  # trainer1
+        self.user_login('trainer1')
+
+        response = self.client.post(
+            reverse('core:user:trainer-login', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertIn(response.status_code, (403, 404))
+        self.assertFalse(self.client.session.get('trainer.identity'))
+
+    def test_admin_notes_list_blocked_when_both_gyms_none(self):
+        """
+        A trainer with gym=None must not list admin notes attached to
+        another gym=None user.
+        """
+        self._set_gym(4, None)  # trainer1
+        self._set_gym(14, None)  # member1, owner of admin note pk=1
+        self.user_login('trainer1')
+
+        response = self.client.get(reverse('gym:admin_note:list', kwargs={'user_pk': 14}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_notes_update_blocked_when_both_gyms_none(self):
+        """
+        Editing an admin note that belongs to a gym=None member must be
+        blocked for a gym=None trainer.
+        """
+        self._set_gym(4, None)
+        self._set_gym(14, None)
+        self.user_login('trainer1')
+
+        response = self.client.get(reverse('gym:admin_note:edit', kwargs={'pk': 1}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_documents_list_blocked_when_both_gyms_none(self):
+        self._set_gym(4, None)
+        self._set_gym(14, None)
+        self.user_login('trainer1')
+
+        response = self.client.get(reverse('gym:document:list', kwargs={'user_pk': 14}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_documents_update_blocked_when_both_gyms_none(self):
+        self._set_gym(4, None)
+        self._set_gym(14, None)
+        self.user_login('trainer1')
+
+        response = self.client.get(reverse('gym:document:edit', kwargs={'pk': 1}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_contracts_list_blocked_when_both_gyms_none(self):
+        self._set_gym(9, None)  # manager1
+        self._set_gym(15, None)  # member2, owner of contract pk=1
+        self.user_login('manager1')
+
+        response = self.client.get(reverse('gym:contract:list', kwargs={'user_pk': 15}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_contracts_update_blocked_when_both_gyms_none(self):
+        self._set_gym(9, None)
+        self._set_gym(15, None)
+        self.user_login('manager1')
+
+        response = self.client.get(reverse('gym:contract:edit', kwargs={'pk': 1}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_blocked_when_both_gyms_none(self):
+        """
+        A manager with gym=None must not be able to load (or POST to) the
+        delete-account form for another gym=None user.
+        """
+        self._both_gyms_none(attacker_pk=9)  # manager1
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('core:user:delete', kwargs={'user_pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_post_does_not_remove_victim_when_both_gyms_none(self):
+        """
+        Even on POST with correct password confirmation the destructive
+        ``user.delete()`` must not run when the attacker is not in the
+        victim's gym.
+        """
+        self._both_gyms_none(attacker_pk=9)
+        self.user_login('manager1')
+
+        response = self.client.post(
+            reverse('core:user:delete', kwargs={'user_pk': self.VICTIM_USER_PK}),
+            {'password': 'manager1manager1'},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(User.objects.filter(pk=self.VICTIM_USER_PK).exists())
+
+    def test_deactivate_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=9)
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('core:user:deactivate', kwargs={'pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(User.objects.get(pk=self.VICTIM_USER_PK).is_active)
+
+    def test_activate_blocked_when_both_gyms_none(self):
+        self._both_gyms_none(attacker_pk=9)
+        victim = User.objects.get(pk=self.VICTIM_USER_PK)
+        victim.is_active = False
+        victim.save()
+        self.user_login('manager1')
+
+        response = self.client.get(
+            reverse('core:user:activate', kwargs={'pk': self.VICTIM_USER_PK})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.get(pk=self.VICTIM_USER_PK).is_active)
 
 
 class TrainerLogoutTestCase(WgerTestCase):
@@ -245,8 +791,8 @@ class TrainerLogoutTestCase(WgerTestCase):
         Test the trainer login as an anonymous user
         """
         self.user_login('admin')
-        self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
+        self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 2}))
         self.assertTrue(self.client.session.get('trainer.identity'))
 
-        self.client.get(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
+        self.client.post(reverse('core:user:trainer-login', kwargs={'user_pk': 1}))
         self.assertFalse(self.client.session.get('trainer.identity'))

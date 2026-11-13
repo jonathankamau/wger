@@ -1,53 +1,61 @@
 [
     {
-        "pk": 1,
+        "pk": "bbbbbbbb-bbbb-bbbb-bbbb-000000000001",
         "model": "manager.workoutsession",
         "fields": {
             "impression": "2",
-            "time_start": "17:00:00",
-            "workout": 1,
-            "time_end": "18:30:00",
+            "datetime_start": "2025-10-01T17:00:00Z",
+            "routine": 1,
+            "datetime_end": "2025-10-01T18:30:00Z",
             "user": 1,
-            "date": "2012-10-01",
             "notes": "Notes come here"
         }
     },
     {
-        "pk": 2,
+        "pk": "bbbbbbbb-bbbb-bbbb-bbbb-000000000002",
         "model": "manager.workoutsession",
         "fields": {
             "impression": "3",
-            "time_start": "17:00:00",
-            "workout": 1,
-            "time_end": "18:00:00",
+            "datetime_start": "2025-01-20T17:00:00Z",
+            "routine": 1,
+            "datetime_end": "2025-01-20T18:00:00Z",
             "user": 1,
-            "date": "2014-01-20",
             "notes": "Even more notes and impressions"
         }
     },
     {
-        "pk": 3,
+        "pk": "bbbbbbbb-bbbb-bbbb-bbbb-000000000003",
         "model": "manager.workoutsession",
         "fields": {
             "impression": "3",
-            "time_start": "10:00:00",
-            "workout": 2,
-            "time_end": "15:00:00",
+            "datetime_start": "2025-01-30T10:00:00Z",
+            "routine": 2,
+            "datetime_end": "2025-01-30T15:00:00Z",
             "user": 1,
-            "date": "2014-01-30",
             "notes": "I spent the whole day in the gym"
         }
     },
     {
-        "pk": 4,
+        "pk": "bbbbbbbb-bbbb-bbbb-bbbb-000000000004",
         "model": "manager.workoutsession",
         "fields": {
             "impression": "3",
-            "time_start": "10:00:00",
-            "workout": 3,
-            "time_end": "10:15:00",
+            "datetime_start": "2025-11-01T10:00:00Z",
+            "routine": 3,
+            "datetime_end": "2025-11-01T10:15:00Z",
+            "user": 1,
+            "notes": "Something, something else"
+        }
+    },
+    {
+        "pk": "bbbbbbbb-bbbb-bbbb-bbbb-000000000005",
+        "model": "manager.workoutsession",
+        "fields": {
+            "impression": "3",
+            "datetime_start": "2025-11-01T10:00:00Z",
+            "routine": 3,
+            "datetime_end": "2025-11-01T10:15:00Z",
             "user": 2,
-            "date": "2014-01-30",
             "notes": "Something, something else"
         }
     }

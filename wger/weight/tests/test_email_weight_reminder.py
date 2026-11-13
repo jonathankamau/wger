@@ -13,30 +13,30 @@
 # You should have received a copy of the GNU Affero General Public License
 
 # Standard Library
-from datetime import (
-    datetime,
-    timedelta,
-)
+from datetime import timedelta
 
 # Django
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.management import call_command
+from django.utils import timezone
 
 # wger
 from wger.core.tests.base_testcase import WgerTestCase
-from wger.weight.models import WeightEntry
+from wger.measurements.models import Measurement
+
+
+ENTRY_PK = '11111111-1111-1111-1111-000000000003'
 
 
 class EmailWeightReminderTestCase(WgerTestCase):
-
     def test_without_email(self):
         user = User.objects.get(pk=2)
         user.email = ''
         user.num_days_weight_reminder = 3
         user.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 0)
 
     def test_without_num_days_weight_reminder(self):
@@ -47,7 +47,7 @@ class EmailWeightReminderTestCase(WgerTestCase):
         user.userprofile.num_days_weight_reminder = 0
         user.userprofile.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 0)
 
     def test_with_num_days_weight_reminder(self):
@@ -58,7 +58,7 @@ class EmailWeightReminderTestCase(WgerTestCase):
         user.userprofile.num_days_weight_reminder = 3
         user.userprofile.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 1)
 
     def test_send_email(self):
@@ -66,14 +66,14 @@ class EmailWeightReminderTestCase(WgerTestCase):
         user.email = 'test@test.com'
         user.save()
 
-        weightEntry = WeightEntry.objects.filter(user=user).get(pk=3)
-        weightEntry.date = datetime.now().date() - timedelta(days=2)
+        weightEntry = Measurement.body_weight_for(user).get(pk=ENTRY_PK)
+        weightEntry.date = timezone.now() - timedelta(days=2)
         weightEntry.save()
 
         user.userprofile.num_days_weight_reminder = 1
         user.userprofile.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 1)
 
     def test_send_email_zero_days_diff(self):
@@ -81,14 +81,14 @@ class EmailWeightReminderTestCase(WgerTestCase):
         user.email = 'test@test.com'
         user.save()
 
-        weightEntry = WeightEntry.objects.filter(user=user).get(pk=3)
-        weightEntry.date = datetime.now().date() - timedelta(days=1)
+        weightEntry = Measurement.body_weight_for(user).get(pk=ENTRY_PK)
+        weightEntry.date = timezone.now() - timedelta(days=1)
         weightEntry.save()
 
         user.userprofile.num_days_weight_reminder = 1
         user.userprofile.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 1)
 
     def test_not_send_email(self):
@@ -96,12 +96,12 @@ class EmailWeightReminderTestCase(WgerTestCase):
         user.email = 'test@test.com.br'
         user.save()
 
-        weightEntry = WeightEntry.objects.filter(user=user).latest()
-        weightEntry.date = datetime.now().date()
+        weightEntry = Measurement.body_weight_for(user).latest('date')
+        weightEntry.date = timezone.now()
         weightEntry.save()
 
         user.userprofile.num_days_weight_reminder = 3
         user.userprofile.save()
 
-        call_command("email-weight-reminder")
+        call_command('email-weight-reminder')
         self.assertEqual(len(mail.outbox), 0)

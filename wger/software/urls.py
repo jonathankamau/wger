@@ -22,14 +22,17 @@ from django.views.generic import (
 )
 
 # wger
-from wger import get_version
 from wger.software import views
+from wger.version import (
+    get_version_date,
+    get_version_with_git,
+)
 
 
 urlpatterns = [
     path(
         'terms-of-service',
-        TemplateView.as_view(template_name="tos.html"),
+        TemplateView.as_view(template_name='tos.html'),
         name='tos',
     ),
     path(
@@ -45,13 +48,14 @@ urlpatterns = [
     path(
         'about-us',
         TemplateView.as_view(
-            template_name="about_us.html", extra_context={'version': get_version()}
+            template_name='about_us.html',
+            extra_context={'version': get_version_with_git(), 'date': get_version_date()},
         ),
         name='about-us',
     ),
     path(
         'api',
-        TemplateView.as_view(template_name="api.html"),
+        TemplateView.as_view(template_name='api.html'),
         name='api',
     ),
 ]

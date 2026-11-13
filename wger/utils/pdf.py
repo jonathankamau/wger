@@ -24,6 +24,7 @@ from django.utils import translation
 # Third Party
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import (
     ParagraphStyle,
     StyleSheet1,
@@ -37,8 +38,8 @@ from reportlab.platypus import (
 )
 
 # wger
-from wger import get_version
 from wger.core.models import Language
+from wger.version import get_version
 
 
 # ************************
@@ -60,36 +61,9 @@ def load_language():
 
     # No luck, load english as our fall-back language
     except ObjectDoesNotExist:
-        language = Language.objects.get(short_name="en")
+        language = Language.objects.get(short_name='en')
 
     return language
-
-
-def load_ingredient_languages(request):
-    """
-    Filter the ingredients the user will see by its language.
-
-    Additionally, if the user has selected on his preference page that he wishes
-    to also see the ingredients in English (from the US Department of Agriculture),
-    show those too.
-
-    This only makes sense if the user's language isn't English, as he will be
-    presented those in that case anyway, so also do a check for this.
-    """
-
-    language = load_language()
-    languages = (language.id, )
-
-    # Only registered users have a profile
-    if request.user.is_authenticated:
-        profile = request.user.userprofile
-        show_english = profile.show_english_ingredients
-
-        # If the user's language is not english and has the preference, add english to the list
-        if show_english and language.short_name != 'en':
-            languages = (language.id, 2)
-
-    return languages
 
 
 def render_footer(url, date=None):
@@ -98,16 +72,19 @@ def render_footer(url, date=None):
     :return: a Paragraph object
     """
     if not date:
-        date = datetime.date.today().strftime("%d.%m.%Y")
+        date = datetime.date.today().strftime('%d.%m.%Y')
+
+    style = ParagraphStyle(
+        'FooterStyle',
+        parent=styleSheet['Normal'],
+        alignment=TA_CENTER,
+    )
 
     p = Paragraph(
-        """<para>
-                        {date} -
-                        <a href="{url}">{url}</a> -
-                        wger Workout Manager
-                        {version}
-                    </para>""".format(date=date, url=url, version=get_version()),
-        styleSheet["Normal"]
+        f"""<para>
+                {date} - <a href="{url}">{url}</a> - wger {get_version()}
+            </para>""",
+        style,
     )
     return p
 
@@ -137,22 +114,26 @@ pdfmetrics.registerFont(
 pdfmetrics.registerFont(
     TTFont(
         'OpenSans-Italic',
-        path_join(settings.SITE_ROOT, 'core/static/fonts/OpenSans-LightItalic.ttf')
+        path_join(settings.SITE_ROOT, 'core/static/fonts/OpenSans-LightItalic.ttf'),
     )
 )
 
 styleSheet = StyleSheet1()
-styleSheet.add(ParagraphStyle(
-    name='Normal',
-    fontName='OpenSans',
-    fontSize=10,
-    leading=12,
-))
-styleSheet.add(ParagraphStyle(
-    parent=styleSheet['Normal'],
-    fontSize=8,
-    name='Small',
-))
+styleSheet.add(
+    ParagraphStyle(
+        name='Normal',
+        fontName='OpenSans',
+        fontSize=10,
+        leading=12,
+    )
+)
+styleSheet.add(
+    ParagraphStyle(
+        parent=styleSheet['Normal'],
+        fontSize=8,
+        name='Small',
+    )
+)
 styleSheet.add(
     ParagraphStyle(
         parent=styleSheet['Normal'],
@@ -174,7 +155,16 @@ styleSheet.add(
         parent=styleSheet['Normal'],
         name='SubHeader',
         fontName='OpenSans-Bold',
-        textColor=colors.white
+        textColor=colors.white,
+    )
+)
+styleSheet.add(
+    ParagraphStyle(
+        parent=styleSheet['Normal'],
+        fontSize=7,
+        name='SubHeaderSmall',
+        fontName='OpenSans-Bold',
+        textColor=colors.white,
     )
 )
 styleSheet.add(
@@ -182,9 +172,9 @@ styleSheet.add(
         parent=styleSheet['Normal'],
         name='SubHeaderBlack',
         fontName='OpenSans-Bold',
-        textColor=colors.black
+        textColor=colors.black,
     )
 )
 
-header_colour = HexColor(0x24416b)
-row_color = HexColor(0xd1def0)
+header_colour = HexColor(0x24416B)
+row_color = HexColor(0xD1DEF0)

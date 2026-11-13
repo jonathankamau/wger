@@ -16,31 +16,33 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Django
-from django.conf.urls import (
-    include,
-    url,
+from django.conf.urls import include
+from django.urls import (
+    path,
 )
-from django.contrib.auth.decorators import login_required
-from django.urls import path
 
 # wger
+from wger.core.views.react import ReactView
 from wger.exercises.views import (
     categories,
-    comments,
     equipment,
-    exercises,
-    images,
+    history,
     muscles,
 )
 
 
+# sub patterns for history
+patterns_history = [
+    path('admin-control', history.control, name='overview'),
+    path(
+        'admin-control/revert/<int:history_pk>/<int:content_type_id>',
+        history.history_revert,
+        name='revert',
+    ),
+]
+
 # sub patterns for muscles
 patterns_muscle = [
-    path(
-        'overview/',
-        muscles.MuscleListView.as_view(),
-        name='overview',
-    ),
     path(
         'admin-overview/',
         muscles.MuscleAdminListView.as_view(),
@@ -59,54 +61,6 @@ patterns_muscle = [
     path(
         '<int:pk>/delete/',
         muscles.MuscleDeleteView.as_view(),
-        name='delete',
-    ),
-]
-
-# sub patterns for exercise images
-patterns_images = [
-    path(
-        '<int:exercise_pk>/image/add',
-        images.ExerciseImageAddView.as_view(),
-        name='add',
-    ),
-    path(
-        '<int:pk>/edit',
-        images.ExerciseImageEditView.as_view(),
-        name='edit',
-    ),
-    path(
-        '<int:exercise_pk>/image/<int:pk>/delete',
-        images.ExerciseImageDeleteView.as_view(),
-        name='delete',
-    ),
-    path(
-        '<int:pk>/accept/',
-        images.accept,
-        name='accept',
-    ),
-    path(
-        '<int:pk>/decline/',
-        images.decline,
-        name='decline',
-    ),
-]
-
-# sub patterns for exercise comments
-patterns_comment = [
-    path(
-        '<int:exercise_pk>/comment/add/',
-        comments.ExerciseCommentAddView.as_view(),
-        name='add',
-    ),
-    path(
-        '<int:pk>/edit/',
-        comments.ExerciseCommentEditView.as_view(),
-        name='edit',
-    ),
-    path(
-        '<int:id>/delete/',
-        comments.delete,
         name='delete',
     ),
 ]
@@ -157,72 +111,36 @@ patterns_equipment = [
         equipment.EquipmentDeleteView.as_view(),
         name='delete',
     ),
-    path(
-        'overview',
-        equipment.EquipmentOverviewView.as_view(),
-        name='overview',
-    ),
 ]
 
 # sub patterns for exercises
 patterns_exercise = [
     path(
         'overview/',
-        exercises.ExerciseListView.as_view(),
+        ReactView.as_view(),
         name='overview',
     ),
     path(
-        '<int:id>/view/',
-        exercises.view,
-        name='view',
-    ),
-    url(
-        r'^(?P<id>\d+)/view/(?P<slug>[-\w]*)/?$',
-        exercises.view,
+        '<int:pk>/view',
+        ReactView.as_view(),
         name='view',
     ),
     path(
-        'add/',
-        login_required(exercises.ExerciseAddView.as_view()),
-        name='add',
+        '<int:pk>/view/<slug:slug>',
+        ReactView.as_view(),
+        name='view',
     ),
     path(
-        '<int:pk>/edit/',
-        exercises.ExerciseUpdateView.as_view(),
-        name='edit',
-    ),
-    path(
-        '<int:pk>/correct',
-        exercises.ExerciseCorrectView.as_view(),
-        name='correct',
-    ),
-    path(
-        '<int:pk>/delete/',
-        exercises.ExerciseDeleteView.as_view(),
-        name='delete',
-    ),
-    path(
-        'pending/',
-        exercises.PendingExerciseListView.as_view(),
-        name='pending',
-    ),
-    path(
-        '<int:pk>/accept/',
-        exercises.accept,
-        name='accept',
-    ),
-    path(
-        '<int:pk>/decline/',
-        exercises.decline,
-        name='decline',
+        'contribute',
+        ReactView.as_view(),
+        name='contribute',
     ),
 ]
 
 urlpatterns = [
-    path('muscle/', include((patterns_muscle, 'muscle'), namespace="muscle")),
-    path('image/', include((patterns_images, 'image'), namespace="image")),
-    path('comment/', include((patterns_comment, 'comment'), namespace="comment")),
-    path('category/', include((patterns_category, 'category'), namespace="category")),
-    path('equipment/', include((patterns_equipment, 'equipment'), namespace="equipment")),
-    path('', include((patterns_exercise, 'exercise'), namespace="exercise")),
+    path('muscle/', include((patterns_muscle, 'muscle'), namespace='muscle')),
+    path('category/', include((patterns_category, 'category'), namespace='category')),
+    path('equipment/', include((patterns_equipment, 'equipment'), namespace='equipment')),
+    path('history/', include((patterns_history, 'history'), namespace='history')),
+    path('', include((patterns_exercise, 'exercise'), namespace='exercise')),
 ]

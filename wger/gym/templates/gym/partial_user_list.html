@@ -1,18 +1,27 @@
 {% load i18n static %}
 
-<link rel="stylesheet" type="text/css" href="{% static 'yarn/datatables/media/css/dataTables.bootstrap4.min.css' %}">
-<script src="{% static 'yarn/datatables/media/js/jquery.datatables.min.js' %}" ></script>
-<script src="{% static 'yarn/datatables/media/js/dataTables.bootstrap4.min.js' %}" ></script>
+<link rel="stylesheet" type="text/css" href="{% static 'node/datatables.net-bs5/css/dataTables.bootstrap5.min.css' %}">
+<script src="{% static 'node/datatables.net/js/dataTables.min.js' %}" ></script>
+<script src="{% static 'node/datatables.net-bs5/js/dataTables.bootstrap5.min.js' %}" ></script>
 <script>
-$(document).ready( function () {
-    /* Make table sortable */
-    $('#main_member_list').DataTable({
-        paging: false,
-        bFilter: true,
-        bInfo : false
+    document.addEventListener('DOMContentLoaded', function () {
+        const title = document.createElement('h4');
+        title.textContent = '{% translate "Members" %}';
+
+        new DataTable('#main_member_list', {
+            paging: false,
+            searching: true,
+            info: false,
+            layout: {
+                topStart: title,
+                topEnd: 'search',
+                bottomStart: null,
+                bottomEnd: null
+            }
+        });
     });
-});
 </script>
+
 
 <table class="table table-hover table-responsive" id="main_member_list">
 <thead>

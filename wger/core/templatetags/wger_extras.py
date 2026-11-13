@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -15,134 +13,22 @@
 # You should have received a copy of the GNU Affero General Public License
 
 # Standard Library
-from collections import Iterable
+import json
+import re
+from functools import lru_cache
 
 # Django
 from django import template
-from django.conf import settings
-from django.templatetags.static import static
-from django.utils.html import strip_spaces_between_tags
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.utils.safestring import mark_safe
-from django.utils.translation import (
-    gettext_lazy as _,
-    pgettext,
-)
+from django.utils.translation import gettext_lazy as _
 
 # wger
-from wger.manager.models import Day
-from wger.utils.constants import (
-    PAGINATION_MAX_TOTAL_PAGES,
-    PAGINATION_PAGES_AROUND_CURRENT,
-)
+from wger.core.tests.base_testcase import get_reverse
+from wger.utils.language import get_language_data
 
 
 register = template.Library()
-
-
-@register.filter(name='get_current_settings')
-def get_current_settings(exercise, set_id):
-    """
-    Does a filter on the sets
-
-    We need to do this here because it's not possible to pass arguments to function in
-    the template, and we are only interested on the settings that belong to the current
-    set
-    """
-    return exercise.setting_set.filter(set_id=set_id)
-
-
-@register.inclusion_tag('tags/render_day.html')
-def render_day(day: Day, editable=True):
-    """
-    Renders a day as it will be displayed in the workout overview
-    """
-    return {
-        'day': day,
-        'workout': day.training,
-        'editable': editable,
-    }
-
-
-@register.inclusion_tag('tags/pagination.html')
-def pagination(paginator, page):
-    """
-    Renders the necessary links to paginating a long list
-    """
-
-    # For very long lists (e.g. the English ingredient with more than 8000 items)
-    # we muck around here to remove the pages not inmediately 'around' the current
-    # one, otherwise we end up with a useless block with 300 pages.
-    if paginator.num_pages > PAGINATION_MAX_TOTAL_PAGES:
-
-        start_page = page.number - PAGINATION_PAGES_AROUND_CURRENT
-        for i in range(page.number - PAGINATION_PAGES_AROUND_CURRENT, page.number + 1):
-            if i > 0:
-                start_page = i
-                break
-
-        end_page = page.number + PAGINATION_PAGES_AROUND_CURRENT
-        for i in range(page.number, page.number + PAGINATION_PAGES_AROUND_CURRENT):
-            if i > paginator.num_pages:
-                end_page = i
-                break
-
-        page_range = range(start_page, end_page)
-    else:
-        page_range = paginator.page_range
-
-    # Set the template variables
-    return {'page': page, 'page_range': page_range}
-
-
-@register.inclusion_tag('tags/render_weight_log.html')
-def render_weight_log(log, div_uuid, user=None):
-    """
-    Renders a weight log series
-    """
-
-    return {
-        'log': log,
-        'div_uuid': div_uuid,
-        'user': user,
-    }
-
-
-@register.inclusion_tag('tags/license-sidebar.html')
-def license_sidebar(license, author=None):
-    """
-    Renders the license notice for exercises
-    """
-
-    return {'license': license, 'author': author}
-
-
-@register.inclusion_tag('tags/muscles.html')
-def render_muscles(muscles=None, muscles_sec=None):
-    """
-    Renders the given muscles
-    """
-    out = {"backgrounds": []}
-    if not muscles and not muscles_sec:
-        return out
-
-    out_main = []
-    if muscles:
-        out_main = muscles if isinstance(muscles, Iterable) else [muscles]
-
-    out_secondary = []
-    if muscles_sec:
-        out_secondary = muscles_sec if isinstance(muscles_sec, Iterable) else [muscles_sec]
-
-    if out_main:
-        front_back = "front" if out_main[0].is_front else "back"
-    else:
-        front_back = "front" if out_secondary[0].is_front else "back"
-
-    out['backgrounds'] = [i.image_url_main for i in out_main] \
-        + [i.image_url_secondary for i in out_secondary] \
-        + [static(f"images/muscles/muscular_system_{front_back}.svg")]
-
-    return out
 
 
 @register.inclusion_tag('tags/language_select.html', takes_context=True)
@@ -151,11 +37,7 @@ def language_select(context, language):
     Renders a link to change the current language.
     """
 
-    return {
-        'language_name': language[1],
-        'path': f'images/icons/flag-{language[0]}.svg',
-        'i18n_path': context['i18n_path'][language[0]]
-    }
+    return get_language_data(language)
 
 
 @register.filter
@@ -189,6 +71,7 @@ def fa_class(class_name='', icon_type='fas', fixed_width=True):
 
     :param class_name: the CSS class name, without the "fa-" prefix
     :param fixed_width: toggle for fixed icon width
+    :param icon_type; icon type (
     :return: the complete CSS classes
     """
     css = ''
@@ -202,26 +85,25 @@ def fa_class(class_name='', icon_type='fas', fixed_width=True):
     return mark_safe(css)
 
 
+@register.inclusion_tag('tags/modal_link.html')
+def modal_link(url: str, text: str, css_class='btn btn-success btn-sm'):
+    return {'url': get_reverse(url), 'text': text, 'css_class': css_class}
+
+
 @register.simple_tag
 def trans_weight_unit(unit, user=None):
     """
     Returns the correct (translated) weight unit
 
-    :param unit: the weight unit. Allowed values are 'kg' and 'g'
+    :param unit: the weight unit. The only allowed value is 'kg'
     :param user: the user object, needed to access the profile. If this evaluates
                  to False, metric is used
     :return: translated unit
     """
-    if not user or user.userprofile.use_metric:
-        if unit == 'kg':
+    if unit == 'kg':
+        if not user or user.userprofile.use_metric:
             return _('kg')
-        if unit == 'g':
-            return pgettext("weight unit, i.e. grams", "g")
-    else:
-        if unit == 'kg':
-            return _('lb')
-        if unit == 'g':
-            return pgettext("weight unit, i.e. ounces", "oz")
+        return _('lb')
 
 
 @register.filter
@@ -237,24 +119,24 @@ def format_username(user):
         return user.username
 
 
-class SpacelessNode(template.base.Node):
+@lru_cache(maxsize=1)
+def _react_translation_paths_json():
+    locale_re = re.compile(r'.*/react-components/build/locales/([^/]+)/translation\.json$')
 
-    def __init__(self, nodelist):
-        self.nodelist = nodelist
+    paths = {}
+    hashed_files = getattr(staticfiles_storage, 'hashed_files', None) or {}
+    for original, hashed in hashed_files.items():
+        m = locale_re.match(original)
+        if m:
+            paths[m.group(1)] = staticfiles_storage.base_url + hashed
+    return json.dumps(paths)
 
-    def render(self, context):
-        if settings.WGER_SETTINGS['REMOVE_WHITESPACE']:
-            return strip_spaces_between_tags(self.nodelist.render(context).strip())
-        else:
-            return self.nodelist.render(context)
 
-
-@register.tag
-def spaceless_config(parser, token):
+@register.simple_tag
+def react_translation_paths():
     """
-    This is django's spaceless tag, copied here to use our configurable
-    SpacelessNode
+    Emit a JSON object mapping language code -> hashed URL of the React app's
+    translation file, calculated from the staticfiles manifest. Used by the
+    React app's i18next backend so it can load the translation file directly.
     """
-    nodelist = parser.parse(('endspaceless_config', ))
-    parser.delete_first_token()
-    return SpacelessNode(nodelist)
+    return mark_safe(_react_translation_paths_json())

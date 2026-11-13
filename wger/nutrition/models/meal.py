@@ -16,17 +16,16 @@
 
 # Standard Library
 import logging
-from decimal import Decimal
 
 # Django
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 # wger
-from wger.utils.constants import TWOPLACES
 from wger.utils.fields import Html5TimeField
+from wger.utils.uuid import uuid7
 
 # Local
+from ..helpers import NutritionalValues
 from .plan import NutritionPlan
 
 
@@ -41,39 +40,42 @@ class Meal(models.Model):
     # Metaclass to set some other properties
     class Meta:
         ordering = [
-            "time",
+            'time',
         ]
+
+    id = models.UUIDField(
+        default=uuid7,
+        primary_key=True,
+    )
 
     plan = models.ForeignKey(
         NutritionPlan,
-        verbose_name=_('Nutrition plan'),
+        verbose_name='Nutrition plan',
         editable=False,
         on_delete=models.CASCADE,
     )
     order = models.IntegerField(
-        verbose_name=_('Order'),
+        verbose_name='Order',
         blank=True,
         editable=False,
     )
     time = Html5TimeField(
         null=True,
         blank=True,
-        verbose_name=_('Time (approx)'),
+        verbose_name='Time (approx)',
     )
     name = models.CharField(
         max_length=25,
         blank=True,
-        verbose_name=_('Name'),
-        help_text=_(
-            'Give meals a textual description / name such as "Breakfast" or "after workout"'
-        ),
+        verbose_name='Name',
+        help_text='Give meals a textual description / name such as "Breakfast" or "after workout"',
     )
 
     def __str__(self):
         """
         Return a more human-readable representation
         """
-        return "{0} Meal".format(self.order)
+        return f'{self.order} Meal'
 
     def get_owner_object(self):
         """
@@ -81,34 +83,13 @@ class Meal(models.Model):
         """
         return self.plan
 
-    def get_nutritional_values(self, use_metric=True):
+    def get_nutritional_values(self):
         """
-        Sums the nutrional info of all items in the meal
-
-        :param use_metric Flag that controls the units used
+        Sums the nutritional info of all items in the meal
         """
-        nutritional_info = {
-            'energy': 0,
-            'protein': 0,
-            'carbohydrates': 0,
-            'carbohydrates_sugar': 0,
-            'fat': 0,
-            'fat_saturated': 0,
-            'fibres': 0,
-            'sodium': 0
-        }
+        nutritional_values = NutritionalValues()
 
-        # Get the calculated values from the meal item and add them
         for item in self.mealitem_set.select_related():
+            nutritional_values += item.get_nutritional_values()
 
-            values = item.get_nutritional_values(use_metric=use_metric)
-            for key in nutritional_info.keys():
-                nutritional_info[key] += values[key]
-
-        nutritional_info['energy_kilojoule'] = Decimal(nutritional_info['energy']) * Decimal(4.184)
-
-        # Only 2 decimal places, anything else doesn't make sense
-        for i in nutritional_info:
-            nutritional_info[i] = Decimal(nutritional_info[i]).quantize(TWOPLACES)
-
-        return nutritional_info
+        return nutritional_values

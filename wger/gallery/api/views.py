@@ -20,10 +20,7 @@ import logging
 
 # Third Party
 from rest_framework import viewsets
-from rest_framework.parsers import (
-    FormParser,
-    MultiPartParser,
-)
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
 # wger
@@ -34,25 +31,30 @@ from wger.gallery.models import Image
 logger = logging.getLogger(__name__)
 
 
-class ImageViewSet(viewsets.ModelViewSet):
+class GalleryImageViewSet(viewsets.ModelViewSet):
     """
     API endpoint for gallery image
     """
-    parser_classes = [MultiPartParser, FormParser]
+
+    parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
     serializer_class = ImageSerializer
     is_private = True
     ordering_fields = '__all__'
-    filterset_fields = [
+    filterset_fields = (
         'id',
         'date',
         'description',
-    ]
+    )
 
     def get_queryset(self):
         """
         Only allow access to appropriate objects
         """
+        # REST API generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Image.objects.none()
+
         return Image.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):

@@ -31,7 +31,6 @@ from django.views.generic import TemplateView
 from django.views.generic.edit import ModelFormMixin
 
 # Third Party
-import bleach
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (
     ButtonHolder,
@@ -40,11 +39,7 @@ from crispy_forms.layout import (
 )
 
 # wger
-from wger.utils.constants import (
-    HTML_ATTRIBUTES_WHITELIST,
-    HTML_STYLES_WHITELIST,
-    HTML_TAG_WHITELIST,
-)
+from wger.utils.markdown import sanitize_html
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +58,7 @@ class WgerMultiplePermissionRequiredMixin(PermissionRequiredMixin):
         return False
 
 
-class WgerPermissionMixin(object):
+class WgerPermissionMixin:
     """
     Custom permission mixim
 
@@ -92,7 +87,7 @@ class WgerPermissionMixin(object):
         if self.login_required or self.permission_required:
             if not request.user.is_authenticated:
                 return HttpResponseRedirect(
-                    reverse_lazy('core:user:login') + '?next={0}'.format(request.path)
+                    reverse_lazy('core:user:login') + f'?next={request.path}'
                 )
 
             if self.permission_required:
@@ -114,11 +109,6 @@ class WgerPermissionMixin(object):
 # , PermissionRequiredMixin
 class WgerFormMixin(ModelFormMixin):
     template_name = 'form.html'
-
-    custom_js = ''
-    """
-    Custom javascript to be executed.
-    """
 
     form_action = ''
     form_action_urlname = ''
@@ -146,7 +136,7 @@ class WgerFormMixin(ModelFormMixin):
 
     clean_html = ()
     """
-    List of form fields that should be passed to bleach to clean the html
+    List of form fields that should be passed to wger.utils.markdown to clean the html
     """
 
     messages = ''
@@ -162,9 +152,6 @@ class WgerFormMixin(ModelFormMixin):
         context = super(WgerFormMixin, self).get_context_data(**kwargs)
         context['sidebar'] = self.sidebar
         context['title'] = self.title
-
-        # Custom JS code on form (autocompleter, editor, etc.)
-        context['custom_js'] = self.custom_js
 
         return context
 
@@ -210,7 +197,7 @@ class WgerFormMixin(ModelFormMixin):
     def get_form(self, form_class=None):
         """Return an instance of the form to be used in this view."""
         form = super(WgerFormMixin, self).get_form(form_class)
-        if not hasattr(form, "helper"):
+        if not hasattr(form, 'helper'):
             form.helper = FormHelper()
         form.helper.form_id = slugify(self.request.path)
         form.helper.form_method = 'post'
@@ -236,16 +223,9 @@ class WgerFormMixin(ModelFormMixin):
         """
 
         for field in self.clean_html:
-            setattr(
-                form.instance, field,
-                bleach.clean(
-                    getattr(form.instance, field),
-                    tags=HTML_TAG_WHITELIST,
-                    attributes=HTML_ATTRIBUTES_WHITELIST,
-                    styles=HTML_STYLES_WHITELIST,
-                    strip=True
-                )
-            )
+            raw_value = getattr(form.instance, field)
+            clean_value = sanitize_html(raw_value)
+            setattr(form.instance, field, clean_value)
 
         if self.get_messages():
             messages.success(self.request, self.get_messages())
@@ -253,7 +233,7 @@ class WgerFormMixin(ModelFormMixin):
         return super(WgerFormMixin, self).form_valid(form)
 
 
-class WgerDeleteMixin(ModelFormMixin):
+class WgerDeleteMixin:
     form_action = ''
     form_action_urlname = ''
     title = ''
@@ -281,7 +261,7 @@ class WgerDeleteMixin(ModelFormMixin):
     def get_form(self, form_class=None):
         """Return an instance of the form to be used in this view."""
         form = super(WgerDeleteMixin, self).get_form(form_class)
-        if not hasattr(form, "helper"):
+        if not hasattr(form, 'helper'):
             form.helper = FormHelper()
         form.helper.form_id = slugify(self.request.path)
         form.helper.form_method = 'post'

@@ -16,7 +16,6 @@
 
 # Django
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 
 class Equipment(models.Model):
@@ -26,15 +25,16 @@ class Equipment(models.Model):
 
     name = models.CharField(
         max_length=50,
-        verbose_name=_('Name'),
+        verbose_name='Name',
     )
 
     class Meta:
         """
         Set default ordering
         """
+
         ordering = [
-            "name",
+            'name',
         ]
 
     def __str__(self):

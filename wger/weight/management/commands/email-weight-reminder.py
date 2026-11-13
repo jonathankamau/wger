@@ -1,5 +1,3 @@
-# -*- coding: utf-8 *-*
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -14,21 +12,21 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
-# Standard Library
-import datetime
-
 # Django
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management.base import BaseCommand
 from django.template import loader
-from django.utils import translation
+from django.utils import (
+    timezone,
+    translation,
+)
 from django.utils.translation import gettext_lazy as _
 
 # wger
 from wger.core.models import UserProfile
-from wger.weight.models import WeightEntry
+from wger.measurements.models import Measurement
 
 
 class Command(BaseCommand):
@@ -39,25 +37,23 @@ class Command(BaseCommand):
     help = 'Send out automatic emails to remind the user to enter the weight'
 
     def handle(self, **options):
-
         profile_list = UserProfile.objects.filter(num_days_weight_reminder__gt=0)
 
         for profile in profile_list:
-
             # Only continue if the user has provided an email address.
             # Checking it here so we check for NULL values and emtpy strings
             if not profile.user.email:
                 continue
 
-            today = datetime.datetime.now().date()
+            today = timezone.now()
 
             try:
-                last_entry = WeightEntry.objects.filter(user=profile.user).latest().date
+                last_entry = Measurement.body_weight_for(profile.user).latest('date').date
                 datediff = (today - last_entry).days
 
                 if datediff >= profile.num_days_weight_reminder:
                     self.send_email(profile.user, last_entry, datediff)
-            except WeightEntry.DoesNotExist:
+            except Measurement.DoesNotExist:
                 pass
 
     @staticmethod
@@ -76,14 +72,11 @@ class Command(BaseCommand):
             'site': Site.objects.get_current(),
             'date': last_entry,
             'days': datediff,
-            'user': user
+            'user': user,
         }
 
         subject = _('You have to enter your weight')
         message = loader.render_to_string('workout/email_weight_reminder.tpl', context)
         mail.send_mail(
-            subject,
-            message,
-            settings.WGER_SETTINGS['EMAIL_FROM'], [user.email],
-            fail_silently=True
+            subject, message, settings.WGER_SETTINGS['EMAIL_FROM'], [user.email], fail_silently=True
         )

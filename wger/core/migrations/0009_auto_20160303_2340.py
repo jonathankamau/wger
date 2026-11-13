@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from django.db import migrations, models
+from django.db import migrations
 
 
 def insert_data(apps, schema_editor):
@@ -28,7 +28,6 @@ def insert_data(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0008_weightunit'),
     ]

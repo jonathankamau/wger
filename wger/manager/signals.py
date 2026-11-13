@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -14,25 +12,62 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
+# Standard Library
+from functools import wraps
+
 # Django
-from django.db.models import Q
+from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import (
     post_save,
     pre_delete,
+    pre_save,
 )
 
 # wger
-from wger.core.models import Language
-from wger.exercises.models import (
-    Exercise,
-    Muscle,
-)
+from wger.core.models import UserProfile
 from wger.gym.helpers import get_user_last_activity
+from wger.manager.helpers import reset_routine_cache
 from wger.manager.models import (
+    AbstractChangeConfig,
+    Day,
+    MaxRepetitionsConfig,
+    MaxRestConfig,
+    MaxRiRConfig,
+    MaxSetsConfig,
+    MaxWeightConfig,
+    RepetitionsConfig,
+    RestConfig,
+    RiRConfig,
+    Routine,
+    SetsConfig,
+    Slot,
+    SlotEntry,
+    WeightConfig,
     WorkoutLog,
     WorkoutSession,
 )
-from wger.utils.cache import delete_template_fragment_cache
+from wger.utils.cache import CacheKeyMapper
+
+
+def ignore_missing_relations(handler):
+    """
+    Skips the handler if a related object no longer exists in the database.
+
+    A concurrent request may have already deleted the rows the handler traverses,
+    e.g. two simultaneous DELETEs of the same routine: the second one still holds
+    the collected child instances and sends pre_delete signals for them, but the
+    fresh FK lookups find nothing. In that case there is no cache left to reset.
+    """
+
+    @wraps(handler)
+    def wrapper(sender, instance, **kwargs):
+        try:
+            handler(sender, instance, **kwargs)
+        except ObjectDoesNotExist:
+            pass
+
+    return wrapper
 
 
 def update_activity_cache(sender, instance, **kwargs):
@@ -45,28 +80,102 @@ def update_activity_cache(sender, instance, **kwargs):
     user.usercache.save()
 
 
-post_save.connect(update_activity_cache, sender=WorkoutSession)
-post_save.connect(update_activity_cache, sender=WorkoutLog)
-
-# TODO: this seems to cause problems when users are deleted
-#       perhaps because of the cascading, needs to be checked
-# post_delete.connect(update_activity_cache, sender=WorkoutSession)
-# post_delete.connect(update_activity_cache, sender=WorkoutLog)
+def update_cache_routine(sender, instance: Routine, **kwargs):
+    reset_routine_cache(instance)
 
 
-def reset_muscle_cache(sender, instance, **kwargs):
-    exercises = Exercise.objects.filter(
-        Q(exercise_base__muscles=instance)
-        | Q(exercise_base__muscles_secondary=instance)
-    ).all()
-    languages = Language.objects.all()
-
-    for exercise in exercises:
-        for language in languages:
-            delete_template_fragment_cache(
-                'exercise-detail-muscles', "{}-{}".format(exercise.id, language.id)
-            )
+@ignore_missing_relations
+def update_cache_day(sender, instance: Day, **kwargs):
+    reset_routine_cache(instance.routine)
 
 
-post_save.connect(reset_muscle_cache, sender=Muscle)
-pre_delete.connect(reset_muscle_cache, sender=Muscle)
+@ignore_missing_relations
+def update_cache_slot(sender, instance: Slot, **kwargs):
+    reset_routine_cache(instance.day.routine)
+
+
+@ignore_missing_relations
+def update_cache_slot_entry(sender, instance: SlotEntry, **kwargs):
+    reset_routine_cache(instance.slot.day.routine)
+
+
+@ignore_missing_relations
+def handle_config_change(sender, instance: AbstractChangeConfig, **kwargs):
+    reset_routine_cache(instance.slot_entry.slot.day.routine)
+
+
+@ignore_missing_relations
+def handle_workout_log_change(sender, instance: WorkoutLog, **kwargs):
+    update_activity_cache(sender, instance, **kwargs)
+    if instance.routine:
+        cache.delete(CacheKeyMapper.routine_api_logs(instance.routine.id, instance.user_id))
+        reset_routine_cache(instance.routine, structure=False)
+
+
+@ignore_missing_relations
+def handle_workout_session_change(sender, instance: WorkoutSession, **kwargs):
+    update_activity_cache(sender, instance, **kwargs)
+    if instance.routine:
+        cache.delete(CacheKeyMapper.routine_api_logs(instance.routine.id, instance.user_id))
+        reset_routine_cache(instance.routine, structure=False)
+
+
+def remember_time_zone(sender, instance: UserProfile, raw=False, **kwargs):
+    if raw or instance.pk is None:
+        return
+    instance._old_time_zone = (
+        UserProfile.objects.filter(pk=instance.pk).values_list('time_zone', flat=True).first()
+    )
+
+
+def handle_time_zone_change(sender, instance: UserProfile, created=False, raw=False, **kwargs):
+    if raw or created:
+        return
+    if getattr(instance, '_old_time_zone', instance.time_zone) == instance.time_zone:
+        return
+    # The date sequences cut their calendar days in the owner's zone; the
+    # structure caches do not depend on it
+    for routine in Routine.objects.filter(user_id=instance.user_id):
+        reset_routine_cache(routine, structure=False)
+
+
+post_save.connect(handle_workout_session_change, sender=WorkoutSession)
+post_save.connect(handle_workout_log_change, sender=WorkoutLog)
+
+pre_save.connect(remember_time_zone, sender=UserProfile)
+post_save.connect(handle_time_zone_change, sender=UserProfile)
+
+post_save.connect(update_cache_routine, sender=Routine)
+post_save.connect(update_cache_day, sender=Day)
+post_save.connect(update_cache_slot, sender=Slot)
+post_save.connect(update_cache_slot_entry, sender=SlotEntry)
+
+post_save.connect(handle_config_change, sender=WeightConfig)
+post_save.connect(handle_config_change, sender=MaxWeightConfig)
+post_save.connect(handle_config_change, sender=RepetitionsConfig)
+post_save.connect(handle_config_change, sender=MaxRepetitionsConfig)
+post_save.connect(handle_config_change, sender=SetsConfig)
+post_save.connect(handle_config_change, sender=MaxSetsConfig)
+post_save.connect(handle_config_change, sender=RestConfig)
+post_save.connect(handle_config_change, sender=MaxRestConfig)
+post_save.connect(handle_config_change, sender=RiRConfig)
+post_save.connect(handle_config_change, sender=MaxRiRConfig)
+
+pre_delete.connect(update_cache_routine, sender=Routine)
+pre_delete.connect(update_cache_day, sender=Day)
+pre_delete.connect(update_cache_slot, sender=Slot)
+pre_delete.connect(update_cache_slot_entry, sender=SlotEntry)
+
+pre_delete.connect(handle_config_change, sender=WeightConfig)
+pre_delete.connect(handle_config_change, sender=MaxWeightConfig)
+pre_delete.connect(handle_config_change, sender=RepetitionsConfig)
+pre_delete.connect(handle_config_change, sender=MaxRepetitionsConfig)
+pre_delete.connect(handle_config_change, sender=SetsConfig)
+pre_delete.connect(handle_config_change, sender=MaxSetsConfig)
+pre_delete.connect(handle_config_change, sender=RestConfig)
+pre_delete.connect(handle_config_change, sender=MaxRestConfig)
+pre_delete.connect(handle_config_change, sender=RiRConfig)
+pre_delete.connect(handle_config_change, sender=MaxRiRConfig)
+
+pre_delete.connect(handle_workout_log_change, sender=WorkoutLog)
+pre_delete.connect(handle_workout_session_change, sender=WorkoutSession)

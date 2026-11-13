@@ -14,15 +14,45 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-RIR_OPTIONS = [
-    (None, '------'),
-    ('0', 0),
-    ('0.5', 0.5),
-    ('1', 1),
-    ('1.5', 1.5),
-    ('2', 2),
-    ('2.5', 2.5),
-    ('3', 3),
-    ('3.5', 3.5),
-    ('4', 4),
-]
+RIR_OPTIONS = [None, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5]
+
+REQUIREMENT_RULES = {
+    'weight': ('weight', 'weight'),
+    'repetitions': ('repetitions', 'repetitions'),
+    'rir': ('rir', 'rir'),
+    'rest': ('rest', 'rest'),
+    'max_weight': ('weight', 'maxweight'),
+    'max_repetitions': ('repetitions', 'maxrepetitions'),
+}
+"""
+Rules that progression requirements can reference.
+
+Maps the rule key to ``(log field, threshold field)``: the workout log field
+the rule reads, and the progression field whose displayed prescription serves
+as the threshold. The ``max_*`` rules compare the same log field as their base
+rule but against the top of the prescribed range, enabling double progression
+(e.g. ``max_repetitions``: increase the weight only once the top of the rep
+range is reached). Without a range they behave like their base rule.
+"""
+
+REQUIREMENTS_RULES_KEYS = list(REQUIREMENT_RULES.keys())
+"""Rule keys accepted in a progression requirement"""
+
+REP_UNIT_REPETITIONS = 1
+REP_UNIT_TILL_FAILURE = 2
+REP_UNIT_MAX_REPS = 7
+
+REP_UNIT_SECONDS = 3
+REP_UNIT_MINUTES = 4
+
+REP_UNIT_METERS = 8
+REP_UNIT_KILOMETERS = 6
+REP_UNIT_MILES = 5
+
+WEIGHT_UNIT_KG = 1
+WEIGHT_UNIT_LB = 2
+
+# Unit type constants (matching RepetitionUnit.UNIT_TYPE_* choices)
+UNIT_TYPE_REPETITIONS = 'REPETITIONS'
+UNIT_TYPE_TIME = 'TIME'
+UNIT_TYPE_DISTANCE = 'DISTANCE'

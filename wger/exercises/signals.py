@@ -17,6 +17,7 @@
 # Django
 from django.db.models.signals import (
     post_delete,
+    pre_delete,
     pre_save,
 )
 from django.dispatch import receiver
@@ -27,25 +28,29 @@ from easy_thumbnails.signal_handlers import generate_aliases
 from easy_thumbnails.signals import saved_file
 
 # wger
-from wger.exercises.models import ExerciseImage
+from wger.exercises.models import (
+    DeletionLog,
+    ExerciseImage,
+    ExerciseVideo,
+    Translation,
+)
 
 
 @receiver(post_delete, sender=ExerciseImage)
-def delete_exercise_image_on_delete(sender, instance, **kwargs):
+def delete_exercise_image_on_delete(sender, instance: ExerciseImage, **kwargs):
     """
-    Delete the image, along with its thumbnails, from the disk
+    Delete the image along with its thumbnails
     """
-
     thumbnailer = get_thumbnailer(instance.image)
     thumbnailer.delete_thumbnails()
     instance.image.delete(save=False)
 
 
 @receiver(pre_save, sender=ExerciseImage)
-def delete_exercise_image_on_update(sender, instance, **kwargs):
+def delete_exercise_image_on_update(sender, instance: ExerciseImage, **kwargs):
     """
-    Delete the corresponding image from the filesystem when the an ExerciseImage
-    object was changed
+    Delete the corresponding image from the filesystem when the ExerciseImage
+    object was edited
     """
     if not instance.pk:
         return False
@@ -56,11 +61,68 @@ def delete_exercise_image_on_update(sender, instance, **kwargs):
         return False
 
     new_file = instance.image
-    if not old_file == new_file:
-        thumbnailer = get_thumbnailer(instance.image)
+    if not old_file == new_file and old_file:
+        # Deletes the old image as well as its thumbnails
+        thumbnailer = get_thumbnailer(old_file)
         thumbnailer.delete_thumbnails()
-        instance.image.delete(save=False)
+        old_file.delete(save=False)
+    return None
 
 
 # Generate thumbnails when uploading a new image
 saved_file.connect(generate_aliases)
+
+
+@receiver(post_delete, sender=ExerciseVideo)
+def auto_delete_video_on_delete(sender, instance: ExerciseVideo, **kwargs):
+    """
+    Deletes file when corresponding ExerciseVideo object is deleted
+    """
+    if instance.video:
+        instance.video.delete(save=False)
+
+
+@receiver(pre_save, sender=ExerciseVideo)
+def delete_exercise_video_on_update(sender, instance: ExerciseVideo, **kwargs):
+    """
+    Deletes file when corresponding ExerciseVideo object was edited
+    """
+    if not instance.pk:
+        return False
+
+    try:
+        old_file = ExerciseVideo.objects.get(pk=instance.pk).video
+    except ExerciseVideo.DoesNotExist:
+        return False
+
+    new_file = instance.video
+    if not old_file == new_file and old_file:
+        old_file.delete(save=False)
+    return None
+
+
+@receiver(pre_delete, sender=Translation)
+def add_deletion_log_translation(sender, instance: Translation, **kwargs):
+    DeletionLog.objects.update_or_create(
+        uuid=instance.uuid,
+        defaults={
+            'model_type': DeletionLog.MODEL_TRANSLATION,
+            'comment': instance.name,
+        },
+    )
+
+
+@receiver(pre_delete, sender=ExerciseImage)
+def add_deletion_log_image(sender, instance: ExerciseImage, **kwargs):
+    DeletionLog.objects.update_or_create(
+        uuid=instance.uuid,
+        defaults={'model_type': DeletionLog.MODEL_IMAGE},
+    )
+
+
+@receiver(pre_delete, sender=ExerciseVideo)
+def add_deletion_log_video(sender, instance: ExerciseVideo, **kwargs):
+    DeletionLog.objects.update_or_create(
+        uuid=instance.uuid,
+        defaults={'model_type': DeletionLog.MODEL_VIDEO},
+    )

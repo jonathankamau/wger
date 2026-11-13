@@ -1,0 +1,1021 @@
+# This file is part of wger Workout Manager.
+#
+# wger Workout Manager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# wger Workout Manager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+
+# Standard Library
+import io
+import tempfile
+from unittest.mock import patch
+
+# Django
+from django.core.cache import cache
+
+# Third Party
+from PIL import Image as PILImage
+
+# wger
+from wger.core.models import (
+    Language,
+    License,
+)
+from wger.core.tests.base_testcase import WgerTestCase
+from wger.exercises.models import (
+    Equipment,
+    Exercise,
+    ExerciseCategory,
+    ExerciseImage,
+    ExerciseVideo,
+    Muscle,
+    Translation,
+)
+from wger.exercises.sync import (
+    download_exercise_images,
+    download_exercise_videos,
+    handle_deleted_entries,
+    sync_categories,
+    sync_equipment,
+    sync_exercises,
+    sync_languages,
+    sync_licenses,
+    sync_muscles,
+)
+from wger.manager.models import (
+    SlotEntry,
+    WorkoutLog,
+)
+from wger.utils.cache import CacheKeyMapper
+from wger.utils.requests import (
+    wger_headers,
+    wger_request_timeout,
+)
+
+
+def _valid_png_bytes():
+    """Return the bytes of a minimal valid PNG, used as fake downloaded image content."""
+    buffer = io.BytesIO()
+    PILImage.new('RGB', (1, 1)).save(buffer, format='PNG')
+    return buffer.getvalue()
+
+
+class MockLanguageResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b'1234'
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 24,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 1,
+                    "short_name": "de",
+                    "full_name": "Daitsch",
+                    "full_name_en": "Kraut"
+                },
+                {
+                    "id": 2,
+                    "short_name": "en",
+                    "full_name": "English",
+                    "full_name_en": "English"
+                },
+                {
+                    "id": 3,
+                    "short_name": "fr",
+                    "full_name": "Français",
+                    "full_name_en": "French"
+                },
+                {
+                    "id": 4,
+                    "short_name": "es",
+                    "full_name": "Español",
+                    "full_name_en": "Spanish"
+                },
+                {
+                    "id": 19,
+                    "short_name": "eo",
+                    "full_name": "Esperanto",
+                    "full_name_en": "Esperanto"
+                }
+            ]
+        }
+    # yapf: enable
+
+
+class MockLicenseResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b''
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 4,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 1,
+                    "full_name": "A cool and free license - Germany",
+                    "short_name": "ACAFL - DE",
+                    "url": "http://creativecommons.org/licenses/aca/fl/4.0/"
+                },
+                {
+                    "id": 2,
+                    "full_name": " Another cool license 2.1",
+                    "short_name": "ACL 2.1",
+                    "url": "https://another-cool-license.org/acl-2.1"
+                },
+                {
+                    "id": 5,
+                    "url": "https://another-cool-license.org/acl-2.2",
+                    "full_name": "Another cool license 2.2",
+                    "short_name": "ACL 2.2"
+                },
+                {
+                    "id": 3,
+                    "full_name": "Creative Commons Attribution Share Alike 4",
+                    "short_name": "CC-BY-SA 4",
+                    "url": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+                },
+            ]
+        }
+    # yapf: enable
+
+
+class MockCategoryResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b'1234'
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 6,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 1,
+                    "name": "A cooler, swaggier category"
+                },
+                {
+                    "id": 2,
+                    "name": "Another category"
+                },
+                {
+                    "id": 3,
+                    "name": "Yet another category"
+                },
+                {
+                    "id": 4,
+                    "name": "Calves"
+                },
+                {
+                    "id": 5,
+                    "name": "Cardio"
+                },
+                {
+                    "id": 16,
+                    "name": "Chest"
+                }
+            ]
+        }
+    # yapf: enable
+
+
+class MockMuscleResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b''
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 4,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 1,
+                    "name": "Anterior testoid",
+                    "name_en": "Testoulders",
+                    "is_front": True,
+                    "image_url_main": "/static/images/muscles/main/muscle-1.svg",
+                    "image_url_secondary": "/static/images/muscles/secondary/muscle-1.svg"
+                },
+                {
+                    "id": 2,
+                    "name": "Novum musculus nomen eius",
+                    "name_en": "Testceps",
+                    "is_front": True,
+                    "image_url_main": "/static/images/muscles/main/muscle-2.svg",
+                    "image_url_secondary": "/static/images/muscles/secondary/muscle-2.svg"
+                },
+                {
+                    "id": 3,
+                    "name": "Biceps notusensis",
+                    "name_en": "",
+                    "is_front": False,
+                    "image_url_main": "/static/images/muscles/main/muscle-3.svg",
+                    "image_url_secondary": "/static/images/muscles/secondary/muscle-3.svg"
+                },
+                {
+                    "id": 10,
+                    "name": "Pectoralis major",
+                    "name_en": "Chest",
+                    "is_front": True,
+                    "image_url_main": "/static/images/muscles/main/muscle-10.svg",
+                    "image_url_secondary": "/static/images/muscles/secondary/muscle-10.svg"
+                },
+            ]
+        }
+    # yapf: enable
+
+
+class MockEquipmentResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b''
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 4,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 1,
+                    "name": "Dumbbells"
+                },
+                {
+                    "id": 2,
+                    "name": "Kettlebell"
+                },
+                {
+                    "id": 3,
+                    "name": "A big rock"
+                },
+                {
+                    "id": 42,
+                    "name": "Gym mat"
+                },
+            ]
+        }
+    # yapf: enable
+
+
+class MockDeletionLogResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b''
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 4,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "model_type": "base",
+                    "uuid": "acad3949-36fb-4481-9a72-be2ddae2bc05",
+                    "replaced_by": "ae3328ba-9a35-4731-bc23-5da50720c5aa",
+                    "timestamp": "2023-01-30T19:32:56.761426+01:00",
+                    "comment": "Exercise with ID 1"
+                },
+                {
+                    "model_type": "base",
+                    "uuid": "577ee012-70c6-4517-b0fe-dcf340926ae7",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.761426+01:00",
+                    "comment": "Unknown Exercise"
+                },
+                {
+                    "model_type": "translation",
+                    "uuid": "0ef4cec8-d9c9-464f-baf9-3dbdf20083cb",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.764582+01:00",
+                    "comment": "Translation that is not in this DB"
+                },
+                {
+                    "model_type": "translation",
+                    "uuid": "946afe7b-54a6-44a6-9c36-c3e31e6b4c3b",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.765350+01:00",
+                    "comment": "Translation with ID 3"
+                },
+                {
+                    "model_type": "image",
+                    "uuid": "c72b4463-48ae-4c7d-8093-2c347c38e05a",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.765350+01:00",
+                    "comment": "Unknown image"
+                },
+                {
+                    "model_type": "video",
+                    "uuid": "e0d25624-348b-4a23-adcd-17190f96f005",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.765350+01:00",
+                    "comment": "Unknown video"
+                },
+                {
+                    "model_type": "foobar",
+                    "uuid": "37b5813c-76bd-4658-820a-572d9dd93f31",
+                    "replaced_by": None,
+                    "timestamp": "2023-01-30T19:32:56.765350+01:00",
+                    "comment": "UUID of existing translation but other model type"
+                },
+            ]
+        }
+    # yapf: enable
+
+
+class MockExerciseResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b''
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 123,
+                    "uuid": "1b020b3a-3732-4c7e-92fd-a0cec90ed69b",
+                    "created": "2022-10-11T19:45:01.914000+01:00",
+                    "last_update": "2023-02-05T19:45:01.914000+01:00",
+                    "last_update_global": "2023-02-05T19:45:01.914000+01:00",
+                    "category": {
+                        "id": 2,
+                        "name": "Another category"
+                    },
+                    "muscles": [
+                        {
+                            "id": 2,
+                            "name": "Biceps testii",
+                            "name_en": "Testceps",
+                            "is_front": True,
+                            "image_url_main": "/static/images/muscles/main/muscle-2.svg",
+                            "image_url_secondary": "/static/images/muscles/secondary/muscle-2.svg"
+                        }
+                    ],
+                    "muscles_secondary": [
+                        {
+                            "id": 4,
+                            "name": "Bigus Pectoralis",
+                            "name_en": "Testch",
+                            "is_front": True,
+                            "image_url_main": "/static/images/muscles/main/muscle-4.svg",
+                            "image_url_secondary": "/static/images/muscles/secondary/muscle-4.svg"
+                        }
+                    ],
+                    "equipment": [
+                        {
+                            "id": 2,
+                            "name": "Kettlebell"
+                        }
+                    ],
+                    "license": {
+                        "id": 2,
+                        "full_name": "Creative Commons Attribution Share Alike 4",
+                        "short_name": "CC-BY-SA 4",
+                        "url": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+                    },
+                    "license_author": "Mr X",
+                    "images": [],
+                    "translations": [
+                        {
+                            "id": 100,
+                            "uuid": "c788d643-150a-4ac7-97ef-84643c6419bf",
+                            "name": "Zweihandiges Kettlebell",
+                            "exercise": 123,
+                            "description": "<p>Hier könnte Ihre Werbung stehen!</p>",
+                            "description_source": "Hier könnte Ihre Werbung stehen!",
+                            "created": "2015-08-03",
+                            "language": 1,
+                            "aliases": [
+                                {
+                                    "id": 1,
+                                    "uuid": "9a9ab323-5f47-431f-9289-cc21ad1de171",
+                                    "alias": "Kettlebell mit zwei Händen"
+                                }
+                            ],
+                            "notes": [
+                                {
+                                    "id": 1,
+                                    "uuid": "f46e1610-b729-4948-b80a-c5ae52672c6a",
+                                    "translation": 100,
+                                    "comment": "Wichtig die Übung richtig zu machen"
+                                },
+                            ],
+                            "license": 2,
+                            "license_author": "Tester von der Testen",
+                            "author_history": [
+                                "wger Team",
+                                "Jürgen",
+                                "Tester von der Testen"
+                            ]
+                        },
+                        {
+                            "id": 101,
+                            "uuid": "ab4185dd-2e68-4579-af1f-0c03957c0a9e",
+                            "name": "2 Handed Kettlebell Swing",
+                            "exercise": 123,
+                            "description": "<p>TBD</p>",
+                            "description_source": "TBD",
+                            "created": "2023-08-03",
+                            "language": 2,
+                            "aliases": [],
+                            "notes": [],
+                            "license": 2,
+                            "license_author": "Tester McTest",
+                            "author_history": [
+                                "Mrs Winterbottom",
+                                "Tester McTest"
+                            ]
+                        }
+                    ],
+                    "variation_group": "4e1bb2fc-3b0e-4a1a-bd3e-3728a0e6d8a7",
+                    "videos": [],
+                    "author_history": [
+                        "Mrs Winterbottom"
+                    ],
+                    "total_authors_history": [
+                        "Mrs Winterbottom",
+                        "Tester McTest",
+                        "wger Team",
+                        "Jürgen",
+                        "Tester von der Testen"
+                    ]
+                },
+                {
+                    "id": 2,
+                    "uuid": "ae3328ba-9a35-4731-bc23-5da50720c5aa",
+                    "created": "2022-10-11T13:11:01.779000+01:00",
+                    "last_update": "2023-02-05T19:45:01.779000+01:00",
+                    "last_update_global": "2023-08-15T23:33:11.779000+01:00",
+                    "category": {
+                        "id": 3,
+                        "name": "Yet another category"
+                    },
+                    "muscles": [
+                        {
+                            "id": 2,
+                            "name": "Biceps testii",
+                            "name_en": "Testceps",
+                            "is_front": True,
+                            "image_url_main": "/static/images/muscles/main/muscle-2.svg",
+                            "image_url_secondary": "/static/images/muscles/secondary/muscle-2.svg"
+                        }
+                    ],
+                    "muscles_secondary": [
+                        {
+                            "id": 4,
+                            "name": "Bigus Pectoralis",
+                            "name_en": "Testch",
+                            "is_front": True,
+                            "image_url_main": "/static/images/muscles/main/muscle-4.svg",
+                            "image_url_secondary": "/static/images/muscles/secondary/muscle-4.svg"
+                        }
+                    ],
+                    "equipment": [
+                        {
+                            "id": 2,
+                            "name": "Kettlebell"
+                        }
+                    ],
+                    "license": {
+                        "id": 2,
+                        "full_name": "Creative Commons Attribution Share Alike 4",
+                        "short_name": "CC-BY-SA 4",
+                        "url": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+                    },
+                    "license_author": "Mr X",
+                    "images": [],
+                    "translations": [
+                        {
+                            "id": 123,
+                            "uuid": "7524ca8d-032e-482d-ab18-40e8a97851f6",
+                            "name": "A new, better, updated name",
+                            "exercise": 2,
+                            "description": "<p>Two Handed Russian Style Kettlebell swing</p>",
+                            "description_source": "Two Handed Russian Style Kettlebell swing",
+                            "created": "2015-08-03",
+                            "language": 1,
+                            "aliases": [
+                                {
+                                    "id": 2,
+                                    "uuid": "65250c7c-d02e-4f3d-be01-beb39ff5ef0f",
+                                    "alias": "A new alias here"
+                                },
+                                {
+                                    "id": 500,
+                                    "uuid": "6544ce61-69a8-413e-9662-189d3aadd1b9",
+                                    "alias": "yet another name"
+                                },
+                            ],
+                            "notes": [
+                                {
+                                    "id": 147,
+                                    "uuid": "a0271147-faca-4a08-af5e-0c02e8ae1310",
+                                    "translation": 123,
+                                    "comment": "Updated note"
+                                },
+                                {
+                                    "id": 12345,
+                                    "uuid": "1cc583ab-4c84-4a8a-9689-8c0ba4c44802",
+                                    "translation": 123,
+                                    "comment": "A new note"
+                                },
+                            ],
+                            "license": 2,
+                            "license_author": "Mr X",
+                            "author_history": [
+                                "Mr X"
+                            ]
+                        },
+                        {
+                            "id": 345,
+                            "uuid": "581338a1-8e52-405b-99eb-f0724c528bc8",
+                            "name": "Balançoire Kettlebell à 2 mains",
+                            "exercise": 2,
+                            "description": "<p>Balançoire Kettlebell à deux mains de style russe</p>",  # noqa: E501
+                            "description_source": "Balançoire Kettlebell à deux mains de style russe",  # noqa: E501
+                            "created": "2015-08-03",
+                            "language": 3,
+                            "aliases": [],
+                            "notes": [],
+                            "license": 2,
+                            "license_author": "Mr Y",
+                            "author_history": [
+                                "Mr Y",
+                                "Mr Z"
+                            ]
+                        }
+                    ],
+                    "variation_group": "4e1bb2fc-3b0e-4a1a-bd3e-3728a0e6d8a7",
+                    "videos": [],
+                    "author_history": [
+                        "Mr X"
+                    ],
+                    "total_authors_history": [
+                        "Mr X",
+                        "Mr Z"
+                    ]
+                },
+            ]
+        }
+    # yapf: enable
+
+
+class MockImageResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = _valid_png_bytes()
+
+    # yapf: disable
+    @staticmethod
+    def json():
+        return {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "results": [
+                # existing image, will be updated
+                {
+                    "id": 1,
+                    "uuid": "00000000-0000-0000-0000-000000000001",
+                    "exercise": 1,
+                    "exercise_uuid": "acad3949-36fb-4481-9a72-be2ddae2bc05",
+                    "image": "https://wger.de/media/exercise-images/1/test.jpg",
+                    "is_main": True,
+                    "style": "2",
+                    "license": 2,
+                    "license_title": "Updated Image Title",
+                    "license_object_url": "https://example.com/updated",
+                    "license_author": "Updated Author",
+                    "license_author_url": "https://author.updated.com",
+                    "license_derivative_source_url": "https://source.updated.com",
+                    "author_history": ["Author 1"]
+                },
+
+                # new image, will be created
+                {
+                    "id": 2,
+                    "uuid": "00000002-1d00-4e9d-a1a4-5f5ebd15e819",
+                    "exercise": 2,
+                    "exercise_uuid": "ae3328ba-9a35-4731-bc23-5da50720c5aa",
+                    "image": "https://wger.de/media/exercise-images/2/newtest.jpg",
+                    "is_main": False,
+                    "style": "4",
+                    "license": 1,
+                    "license_title": "New Image Title",
+                    "license_object_url": "https://example.com/new",
+                    "license_author": "New Author",
+                    "license_author_url": "https://author.new.com",
+                    "license_derivative_source_url": "https://source.new.com",
+                    "author_history": ["Author 2"]
+                }
+            ]
+        }
+    # yapf: enable
+
+
+class MockInvalidImageResponse:
+    """Image endpoint returns one record whose downloaded bytes are not a valid image."""
+
+    def __init__(self):
+        self.status_code = 200
+        self.content = b'<html><script>alert(1)</script></html>'
+
+    @staticmethod
+    def json():
+        return {
+            'count': 1,
+            'next': None,
+            'previous': None,
+            'results': [
+                {
+                    'id': 99,
+                    'uuid': '00000099-1d00-4e9d-a1a4-5f5ebd15e819',
+                    'exercise': 2,
+                    'exercise_uuid': 'ae3328ba-9a35-4731-bc23-5da50720c5aa',
+                    'image': 'https://wger.de/media/exercise-images/2/evil.jpg',
+                    'is_main': False,
+                    'style': '4',
+                    'license': 1,
+                    'license_title': 'Bad image',
+                    'license_object_url': '',
+                    'license_author': 'Attacker',
+                    'license_author_url': '',
+                    'license_derivative_source_url': '',
+                    'author_history': [],
+                }
+            ],
+        }
+
+
+class MockVideoResponse:
+    def __init__(self):
+        self.status_code = 200
+        self.content = b'fake video bytes'
+
+    @staticmethod
+    def json():
+        return {
+            'count': 1,
+            'next': None,
+            'previous': None,
+            'results': [
+                {
+                    'id': 88,
+                    'uuid': '00000088-1d00-4e9d-a1a4-5f5ebd15e819',
+                    'exercise': 2,
+                    'exercise_uuid': 'ae3328ba-9a35-4731-bc23-5da50720c5aa',
+                    'video': 'https://wger.de/media/exercise-video/2/evil.html',
+                    'is_main': False,
+                    'license': 1,
+                    'license_author': 'Attacker',
+                    'size': 123,
+                    'width': 0,
+                    'height': 0,
+                    'codec': '',
+                    'codec_long': '',
+                    'duration': 0,
+                }
+            ],
+        }
+
+
+class MockValidVideoResponse(MockVideoResponse):
+    def __init__(self):
+        super().__init__()
+        self.content = b'\x00\x00\x00\x14ftypqt  \x00\x00\x00\x00qt  ' + b'\x00' * 64
+
+    @staticmethod
+    def json():
+        data = MockVideoResponse.json()
+        data['results'][0]['video'] = 'https://wger.de/media/exercise-video/2/clip.mov'
+        return data
+
+
+class TestSyncMethods(WgerTestCase):
+    @patch('requests.get', return_value=MockLanguageResponse())
+    def test_language_sync(self, mock_request):
+        language1 = Language.objects.get(pk=1)
+        self.assertEqual(Language.objects.count(), 3)
+        self.assertEqual(language1.full_name, 'Deutsch')
+        self.assertEqual(language1.full_name_en, 'German')
+
+        # Act
+        sync_languages(lambda x: x)
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/language/',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+
+        # Assert
+        language1 = Language.objects.get(pk=1)
+        self.assertEqual(language1.full_name, 'Daitsch')
+        self.assertEqual(language1.full_name_en, 'Kraut')
+        self.assertEqual(Language.objects.get(short_name='eo').full_name, 'Esperanto')
+        self.assertEqual(Language.objects.count(), 5)
+
+    @patch('requests.get', return_value=MockLicenseResponse())
+    def test_license_sync(self, mock_request):
+        self.assertEqual(License.objects.count(), 3)
+        self.assertEqual(License.objects.get(pk=1).url, '')
+
+        sync_licenses(lambda x: x)
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/license/',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(
+            License.objects.get(pk=1).url,
+            'http://creativecommons.org/licenses/aca/fl/4.0/',
+        )
+        self.assertEqual(
+            License.objects.get(short_name='CC-BY-SA 4').full_name,
+            'Creative Commons Attribution Share Alike 4',
+        )
+        self.assertEqual(License.objects.count(), 4)
+
+    @patch('requests.get', return_value=MockCategoryResponse())
+    def test_categories_sync(self, mock_request):
+        self.assertEqual(ExerciseCategory.objects.count(), 4)
+        self.assertEqual(ExerciseCategory.objects.get(pk=1).name, 'Category')
+
+        sync_categories(lambda x: x)
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/exercisecategory/',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(ExerciseCategory.objects.count(), 6)
+        self.assertEqual(ExerciseCategory.objects.get(pk=1).name, 'A cooler, swaggier category')
+        self.assertEqual(ExerciseCategory.objects.get(pk=16).name, 'Chest')
+
+    @patch('requests.get', return_value=MockMuscleResponse())
+    def test_muscle_sync(self, mock_request):
+        self.assertEqual(Muscle.objects.count(), 6)
+        self.assertEqual(Muscle.objects.get(pk=2).name, 'Biceps testii')
+        self.assertFalse(Muscle.objects.get(pk=2).is_front)
+        sync_muscles(lambda x: x)
+
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/muscle/',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(Muscle.objects.count(), 7)
+        self.assertTrue(Muscle.objects.get(pk=2).is_front)
+        self.assertEqual(Muscle.objects.get(pk=2).name, 'Novum musculus nomen eius')
+        self.assertEqual(Muscle.objects.get(pk=10).name, 'Pectoralis major')
+
+    @patch('requests.get', return_value=MockEquipmentResponse())
+    def test_equipment_sync(self, mock_request):
+        self.assertEqual(Equipment.objects.count(), 3)
+        self.assertEqual(Equipment.objects.get(pk=3).name, 'Something else')
+        sync_equipment(lambda x: x)
+
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/equipment/',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(Equipment.objects.count(), 4)
+        self.assertEqual(Equipment.objects.get(pk=3).name, 'A big rock')
+        self.assertEqual(Equipment.objects.get(pk=42).name, 'Gym mat')
+
+    @patch('requests.get', return_value=MockDeletionLogResponse())
+    def test_deletion_log(self, mock_request):
+        self.assertEqual(Exercise.objects.count(), 8)
+        self.assertEqual(Translation.objects.count(), 11)
+
+        # Materialize the PKs now, the querysets would be empty after the sync
+        slot_entry_pks = list(SlotEntry.objects.filter(exercise_id=1).values_list('pk', flat=True))
+        log_pks = list(WorkoutLog.objects.filter(exercise_id=1).values_list('pk', flat=True))
+        self.assertTrue(slot_entry_pks)
+        self.assertTrue(log_pks)
+
+        handle_deleted_entries(print)
+
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/deletion-log/?limit=100',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(Exercise.objects.count(), 7)
+        self.assertEqual(Translation.objects.count(), 8)
+        self.assertRaises(Translation.DoesNotExist, Translation.objects.get, pk=3)
+        self.assertRaises(Exercise.DoesNotExist, Exercise.objects.get, pk=1)
+
+        # Workouts and logs have been moved to the replacement exercise
+        for pk in slot_entry_pks:
+            self.assertEqual(SlotEntry.objects.get(pk=pk).exercise_id, 2)
+        for pk in log_pks:
+            self.assertEqual(WorkoutLog.objects.get(pk=pk).exercise_id, 2)
+
+    @patch('requests.get', return_value=MockDeletionLogResponse())
+    def test_deletion_log_resets_routine_cache(self, mock_request):
+        """
+        Test that syncing a deletion that replaces an exercise invalidates the
+        cache of every routine that referenced it. Otherwise the cached routine
+        structure keeps pointing at the now-deleted exercise.
+        """
+        exercise1 = Exercise.objects.get(pk=1)
+        routine = SlotEntry.objects.filter(exercise=exercise1).first().slot.day.routine
+        cache_key = CacheKeyMapper.routine_api_structure_key(routine.id, routine.user_id)
+        cache.set(cache_key, {'stale': 'data'})
+        self.assertIsNotNone(cache.get(cache_key))
+
+        handle_deleted_entries(print)
+
+        self.assertIsNone(cache.get(cache_key))
+
+    @patch('requests.get', return_value=MockExerciseResponse())
+    def test_exercise_sync(self, mock_request):
+        self.assertEqual(Exercise.objects.count(), 8)
+        self.assertEqual(Translation.objects.count(), 11)
+        exercise = Exercise.objects.get(uuid='ae3328ba-9a35-4731-bc23-5da50720c5aa')
+        self.assertEqual(exercise.category_id, 2)
+
+        sync_exercises(lambda x: x)
+
+        mock_request.assert_called_with(
+            'https://wger.de/api/v2/exerciseinfo/?limit=100',
+            headers=wger_headers(),
+            timeout=wger_request_timeout(),
+        )
+        self.assertEqual(Exercise.objects.count(), 9)
+        self.assertEqual(Translation.objects.count(), 14)
+
+        # New exercise was created
+        new_exercise = Exercise.objects.get(uuid='1b020b3a-3732-4c7e-92fd-a0cec90ed69b')
+        self.assertEqual(new_exercise.category_id, 2)
+        self.assertEqual([e.id for e in new_exercise.equipment.all()], [2])
+        self.assertEqual([m.id for m in new_exercise.muscles.all()], [2])
+        self.assertEqual([m.id for m in new_exercise.muscles_secondary.all()], [4])
+
+        translation_de = new_exercise.get_translation('de')
+        self.assertEqual(translation_de.language_id, 1)
+        self.assertEqual(translation_de.name, 'Zweihandiges Kettlebell')
+        self.assertEqual(
+            translation_de.description_source,
+            'Hier könnte Ihre Werbung stehen!',
+        )
+        self.assertEqual(
+            translation_de.description,
+            '<p>Hier könnte Ihre Werbung stehen!</p>\n',
+        )
+        self.assertEqual(translation_de.alias_set.first().alias, 'Kettlebell mit zwei Händen')
+        self.assertEqual(
+            translation_de.exercisecomment_set.first().comment,
+            'Wichtig die Übung richtig zu machen',
+        )
+
+        translation_en = new_exercise.get_translation('en')
+        self.assertEqual(translation_en.language_id, 2)
+        self.assertEqual(translation_en.name, '2 Handed Kettlebell Swing')
+        self.assertEqual(translation_en.description_source, 'TBD')
+        self.assertEqual(translation_en.description, '<p>TBD</p>\n')
+
+        # Existing exercise was updated
+        exercise = Exercise.objects.get(uuid='ae3328ba-9a35-4731-bc23-5da50720c5aa')
+        self.assertEqual(exercise.category_id, 3)
+
+        translation_de = exercise.get_translation('de')
+        self.assertEqual(translation_de.name, 'A new, better, updated name')
+        self.assertEqual(translation_de.pk, 2)
+        self.assertEqual(translation_de.alias_set.count(), 2)
+        self.assertEqual(translation_de.alias_set.all()[0].alias, 'A new alias here')
+        self.assertEqual(translation_de.alias_set.all()[1].alias, 'yet another name')
+
+        self.assertEqual(translation_de.exercisecomment_set.count(), 2)
+        comments = translation_de.exercisecomment_set.all()
+        self.assertEqual(str(comments[0].uuid), 'a0271147-faca-4a08-af5e-0c02e8ae1310')
+        self.assertEqual(comments[0].comment, 'Updated note')
+        self.assertEqual(str(comments[1].uuid), '1cc583ab-4c84-4a8a-9689-8c0ba4c44802')
+        self.assertEqual(comments[1].comment, 'A new note')
+
+        translation_fr = exercise.get_translation('fr')
+        self.assertEqual(str(translation_fr.uuid), '581338a1-8e52-405b-99eb-f0724c528bc8')
+
+        # Both exercises should be in the same variation group
+        self.assertIsNotNone(new_exercise.variation_group)
+        self.assertIsNotNone(exercise.variation_group)
+        self.assertEqual(new_exercise.variation_group, exercise.variation_group)
+        self.assertEqual(
+            str(new_exercise.variation_group),
+            '4e1bb2fc-3b0e-4a1a-bd3e-3728a0e6d8a7',
+        )
+
+    @patch('requests.get', return_value=MockImageResponse())
+    def test_image_sync(self, mock_request):
+        """
+        Test that download_exercise_images updates existing images and creates new ones,
+        passing a request timeout to every request
+        """
+
+        # Arrange
+        initial_image_count = ExerciseImage.objects.count()
+
+        # Act
+        download_exercise_images()
+
+        # Assert
+        existing_image = ExerciseImage.objects.get(uuid='00000000-0000-0000-0000-000000000001')
+        mock_request.assert_called()
+        self.assertEqual(ExerciseImage.objects.count(), initial_image_count + 1)
+
+        self.assertEqual(existing_image.is_main, True)
+        self.assertEqual(existing_image.style, '2')
+        self.assertEqual(existing_image.license_id, 2)
+        self.assertEqual(existing_image.license_title, 'Updated Image Title')
+        self.assertEqual(existing_image.license_author, 'Updated Author')
+        self.assertEqual(existing_image.license_object_url, 'https://example.com/updated')
+        self.assertEqual(existing_image.license_author_url, 'https://author.updated.com')
+        self.assertEqual(
+            existing_image.license_derivative_source_url,
+            'https://source.updated.com',
+        )
+
+        # Check that a new image was created
+        new_image = ExerciseImage.objects.get(uuid='00000002-1d00-4e9d-a1a4-5f5ebd15e819')
+        self.assertEqual(new_image.exercise_id, 2)
+        self.assertEqual(new_image.is_main, True)  # the only image will be marked as "main"
+        self.assertEqual(new_image.style, '4')
+        self.assertEqual(new_image.license_id, 1)
+        self.assertEqual(new_image.license_title, 'New Image Title')
+        self.assertEqual(new_image.license_author, 'New Author')
+
+        for call in mock_request.call_args_list:
+            self.assertEqual(call.kwargs.get('timeout'), wger_request_timeout())
+
+    @patch('requests.get', return_value=MockInvalidImageResponse())
+    def test_image_sync_skips_invalid_image(self, mock_request):
+        """A download whose bytes are not a valid image is skipped, not stored."""
+
+        count_before = ExerciseImage.objects.count()
+
+        # A malformed image must not abort the run or get stored
+        download_exercise_images()
+
+        self.assertFalse(
+            ExerciseImage.objects.filter(uuid='00000099-1d00-4e9d-a1a4-5f5ebd15e819').exists()
+        )
+        self.assertEqual(ExerciseImage.objects.count(), count_before)
+
+    @patch('requests.get', return_value=MockVideoResponse())
+    def test_video_sync_skips_invalid_video(self, mock_request):
+        """A download that is not a video is skipped, not stored."""
+
+        count_before = ExerciseVideo.objects.count()
+
+        # An invalid video must not abort the run or get stored
+        download_exercise_videos(lambda x: x)
+
+        self.assertFalse(
+            ExerciseVideo.objects.filter(uuid='00000088-1d00-4e9d-a1a4-5f5ebd15e819').exists()
+        )
+        self.assertEqual(ExerciseVideo.objects.count(), count_before)
+
+    @patch('requests.get', return_value=MockValidVideoResponse())
+    def test_video_sync_stores_valid_video(self, mock_request):
+        """A downloaded video is stored under the remote file's extension, fetched with timeout."""
+
+        with tempfile.TemporaryDirectory() as media_root, self.settings(MEDIA_ROOT=media_root):
+            download_exercise_videos(lambda x: x)
+
+        video = ExerciseVideo.objects.get(uuid='00000088-1d00-4e9d-a1a4-5f5ebd15e819')
+        self.assertTrue(video.video.name.endswith('.mov'))
+
+        for call in mock_request.call_args_list:
+            self.assertEqual(call.kwargs.get('timeout'), wger_request_timeout())

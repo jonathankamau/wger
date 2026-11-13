@@ -34,7 +34,34 @@ class RepresentationTestCase(WgerTestCase):
         """
         Test that the representation of an object is correct
         """
-        self.assertEqual(f"{RepetitionUnit.objects.get(pk=1)}", 'Repetitions')
+        self.assertEqual(f'{RepetitionUnit.objects.get(pk=1)}', 'Repetitions')
+
+
+class UnitTypeTestCase(WgerTestCase):
+    """
+    Test the unit_type field and related properties
+    """
+
+    def test_time_unit_type(self):
+        """Test that Seconds unit has TIME type"""
+        unit = RepetitionUnit.objects.get(pk=3)  # Seconds
+        self.assertEqual(unit.unit_type, RepetitionUnit.UNIT_TYPE_TIME)
+        self.assertTrue(unit.is_time)
+        self.assertFalse(unit.is_distance)
+
+    def test_repetitions_unit_type(self):
+        """Test that Repetitions unit has REPETITIONS type"""
+        unit = RepetitionUnit.objects.get(pk=1)  # Repetitions
+        self.assertEqual(unit.unit_type, RepetitionUnit.UNIT_TYPE_REPETITIONS)
+        self.assertFalse(unit.is_time)
+        self.assertFalse(unit.is_distance)
+
+    def test_distance_unit_type(self):
+        """Test that Miles unit has DISTANCE type"""
+        unit = RepetitionUnit.objects.get(pk=5)  # Miles
+        self.assertEqual(unit.unit_type, RepetitionUnit.UNIT_TYPE_DISTANCE)
+        self.assertFalse(unit.is_time)
+        self.assertTrue(unit.is_distance)
 
 
 class OverviewTest(WgerAccessTestCase):
@@ -53,8 +80,8 @@ class AddTestCase(WgerAddTestCase):
 
     object_class = RepetitionUnit
     url = 'core:repetition-unit:add'
-    data = {'name': 'Furlongs'}
-    user_success = 'admin',
+    data = {'name': 'Furlongs', 'unit_type': RepetitionUnit.UNIT_TYPE_DISTANCE, 'multiplier': 201}
+    user_success = ('admin',)
     user_fail = (
         'general_manager1',
         'general_manager2',
@@ -75,7 +102,7 @@ class DeleteTestCase(WgerDeleteTestCase):
     pk = 1
     object_class = RepetitionUnit
     url = 'core:repetition-unit:delete'
-    user_success = 'admin',
+    user_success = ('admin',)
     user_fail = (
         'general_manager1',
         'general_manager2',
@@ -96,8 +123,8 @@ class EditTestCase(WgerEditTestCase):
     pk = 1
     object_class = RepetitionUnit
     url = 'core:repetition-unit:edit'
-    data = {'name': 'Furlongs'}
-    user_success = 'admin',
+    data = {'name': 'Furlongs', 'unit_type': RepetitionUnit.UNIT_TYPE_DISTANCE, 'multiplier': 201}
+    user_success = ('admin',)
     user_fail = (
         'general_manager1',
         'general_manager2',
@@ -114,6 +141,7 @@ class ApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the unit resource
     """
+
     pk = 1
     resource = RepetitionUnit
     private_resource = False

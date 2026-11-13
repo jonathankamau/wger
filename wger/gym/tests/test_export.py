@@ -13,9 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 
 # Standard Library
+import csv
 import datetime
+import io
 
 # Django
+from django.contrib.auth.models import User
 from django.urls import reverse
 
 # wger
@@ -42,11 +45,10 @@ class GymMembersCsvExportTestCase(WgerTestCase):
             self.assertEqual(response['Content-Type'], 'text/csv')
 
             today = datetime.date.today()
-            filename = 'User-data-gym-{gym}-{t.year}-{t.month:02d}-{t.day:02d}.csv'.\
-                format(t=today, gym=gym.id)
-            self.assertEqual(
-                response['Content-Disposition'], 'attachment; filename={0}'.format(filename)
+            filename = 'User-data-gym-{gym}-{t.year}-{t.month:02d}-{t.day:02d}.csv'.format(
+                t=today, gym=gym.id
             )
+            self.assertEqual(response['Content-Disposition'], f'attachment; filename={filename}')
             self.assertGreaterEqual(len(response.content), 1000)
             self.assertLessEqual(len(response.content), 1300)
 
@@ -66,7 +68,6 @@ class GymMembersCsvExportTestCase(WgerTestCase):
 
         for username in (
             'manager3',
-            'manager4',
             'test',
             'member1',
             'member2',
@@ -83,3 +84,45 @@ class GymMembersCsvExportTestCase(WgerTestCase):
         """
         self.user_logout()
         self.export_csv(fail=True)
+
+    def test_export_neutralises_csv_formula_payload(self):
+        member = User.objects.get(username='member1')
+        member.first_name = '=HYPERLINK("http://attacker.example", "click")'
+        member.last_name = '+SUM(1+2)'
+        member.save()
+        member.userprofile.phone = '@evil'
+        member.userprofile.city = '-bad'
+        member.userprofile.save()
+
+        self.user_login('manager1')
+        response = self.client.get(reverse('gym:export:users', kwargs={'gym_pk': 1}))
+        self.assertEqual(response.status_code, 200)
+
+        rows = list(csv.reader(io.StringIO(response.content.decode()), delimiter='\t'))
+        member_row = next(row for row in rows if row and row[2] == 'member1')
+
+        for cell in member_row:
+            if cell:
+                self.assertNotIn(
+                    cell[0],
+                    ('=', '+', '-', '@'),
+                    msg=f'unsanitised formula cell in export: {cell!r}',
+                )
+
+
+class GymMembersExportLinkTestCase(WgerTestCase):
+    """
+    The export is a file download, the member list must not load it into the page
+    """
+
+    def test_export_link_is_a_plain_download(self):
+        self.user_login('admin')
+        response = self.client.get(reverse('gym:gym:user-list', kwargs={'pk': 1}))
+        self.assertEqual(response.status_code, 200)
+
+        export_url = reverse('gym:export:users', kwargs={'gym_pk': 1})
+        content = response.content.decode()
+        start = content.index(f'href="{export_url}"')
+        link = content[content.rindex('<a', 0, start) : content.index('>', start)]
+
+        self.assertNotIn('hx-get', link)

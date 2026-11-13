@@ -31,7 +31,9 @@ class CopyPlanTestCase(WgerTestCase):
         """
 
         # Open the copy nutritional plan form
-        response = self.client.get(reverse('nutrition:plan:copy', kwargs={'pk': 4}))
+        response = self.client.get(
+            reverse('nutrition:plan:copy', kwargs={'pk': '11111111-1111-1111-1111-000000000004'})
+        )
         if fail:
             self.assertIn(response.status_code, (302, 403, 404))
         else:
@@ -40,7 +42,7 @@ class CopyPlanTestCase(WgerTestCase):
         # Copy the plan
         count_before = NutritionPlan.objects.count()
         response = self.client.post(
-            reverse('nutrition:plan:copy', kwargs={'pk': 4}),
+            reverse('nutrition:plan:copy', kwargs={'pk': '11111111-1111-1111-1111-000000000004'}),
             {'comment': 'A copied plan'},
         )
         count_after = NutritionPlan.objects.count()
@@ -50,14 +52,6 @@ class CopyPlanTestCase(WgerTestCase):
         else:
             self.assertGreater(count_after, count_before)
             self.assertEqual(count_after, 7)
-
-        # Test accessing the copied workout
-        response = self.client.get(reverse('nutrition:plan:view', kwargs={'id': 4}))
-
-        if fail:
-            self.assertIn(response.status_code, (302, 403, 404))
-        else:
-            self.assertEqual(response.status_code, 200)
 
     def test_copy_plan_anonymous(self):
         """

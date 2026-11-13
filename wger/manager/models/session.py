@@ -14,18 +14,19 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard Library
+import datetime
+
 # Django
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _, ngettext
 
 # wger
-from wger.utils.cache import reset_workout_log
-from wger.utils.fields import Html5DateField
-
-# Local
-from .workout import Workout
+from wger.utils.uuid import uuid7
 
 
 class WorkoutSession(models.Model):
@@ -33,119 +34,172 @@ class WorkoutSession(models.Model):
     Model for a workout session
     """
 
-    # Note: values hardcoded in manager.helpers.WorkoutCalendar
     IMPRESSION_BAD = '1'
     IMPRESSION_NEUTRAL = '2'
     IMPRESSION_GOOD = '3'
 
     IMPRESSION = (
-        (IMPRESSION_BAD, _("Bad")),
+        (IMPRESSION_BAD, _('Bad')),
         (IMPRESSION_NEUTRAL, _('Neutral')),
         (IMPRESSION_GOOD, _('Good')),
     )
 
     user = models.ForeignKey(
         User,
-        verbose_name=_('User'),
+        verbose_name='User',
         on_delete=models.CASCADE,
     )
     """
     The user the workout session belongs to
 
-    See note in weight.models.WeightEntry about why this is not editable=False
+    NOTE: this field is neither marked as editable=False nor excluded from the
+    form. This is done intentionally because otherwise it's *very* difficult
+    and ugly to validate the uniqueness of unique_together fields when one
+    field is excluded from the form. This does not pose any security risk
+    because the value from the form is ignored and the request's user always
+    used.
     """
 
-    workout = models.ForeignKey(
-        Workout,
-        verbose_name=_('Workout'),
-        on_delete=models.CASCADE,
+    id = models.UUIDField(
+        default=uuid7,
+        null=False,
+        primary_key=True,
+    )
+
+    routine = models.ForeignKey(
+        'Routine',
+        on_delete=models.SET_NULL,
+        related_name='sessions',
+        null=True,
+    )
+
+    day = models.ForeignKey(
+        'Day',
+        on_delete=models.SET_NULL,
+        null=True,
     )
     """
-    The workout the session belongs to
+    The day the session belongs to
     """
 
-    date = Html5DateField(verbose_name=_('Date'))
+    datetime_start = models.DateTimeField(
+        verbose_name='Start date and time',
+        default=timezone.now,
+    )
     """
-    The date the workout session was performed
+    The date and time the workout session started
+    """
+
+    datetime_end = models.DateTimeField(
+        verbose_name='End date and time',
+        blank=True,
+        null=True,
+    )
+    """
+    The date and time the workout session ended
     """
 
     notes = models.TextField(
-        verbose_name=_('Notes'),
+        verbose_name='Notes',
         null=True,
         blank=True,
-        help_text=_('Any notes you might want to save about this workout '
-                    'session.')
+        help_text='Any notes you might want to save about this workout session.',
     )
     """
     User notes about the workout
     """
 
     impression = models.CharField(
-        verbose_name=_('General impression'),
+        verbose_name='General impression',
         max_length=2,
         choices=IMPRESSION,
         default=IMPRESSION_NEUTRAL,
-        help_text=_(
-            'Your impression about this workout session. '
-            'Did you exercise as well as you could?'
-        )
+        help_text=(
+            'Your impression about this workout session. Did you exercise as well as you could?'
+        ),
     )
     """
     The user's general impression of workout
-    """
-
-    time_start = models.TimeField(verbose_name=_('Start time'), blank=True, null=True)
-    """
-    Time the workout session started
-    """
-
-    time_end = models.TimeField(verbose_name=_('Finish time'), blank=True, null=True)
-    """
-    Time the workout session ended
     """
 
     def __str__(self):
         """
         Return a more human-readable representation
         """
-        return "{0} - {1}".format(self.workout, self.date)
+        return f'{self.routine} - {self.local_day}'
+
+    @property
+    def local_day(self) -> datetime.date | None:
+        """
+        The calendar day this session counts for, e.g. for streaks
+
+        A session that runs over midnight counts for the day it started on, in
+        the timezone of the user it belongs to and not in the one of whoever is
+        asking. An ORM lookup such as ``datetime_start__date`` resolves in the
+        active timezone instead and is not an equivalent.
+
+        Loads the owner's profile. Anything iterating over sessions of one user
+        should fetch the zone once and use ``local_day_in`` instead.
+        """
+        return self.local_day_in(self.user.userprofile.zone_info)
+
+    def local_day_in(self, tz: datetime.tzinfo) -> datetime.date | None:
+        """
+        The calendar day this session counts for, in the given timezone
+        """
+        if not self.datetime_start:
+            return None
+
+        return timezone.localtime(self.datetime_start, timezone=tz).date()
 
     class Meta:
         """
         Set other properties
         """
+
         ordering = [
-            "date",
+            'datetime_start',
         ]
-        unique_together = ("date", "user")
+        indexes = [models.Index(fields=['routine', 'datetime_start'])]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(datetime_end__isnull=True)
+                | models.Q(datetime_end__gte=models.F('datetime_start')),
+                name='session_end_after_start',
+            ),
+        ]
+
+    @classmethod
+    def max_duration(cls) -> datetime.timedelta:
+        """
+        How long a session may last, and how far back a log looks for an open one
+        """
+        return datetime.timedelta(hours=settings.WGER_MAX_SESSION_LENGTH_HOURS)
 
     def clean(self):
         """
         Perform some additional validations
         """
+        # Note: We do NOT force both datetime_start and datetime_end to be present.
+        # A missing datetime_end means the session is currently "open" and ongoing.
+        if not (self.datetime_start and self.datetime_end):
+            return
 
-        if (not self.time_end and self.time_start) or (self.time_end and not self.time_start):
-            raise ValidationError(_("If you enter a time, you must enter both start and end time."))
+        if self.datetime_start > self.datetime_end:
+            raise ValidationError(_('The start time cannot be after the end time.'))
 
-        if self.time_end and self.time_start and self.time_start > self.time_end:
-            raise ValidationError(_("The start time cannot be after the end time."))
+        if self.datetime_end - self.datetime_start > self.max_duration():
+            raise ValidationError(
+                ngettext(
+                    'A session cannot be longer than %(hours)s hour.',
+                    'A session cannot be longer than %(hours)s hours.',
+                    settings.WGER_MAX_SESSION_LENGTH_HOURS,
+                )
+                % {'hours': settings.WGER_MAX_SESSION_LENGTH_HOURS}
+            )
 
     def get_owner_object(self):
         """
         Returns the object that has owner information
         """
         return self
-
-    def save(self, *args, **kwargs):
-        """
-        Reset cache
-        """
-        reset_workout_log(self.user_id, self.date.year, self.date.month)
-        super(WorkoutSession, self).save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        """
-        Reset cache
-        """
-        reset_workout_log(self.user_id, self.date.year, self.date.month)
-        super(WorkoutSession, self).delete(*args, **kwargs)

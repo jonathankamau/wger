@@ -18,8 +18,11 @@ import random
 
 # Django
 from django.contrib.auth.models import User
+from django.contrib.sessions.models import Session
 from django.core.management import call_command
+from django.http import HttpRequest
 from django.urls import reverse
+from django.utils import timezone
 
 # wger
 from wger.core.demo import (
@@ -29,16 +32,17 @@ from wger.core.demo import (
 from wger.core.tests.base_testcase import WgerTestCase
 from wger.manager.models import (
     Day,
-    Schedule,
-    ScheduleStep,
-    Workout,
+    Routine,
     WorkoutLog,
+)
+from wger.measurements.models import (
+    Category,
+    Measurement,
 )
 from wger.nutrition.models import (
     Meal,
     NutritionPlan,
 )
-from wger.weight.models import WeightEntry
 
 
 class DemoUserTestCase(WgerTestCase):
@@ -53,6 +57,17 @@ class DemoUserTestCase(WgerTestCase):
         """
         return User.objects.filter(userprofile__is_temporary=1).count()
 
+    def test_anonymous_request_creates_no_session(self):
+        """
+        Reading a public page without logging in creates no session row
+        """
+        before = Session.objects.count()
+
+        response = self.client.get(reverse('software:features'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Session.objects.count(), before)
+
     def test_demo_data_no_guest_account(self):
         """
         Tests that the helper function creates demo data (workout, etc.)
@@ -61,10 +76,10 @@ class DemoUserTestCase(WgerTestCase):
         with self.settings(
             WGER_SETTINGS={
                 'USE_RECAPTCHA': True,
-                'REMOVE_WHITESPACE': False,
                 'ALLOW_REGISTRATION': True,
                 'ALLOW_GUEST_USERS': False,
-                'TWITTER': False,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
             }
         ):
             self.assertEqual(self.count_temp_users(), 1)
@@ -82,46 +97,46 @@ class DemoUserTestCase(WgerTestCase):
         self.assertEqual(self.count_temp_users(), 2)
         user = User.objects.get(pk=User.objects.latest('id').id)
         self.assertEqual(user.userprofile.is_temporary, True)
-        self.assertEqual(Workout.objects.filter(user=user).count(), 0)
+        self.assertEqual(Routine.objects.filter(user=user).count(), 0)
 
         self.client.get(reverse('core:user:demo-entries'))
-        # Workout
-        self.assertEqual(Workout.objects.filter(user=user).count(), 4)
-        self.assertEqual(Day.objects.filter(training__user=user).count(), 2)
-        self.assertEqual(WorkoutLog.objects.filter(user=user).count(), 56)
 
-        # Schedule
-        self.assertEqual(Schedule.objects.filter(user=user).count(), 3)
-        self.assertEqual(ScheduleStep.objects.filter(schedule__user=user).count(), 6)
+        # Routine
+        self.assertEqual(Routine.objects.filter(user=user).count(), 4)
+        self.assertGreater(Day.objects.filter(routine__user=user).count(), 5)
+        self.assertGreater(WorkoutLog.objects.filter(user=user).count(), 400)
 
         # Nutrition
-        self.assertEqual(NutritionPlan.objects.filter(user=user).count(), 1)
-        self.assertEqual(Meal.objects.filter(plan__user=user).count(), 3)
+        self.assertEqual(NutritionPlan.objects.filter(user=user).count(), 5)
+        self.assertEqual(Meal.objects.filter(plan__user=user).count(), 20)
 
         # Body weight
-        self.assertEqual(WeightEntry.objects.filter(user=user).count(), 19)
+        self.assertEqual(Measurement.body_weight_for(user).count(), 40)
 
     def test_demo_data_body_weight(self):
         """
-        Tests that the helper function that creates demo data filters out
+        Tests that the helper function that creates demo data does not filter out
         existing dates for the weight entries
         """
         self.client.get(reverse('core:dashboard'))
         self.assertEqual(self.count_temp_users(), 2)
         user = User.objects.get(pk=4)
 
+        category = Category.get_or_create_body_weight(user, unit='kg')
         temp = []
         for i in range(1, 5):
-            creation_date = datetime.date.today() - datetime.timedelta(days=i)
-            entry = WeightEntry(
-                user=user, weight=80 + 0.5 * i + random.randint(1, 3), date=creation_date
+            creation_date = timezone.now() - datetime.timedelta(days=i)
+            entry = Measurement(
+                category=category,
+                value=80 + 0.5 * i + random.randint(1, 3),
+                date=creation_date,
             )
             temp.append(entry)
-        WeightEntry.objects.bulk_create(temp)
+        Measurement.objects.bulk_create(temp)
         create_demo_entries(user)
 
         # Body weight
-        self.assertEqual(WeightEntry.objects.filter(user=user).count(), 19)
+        self.assertEqual(Measurement.body_weight_for(user).count(), 44)
 
     def test_demo_user(self):
         """
@@ -142,7 +157,7 @@ class DemoUserTestCase(WgerTestCase):
         self.assertEqual(self.count_temp_users(), 1)
 
         self.user_logout()
-        self.client.get(reverse('manager:workout:overview'))
+        self.client.get(reverse('manager:routine:overview'))
         self.assertEqual(self.count_temp_users(), 1)
 
         self.user_logout()
@@ -169,11 +184,10 @@ class DemoUserTestCase(WgerTestCase):
         demo_notice_text = 'You are using a guest account'
         self.user_login('demo')
         self.assertContains(self.client.get(reverse('core:dashboard')), demo_notice_text)
-        self.assertContains(self.client.get(reverse('manager:workout:overview')), demo_notice_text)
+        self.assertContains(self.client.get(reverse('manager:routine:overview')), demo_notice_text)
         self.assertContains(
             self.client.get(reverse('exercise:exercise:overview')), demo_notice_text
         )
-        self.assertContains(self.client.get(reverse('exercise:muscle:overview')), demo_notice_text)
         self.assertContains(self.client.get(reverse('nutrition:plan:overview')), demo_notice_text)
         self.assertContains(self.client.get(reverse('software:about-us')), demo_notice_text)
 
@@ -182,16 +196,44 @@ class DemoUserTestCase(WgerTestCase):
         Tests that old demo users are deleted by the management command
         """
 
+        request = HttpRequest()
+
         # Create some new demo users
         for i in range(0, 15):
-            create_temporary_user()
+            create_temporary_user(request)
         User.objects.filter().update(date_joined='2013-01-01 00:00+01:00')
 
         # These ones keep the date_joined field
-        create_temporary_user()
-        create_temporary_user()
+        create_temporary_user(request)
+        create_temporary_user(request)
 
         # Check and delete
         self.assertEqual(self.count_temp_users(), 18)
         call_command('delete-temp-users')
         self.assertEqual(self.count_temp_users(), 2)
+
+    def test_temporary_user_deleted_on_logout(self):
+        """
+        Logging out a temporary user must delete the account
+        """
+        before = self.count_temp_users()
+        temp_user = create_temporary_user(HttpRequest())
+        self.assertEqual(self.count_temp_users(), before + 1)
+
+        self.client.force_login(temp_user)
+        self.client.post(reverse('account_logout'))
+
+        self.assertFalse(User.objects.filter(pk=temp_user.pk).exists())
+        self.assertEqual(self.count_temp_users(), before)
+
+    def test_regular_user_kept_on_logout(self):
+        """
+        Logging out a regular (non-temporary) user must not delete the account.
+        """
+        regular = User.objects.get(username='admin')
+        self.assertFalse(regular.userprofile.is_temporary)
+
+        self.client.force_login(regular)
+        self.client.post(reverse('account_logout'))
+
+        self.assertTrue(User.objects.filter(pk=regular.pk).exists())

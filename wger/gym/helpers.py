@@ -14,11 +14,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
-# wger
-from wger.manager.models import (
-    WorkoutLog,
-    WorkoutSession,
-)
+# Django
+from django.contrib.auth.models import Permission
+from django.db.models import Q
+from django.utils import timezone
 
 
 def get_user_last_activity(user):
@@ -29,28 +28,54 @@ def get_user_last_activity(user):
     :param user: user object
     :return: a date or None if nothing was found
     """
+    # wger
+    from wger.manager.models import (
+        WorkoutLog,
+        WorkoutSession,
+    )
 
-    last_activity = None
+    dates = []
 
-    # Check workout logs
+    # The day is derived in the member's zone, not in the one of the trainer
+    # looking at the list
+    tz = user.userprofile.zone_info
+
+    # Check workout logs. They use datetimes, the sessions and the user cache
+    # only dates
     last_log = WorkoutLog.objects.filter(user=user).order_by('date').last()
     if last_log:
-        last_activity = last_log.date
+        dates.append(timezone.localdate(last_log.date, timezone=tz))
 
     # Check workout sessions
-    last_session = WorkoutSession.objects.filter(user=user).order_by('date').last()
+    last_session = WorkoutSession.objects.filter(user=user).order_by('datetime_start').last()
     if last_session:
-        last_session = last_session.date
+        dates.append(timezone.localdate(last_session.datetime_start, timezone=tz))
 
-    # Return the last one
-    if last_session:
-        if not last_activity:
-            last_activity = last_session
+    return max(dates) if dates else None
 
-        if last_activity < last_session:
-            last_activity = last_session
 
-    return last_activity
+_CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def sanitize_csv_cell(value):
+    """
+    Neutralise spreadsheet formula triggers in a CSV/TSV cell.
+    """
+    s = '' if value is None else str(value)
+    if s and s[0] in _CSV_FORMULA_PREFIXES:
+        return "'" + s
+    return s
+
+
+def is_same_gym(user_a, user_b):
+    """
+    Check whether two users belong to the same gym.
+
+    Returns ``True`` only when both users are members of the same, non-null gym
+    """
+    gym_a = user_a.userprofile.gym_id
+    gym_b = user_b.userprofile.gym_id
+    return gym_a is not None and gym_a == gym_b
 
 
 def is_any_gym_admin(user):
@@ -58,9 +83,90 @@ def is_any_gym_admin(user):
     Small utility that checks that the user object has any administrator
     permissions
     """
-    return user.has_perm('gym.manage_gym')\
-        or user.has_perm('gym.manage_gyms')\
+    return (
+        user.has_perm('gym.manage_gym')
+        or user.has_perm('gym.manage_gyms')
         or user.has_perm('gym.gym_trainer')
+    )
+
+
+def holds_gym_permission(user, *codenames: str) -> bool:
+    """
+    Whether the user holds any of the given gym permissions, directly or
+    through a group. Superusers hold all of them.
+
+    Unlike has_perm this also works for deactivated accounts.
+    """
+    if user.is_superuser:
+        return True
+
+    return Permission.objects.filter(
+        Q(user=user) | Q(group__user=user),
+        content_type__app_label='gym',
+        codename__in=codenames,
+    ).exists()
+
+
+def holds_permissions_beyond(target, actor) -> bool:
+    """
+    Whether the target holds any permission the actor doesn't, directly or
+    through a group (e.g. exercise editors). Superusers hold all of them.
+
+    Unlike has_perm this also works for deactivated accounts.
+    """
+    if actor.is_superuser:
+        return False
+
+    if target.is_superuser:
+        return True
+
+    actor_permissions = Permission.objects.filter(Q(user=actor) | Q(group__user=actor))
+    return (
+        Permission.objects.filter(Q(user=target) | Q(group__user=target))
+        .exclude(pk__in=actor_permissions)
+        .exists()
+    )
+
+
+def outranks(actor, target) -> bool:
+    """
+    Whether the actor has more gym privileges than the target, needed for
+    actions that hand over the target's account (password, email)
+
+    - superusers outrank everybody
+    - general managers outrank everybody except other general managers
+    - managers only outrank accounts without any gym role and without
+      permissions they don't hold themselves
+    """
+    if actor.is_superuser:
+        return True
+
+    if holds_gym_permission(target, 'manage_gyms'):
+        return False
+
+    if actor.has_perm('gym.manage_gyms'):
+        return True
+
+    return not holds_gym_permission(
+        target, 'manage_gym', 'gym_trainer'
+    ) and not holds_permissions_beyond(target, actor)
+
+
+def may_change_activation(actor, target) -> bool:
+    """
+    Whether the actor may deactivate or reactivate the target's account
+
+    - superusers and general managers can (de)activate every account
+    - managers can't (de)activate general managers or superusers
+    - trainers only (de)activate accounts without any gym role
+    """
+    if actor.has_perm('gym.manage_gyms'):
+        return True
+
+    if actor.has_perm('gym.manage_gym'):
+        return not holds_gym_permission(target, 'manage_gyms')
+
+    return not holds_gym_permission(target, 'manage_gyms', 'manage_gym', 'gym_trainer')
 
 
 def get_permission_list(user):

@@ -11,9 +11,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wger Workout Manager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-08-17 17:23+0200\n"
-"PO-Revision-Date: 2021-04-15 07:27+0000\n"
-"Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
+"POT-Creation-Date: 2026-11-07 14:27+0100\n"
+"PO-Revision-Date: 2026-03-05 10:09+0000\n"
+"Last-Translator: Teodor Olteanu <teo.olteanu00@gmail.com>\n"
 "Language-Team: Romanian <https://hosted.weblate.org/projects/wger/web/ro/>\n"
 "Language: ro\n"
 "MIME-Version: 1.0\n"
@@ -21,1154 +21,1097 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < "
 "20)) ? 1 : 2;\n"
-"X-Generator: Weblate 4.6-dev\n"
+"X-Generator: Weblate 5.17-dev\n"
 
-#: config/models/gym_config.py:46 gym/templates/gym/list.html:50
+#: config/models/gym_config.py:46 gym/templates/gym/list.html:56
 msgid "Default gym"
-msgstr ""
+msgstr "Sala de baza"
 
 #: config/models/gym_config.py:48
 msgid ""
 "Select the default gym for this installation. This will assign all new "
 "registered users to this gym and update all existing users without a gym."
 msgstr ""
+"Selectează sala implicită pentru această instalare. Aceasta va atribui toți "
+"utilizatorii noi înregistrați la această sală și va actualiza toți "
+"utilizatorii existenți care nu au o sală."
 
-#: config/models/language_config.py:41 core/templates/navigation.html:63
-#: exercises/templates/exercise/overview.html:11 manager/forms.py:122
-#: manager/models/setting.py:44
-msgid "Exercises"
-msgstr "Exerciții"
-
-#: config/models/language_config.py:42
-msgid "Ingredients"
-msgstr "Ingrediente"
-
-#: config/templates/language/overview.html:4 core/templates/navigation.html:228
-msgid "Languages"
-msgstr "Limbi"
-
-#: config/templates/language/overview.html:16
-msgid "Nothing found."
-msgstr ""
-
-#: config/templates/language/overview.html:16 core/templates/index.html:147
-#: core/templates/index.html:199 manager/templates/calendar/month.html:132
-#: manager/templates/schedule/overview.html:28
-#: manager/templates/schedule/view.html:146
-#: manager/templates/workout/overview.html:28
-#: nutrition/templates/ingredient/overview.html:45
-#: nutrition/templates/plan/overview.html:23
-#: nutrition/templates/plan/view.html:148
-#: nutrition/templates/plan/view.html:151
-#: nutrition/templates/plan/view.html:189
-msgid "Add one now."
-msgstr ""
-
-#: config/templates/language/overview.html:29
-#: core/templates/license/list.html:38 core/templates/misc/license/list.html:41
-#: core/templates/repetition_unit/list.html:41
-#: core/templates/user/overview.html:327 core/templates/user/overview.html:366
-#: core/templates/user/overview.html:402
-#: core/templates/weight_unit/list.html:41 core/views/languages.py:73
-#: core/views/license.py:65 core/views/repetition_units.py:65
-#: core/views/weight_units.py:65
-#: exercises/templates/categories/admin-overview.html:36
-#: gallery/views/images.py:62 gym/templates/admin_notes/list.html:67
-#: gym/templates/contract/list.html:72
-#: gym/templates/contract_option/list.html:70
-#: gym/templates/contract_type/list.html:70 gym/templates/document/list.html:78
-#: gym/templates/gym/member_list.html:211
-#: gym/templates/gym/member_list.html:244
-#: gym/templates/gym/member_list.html:281
-#: mailer/templates/mailer/gym/overview.html:43
-#: weight/templates/overview.html:78
-msgid "Add"
-msgstr "Adăugare"
-
-#: config/templates/language/view.html:21 core/models/language.py:29
-msgid "Language short name"
-msgstr "Denumirea limbii scurt"
-
-#: config/templates/language/view.html:22
-#: config/templates/language/view.html:43 core/models/language.py:32
-msgid "Language full name"
-msgstr "Denumirea limbii complet"
-
-#: config/templates/language/view.html:34 core/templates/user/overview.html:451
-#: gym/views/admin_config.py:44 gym/views/admin_config.py:58
-#: gym/views/user_config.py:46
-msgid "Configuration"
-msgstr ""
-
-#: config/templates/language/view.html:35
-msgid ""
-"Use the configuration to select in what languages the\n"
-"exercises and ingredients will be shown for the current language (for "
-"example\n"
-"the exercises should be shown in languages A, B and C; the ingredients only\n"
-"in A)."
-msgstr ""
-
-#: config/templates/language/view.html:44 gym/templates/contract/list.html:36
-msgid "Show"
-msgstr ""
-
-#: config/templates/language/view.html:91 core/templates/user/api_key.html:44
-#: core/templates/user/preferences.html:28
-#: exercises/templates/exercise/view.html:273
-#: exercises/templates/exercise/view.html:296 gym/models/contract.py:200
-#: gym/templates/contract/view.html:41 gym/templates/contract/view.html:106
-#: gym/templates/gym/member_list.html:248
-#: manager/templates/schedule/view.html:281
-#: manager/templates/workout/view.html:206
-#: nutrition/templates/ingredient/view.html:226
-#: nutrition/templates/plan/view.html:409 weight/templates/overview.html:62
-msgid "Options"
-msgstr "Opțiuni"
-
-#: config/templates/language/view.html:96 config/views/gym_config.py:41
-#: config/views/language_config.py:49 core/templates/license/list.html:16
-#: core/templates/misc/license/list.html:17
-#: core/templates/repetition_unit/list.html:17
-#: core/templates/tags/render_day.html:39
-#: core/templates/tags/render_day.html:75 core/templates/user/overview.html:205
-#: core/templates/user/overview.html:446
-#: core/templates/weight_unit/list.html:17
-#: exercises/templates/categories/admin-overview.html:16
-#: exercises/templates/equipment/admin-overview.html:16
-#: exercises/templates/exercise/view.html:180
-#: exercises/templates/exercise/view.html:301
-#: exercises/templates/muscles/admin-overview.html:16
-#: exercises/views/comments.py:63 gallery/views/images.py:96
-#: gym/templates/admin_notes/list.html:32 gym/templates/contract/list.html:31
-#: gym/templates/contract/view.html:107
-#: gym/templates/contract_option/list.html:31
-#: gym/templates/contract_type/list.html:31 gym/templates/document/list.html:38
-#: gym/templates/gym/list.html:19 gym/templates/gym/list.html:43
-#: gym/templates/gym/member_list.html:87 gym/templates/gym/member_list.html:140
-#: gym/templates/gym/member_list.html:176
-#: manager/templates/calendar/day.html:65
-#: manager/templates/calendar/month.html:85
-#: manager/templates/calendar/partial_overview_table.html:18
-#: manager/templates/schedule/view.html:121
-#: nutrition/templates/ingredient/view.html:198
-#: nutrition/templates/plan/view.html:89 nutrition/templates/plan/view.html:124
-#: nutrition/templates/units/list.html:18
-msgid "Edit"
-msgstr "Editare"
-
-#: config/templates/language/view.html:101 core/forms.py:191
-#: core/templates/license/list.html:17 core/templates/misc/license/list.html:20
+#: config/views/gym_config.py:46 core/templates/language/view.html:64
+#: core/templates/license/list.html:17
 #: core/templates/repetition_unit/list.html:18
-#: core/templates/tags/render_day.html:45
-#: core/templates/tags/render_day.html:81 core/templates/user/overview.html:218
+#: core/templates/user/overview.html:226 core/templates/user/overview.html:453
 #: core/templates/weight_unit/list.html:18
 #: exercises/templates/categories/admin-overview.html:17
 #: exercises/templates/equipment/admin-overview.html:17
-#: exercises/templates/exercise/view.html:68
-#: exercises/templates/exercise/view.html:155
-#: exercises/templates/exercise/view.html:185
-#: exercises/templates/exercise/view.html:306
-#: exercises/templates/muscles/admin-overview.html:17
-#: gym/templates/admin_notes/list.html:40
-#: gym/templates/contract_option/list.html:39
-#: gym/templates/contract_type/list.html:39 gym/templates/document/list.html:46
-#: gym/templates/gym/list.html:20 manager/templates/calendar/day.html:69
-#: manager/templates/calendar/month.html:89
-#: manager/templates/calendar/partial_overview_table.html:23
-#: manager/templates/schedule/view.html:125
-#: manager/templates/workout/view.html:231
-#: nutrition/templates/ingredient/view.html:199
-#: nutrition/templates/ingredient/view.html:239
-#: nutrition/templates/log/detail.html:197
-#: nutrition/templates/plan/view.html:95 nutrition/templates/plan/view.html:130
-#: nutrition/templates/units/list.html:20
-msgid "Delete"
-msgstr "Ștergere"
+#: exercises/templates/muscles/admin-overview.html:16
+#: gallery/views/images.py:100 gym/templates/admin_notes/list.html:31
+#: gym/templates/contract/list.html:30 gym/templates/contract/view.html:106
+#: gym/templates/contract_option/list.html:29
+#: gym/templates/contract_type/list.html:30 gym/templates/document/list.html:38
+#: gym/templates/gym/list.html:19 gym/templates/gym/list.html:48
+#: gym/templates/gym/member_list.html:94 gym/templates/gym/member_list.html:152
+#: gym/templates/gym/member_list.html:190
+#: nutrition/templates/ingredient/view.html:254
+#: nutrition/templates/ingredient/view.html:297
+msgid "Edit"
+msgstr "Editează"
 
-#: core/demo.py:86
-msgid "Sample workout"
+#: core/forms.py:116 core/forms.py:362
+msgid "The form is secured with reCAPTCHA"
+msgstr "Formularul este securizat cu reCAPTCHA"
+
+#: core/forms.py:129 core/templates/account/login.html:93
+#: core/templates/account/signup.html:4 core/templates/navigation.html:269
+#: core/templates/navigation.html:282 core/templates/template.html:114
+#: software/templates/features.html:89 software/templates/features.html:445
+msgid "Register"
+msgstr "Înregistrare"
+
+#: core/forms.py:148
+msgid "Not set"
 msgstr ""
 
-#: core/demo.py:90
-msgid "Sample day"
-msgstr ""
-
-#: core/demo.py:94
-msgid "Another sample day"
-msgstr ""
-
-#: core/demo.py:217
-msgid "Sample nutrional plan"
-msgstr ""
-
-#: core/demo.py:349 core/demo.py:351 core/demo.py:353
-#, python-brace-format
-msgid "Placeholder workout nr {0} for schedule"
-msgstr ""
-
-#: core/demo.py:358
-msgid "My cool workout schedule"
-msgstr ""
-
-#: core/demo.py:397 core/demo.py:412
-msgid "Empty placeholder schedule"
-msgstr ""
-
-#: core/forms.py:61 core/templates/navigation.html:190
-#: core/templates/navigation.html:194 core/templates/user/login.html:4
-#: software/templates/features.html:43
-msgid "Login"
-msgstr ""
-
-#: core/forms.py:73 core/forms.py:164 gym/views/export.py:63
-#: gym/views/gym.py:218
+#: core/forms.py:152 core/forms.py:270 gym/views/export.py:62
+#: gym/views/gym.py:227
 msgid "First name"
 msgstr "Prenume"
 
-#: core/forms.py:74 core/forms.py:165 core/templates/user/overview.html:267
-#: gym/views/export.py:64 gym/views/gym.py:218
+#: core/forms.py:153 core/forms.py:271 core/templates/user/overview.html:270
+#: gym/views/export.py:63 gym/views/gym.py:227
 msgid "Last name"
-msgstr "Nume"
+msgstr "Nume de familie"
 
-#: core/forms.py:76 core/forms.py:131 core/templates/user/overview.html:271
-#: gym/models/contract.py:253 gym/models/gym.py:58
-#: gym/templates/contract/view.html:77 gym/templates/gym/member_list.html:104
-#: gym/templates/gym/new_user.html:30 gym/views/export.py:62
+#: core/forms.py:155 core/models/profile.py:227
+#: gym/templates/gym/new_user.html:38
+msgid "Date of Birth"
+msgstr "Data nașterii"
+
+#: core/forms.py:168
+msgid "Timezone"
+msgstr "Fus orar"
+
+#: core/forms.py:172
+msgid ""
+"Used to decide which day a workout counts for. The mobile app reports it "
+"automatically."
+msgstr ""
+
+#: core/forms.py:211
+msgid "Personal data"
+msgstr "Date personale"
+
+#: core/forms.py:221
+msgid "Other settings"
+msgstr "Alte setări"
+
+#: core/forms.py:226 core/views/user.py:734 gym/forms.py:73
+#: utils/generic_views.py:132
+msgid "Save"
+msgstr "Salvează"
+
+#: core/forms.py:241 core/templates/user/overview.html:274
+#: gym/models/contract.py:256 gym/models/gym.py:58
+#: gym/templates/contract/view.html:77 gym/templates/gym/member_list.html:116
+#: gym/templates/gym/new_user.html:30 gym/views/export.py:61
 #: mailer/templates/mailer/gym/form.html:4
 #: mailer/templates/mailer/gym/overview.html:4
 #: mailer/templates/mailer/gym/preview.html:4
 msgid "Email"
-msgstr "Adresa de email"
+msgstr "E-mail"
 
-#: core/forms.py:77
-#, fuzzy
-#| msgid "Used for password resets and, optionally, email reminders."
-msgid "Used for password resets and, optionally, e-mail reminders."
-msgstr ""
-"Folosit pentru resetarea parolei și, opțional, pentru memento-uri prin e-"
-"mail."
-
-#: core/forms.py:102
-msgid "Personal data"
-msgstr "Date personale"
-
-#: core/forms.py:110
-msgid "Workout reminders"
-msgstr "Mementouri de antrenament"
-
-#: core/forms.py:117
-msgid "Other settings"
-msgstr "Alte setari"
-
-#: core/forms.py:125 core/views/user.py:599 core/views/user.py:614
-#: core/views/user.py:626 gym/forms.py:72 manager/templates/log/add.html:65
-#: manager/templates/set/add.html:69 manager/views/workout.py:221
-#: utils/generic_views.py:142
-msgid "Save"
-msgstr "Salvează"
-
-#: core/forms.py:132
+#: core/forms.py:242
 msgid "Used for password resets and, optionally, email reminders."
-msgstr ""
-"Folosit pentru resetarea parolei și, opțional, pentru memento-uri prin e-"
-"mail."
+msgstr "Folosit pentru resetarea parolei și, opțional, mementouri prin e-mail."
 
-#: core/forms.py:160
-#, fuzzy
-#| msgid "This email is already used."
+#: core/forms.py:265
 msgid "This e-mail address is already in use."
-msgstr "Acest email este deja folosit."
+msgstr "Această adresă de e-mail este deja folosită."
 
-#: core/forms.py:180 gym/templates/gym/new_user.html:26
-#: gym/templates/gym/reset_user_password.html:24 gym/views/gym.py:218
+#: core/forms.py:287 gym/templates/gym/new_user.html:26
+#: gym/templates/gym/reset_user_password.html:24 gym/views/gym.py:227
 msgid "Password"
-msgstr "Parola"
+msgstr "Parolă"
 
-#: core/forms.py:182
+#: core/forms.py:289
 msgid "Please enter your current password."
-msgstr "Te rog introdu parola curentă"
+msgstr "Te rugăm să introduci parola ta curentă."
 
-#: core/forms.py:200
+#: core/forms.py:298 core/forms.py:335 core/templates/language/view.html:70
+#: core/templates/license/list.html:21
+#: core/templates/repetition_unit/list.html:22
+#: core/templates/user/overview.html:251
+#: core/templates/weight_unit/list.html:22
+#: exercises/templates/categories/admin-overview.html:21
+#: exercises/templates/equipment/admin-overview.html:21
+#: exercises/templates/muscles/admin-overview.html:20
+#: gym/templates/admin_notes/list.html:37
+#: gym/templates/contract_option/list.html:35
+#: gym/templates/contract_type/list.html:36 gym/templates/document/list.html:46
+#: gym/templates/gym/list.html:23 nutrition/templates/ingredient/view.html:258
+#: nutrition/templates/ingredient/view.html:303
+msgid "Delete"
+msgstr "Șterge"
+
+#: core/forms.py:307
 msgid "Invalid password"
-msgstr "Parola incorectă"
+msgstr "Parolă invalidă"
 
-#: core/forms.py:212 core/forms.py:278
-msgid "The form is secured with reCAPTCHA"
+#: core/forms.py:320
+msgid "Confirm"
+msgstr "Confirmă"
+
+#: core/forms.py:328
+#, python-brace-format
+msgid ""
+"Your account has no password. Type the username \"{username}\" to confirm."
 msgstr ""
 
-#: core/forms.py:226 core/forms.py:245 core/templates/navigation.html:190
-#: core/templates/navigation.html:195 core/templates/template.html:150
-#: core/templates/user/login.html:20 core/views/user.py:293
-#: software/templates/features.html:38
-msgid "Register"
-msgstr "Inregistreaza-te"
-
-#: core/forms.py:256
-msgid "Contact"
-msgstr "Contact"
-
-#: core/forms.py:257
-#, fuzzy
-#| msgid "Some way of answering you (email, etc.)"
-msgid "Some way of answering you (e-mail, etc.)"
-msgstr "Metodă de contactare (email, etc)"
-
-#: core/forms.py:265 exercises/models/comment.py:40 manager/models/set.py:60
-#: manager/models/setting.py:99 nutrition/models/log.py:61
-msgid "Comment"
-msgstr "Comentariu"
-
-#: core/forms.py:266
-msgid "What do you want to say?"
-msgstr "Ce vrei să spui?"
-
-#: core/models/days_of_week.py:29
-msgid "Day of the week"
+#: core/forms.py:344
+msgid "The entered username does not match"
 msgstr ""
+
+#: core/forms.py:372 weight/templates/import_csv_form.html:9
+msgid "Submit"
+msgstr "Trimite"
+
+#: core/models/language.py:31 core/templates/language/view.html:21
+msgid "Language short name"
+msgstr "Numele scurt al limbii"
+
+#: core/models/language.py:39 core/templates/language/view.html:22
+msgid "Language full name"
+msgstr "Numele complet al limbii"
+
+#: core/models/language.py:45 core/templates/language/view.html:23
+msgid "Language full name in English"
+msgstr "Numele complet al limbii în engleză"
 
 #: core/models/license.py:29
 msgid "Full name"
-msgstr ""
+msgstr "Nume complet"
 
 #: core/models/license.py:31
 msgid ""
 "If a license has been localized, e.g. the Creative Commons licenses for the "
 "different countries, add them as separate entries here."
 msgstr ""
+"Dacă o licență a fost localizată, de ex. licențele Creative Commons pentru "
+"diferitele țări, adaugă-le ca intrări separate aici."
 
-#: core/models/license.py:38
+#: core/models/license.py:40
 msgid "Short name, e.g. CC-BY-SA 3"
-msgstr ""
+msgstr "Nume scurt, de ex. CC-BY-SA 3"
 
-#: core/models/license.py:42 nutrition/models/ingredient.py:182
+#: core/models/license.py:45
 msgid "Link"
-msgstr ""
+msgstr "Link"
 
-#: core/models/license.py:43
+#: core/models/license.py:46
 msgid "Link to license text or other information"
-msgstr ""
+msgstr "Link către textul licenței sau alte informații"
 
-#: core/models/profile.py:52
+#: core/models/profile.py:69
 #, python-format
 msgid "%(birthdate)s is not a valid birthdate"
 msgstr "%(birthdate)s nu este o dată de naștere validă"
 
-#: core/models/profile.py:61
+#: core/models/profile.py:96
 msgid "Male"
 msgstr "Bărbat"
 
-#: core/models/profile.py:62
+#: core/models/profile.py:97
 msgid "Female"
 msgstr "Femeie"
 
-#: core/models/profile.py:69
+#: core/models/profile.py:104
 msgid "Low"
 msgstr "Scăzut"
 
-#: core/models/profile.py:70
+#: core/models/profile.py:105
 msgid "Medium"
 msgstr "Mediu"
 
-#: core/models/profile.py:71
+#: core/models/profile.py:106
 msgid "High"
 msgstr "Ridicat"
 
-#: core/models/profile.py:77
-msgid "Metric (kilogram)"
-msgstr "Metric (kilogram)"
-
-#: core/models/profile.py:78
-msgid "Imperial (pound)"
-msgstr "Imperial (pound)"
-
-#: core/models/profile.py:111
-msgid "Show exercise comments"
-msgstr "Arată comentariile exercițiilor"
-
 #: core/models/profile.py:112
-msgid "Check to show exercise comments on the workout view"
-msgstr ""
-"Bifați pentru a afișa comentarii despre exerciții în vizualizarea "
-"antrenamentului"
+msgid "Metric (kilogram)"
+msgstr "Metric (kilograme)"
 
-#: core/models/profile.py:123
-msgid "Also use ingredients in English"
-msgstr "Folosește și ingrediente din limba Engleză"
+#: core/models/profile.py:113
+msgid "Imperial (pound)"
+msgstr "Imperial (livre)"
 
-#: core/models/profile.py:125
-msgid ""
-"Check to also show ingredients in English while creating\n"
-"a nutritional plan. These ingredients are extracted from a list provided\n"
-"by the US Department of Agriculture. It is extremely complete, with around\n"
-"7000 entries, but can be somewhat overwhelming and make the search difficult."
-msgstr ""
-"Bifați pentru a afișa și ingredientele în limba engleză în timp ce creați\n"
-"un plan nutrițional. Aceste ingrediente sunt extrase dintr-o listă "
-"furnizată\n"
-"de către Departamentul Agriculturii al SUA. Este extrem de complet, cu "
-"aproximativ\n"
-"7000 de intrări, dar pot fi oarecum copleșitoare și pot face căutarea "
-"dificilă."
-
-#: core/models/profile.py:134
+#: core/models/profile.py:146
 msgid "Activate workout reminders"
-msgstr "Activați mementourile de antrenament"
+msgstr "Activează mementourile pentru antrenament"
 
-#: core/models/profile.py:136
+#: core/models/profile.py:148
 msgid ""
 "Check to activate automatic reminders for workouts. You need to provide a "
 "valid email for this to work."
 msgstr ""
+"Bifează pentru a activa mementourile automate pentru antrenamente. Trebuie "
+"să furnizezi un e-mail valid pentru ca acest lucru să funcționeze."
 
-#: core/models/profile.py:145
+#: core/models/profile.py:157
 msgid "Remind before expiration"
-msgstr ""
+msgstr "Amintește înainte de expirare"
 
-#: core/models/profile.py:146
+#: core/models/profile.py:158
 msgid "The number of days you want to be reminded before a workout expires."
 msgstr ""
+"Numărul de zile cu care vrei să fii notificat înainte să expire un "
+"antrenament."
 
-#: core/models/profile.py:152
+#: core/models/profile.py:164
 msgid "Default duration of workouts"
-msgstr ""
+msgstr "Durata implicită a antrenamentelor"
 
-#: core/models/profile.py:154
+#: core/models/profile.py:166
 msgid ""
 "Default duration in weeks of workouts not in a schedule. Used for email "
 "workout reminders."
 msgstr ""
+"Durata implicită în săptămâni a antrenamentelor care nu sunt într-un "
+"program. Folosită pentru mementourile de antrenament prin e-mail."
 
-#: core/models/profile.py:171
+#: core/models/profile.py:184
 msgid "Notification language"
-msgstr ""
+msgstr "Limba notificărilor"
 
-#: core/models/profile.py:173
+#: core/models/profile.py:186
 msgid ""
 "Language to use when sending you email notifications, e.g. email reminders "
 "for workouts. This does not affect the language used on the website."
 msgstr ""
+"Limba folosită pentru a-ți trimite notificări prin e-mail, de ex. mementouri "
+"pentru antrenamente. Aceasta nu afectează limba folosită pe site."
 
-#: core/models/profile.py:186 gym/views/export.py:66
+#: core/models/profile.py:219 gym/views/export.py:65
 msgid "Age"
-msgstr ""
+msgstr "Vârstă"
 
-#: core/models/profile.py:202 nutrition/forms.py:98
+#: core/models/profile.py:235
 msgid "Height (cm)"
-msgstr ""
+msgstr "Înălțime (cm)"
 
-#: core/models/profile.py:219
+#: core/models/profile.py:252
 msgid "Hours of sleep"
-msgstr ""
+msgstr "Ore de somn"
 
-#: core/models/profile.py:220
+#: core/models/profile.py:253
 msgid "The average hours of sleep per day"
-msgstr ""
+msgstr "Numărul mediu de ore de somn pe zi"
 
-#: core/models/profile.py:229
+#: core/models/profile.py:262
 msgid "Work"
-msgstr ""
+msgstr "Muncă"
 
-#: core/models/profile.py:230 core/models/profile.py:272
+#: core/models/profile.py:263 core/models/profile.py:305
 msgid "Average hours per day"
-msgstr ""
+msgstr "Ore medii pe zi"
 
-#: core/models/profile.py:239 core/models/profile.py:260
-#: core/models/profile.py:281
+#: core/models/profile.py:272 core/models/profile.py:293
+#: core/models/profile.py:314
 msgid "Physical intensity"
-msgstr ""
+msgstr "Intensitate fizică"
 
-#: core/models/profile.py:240 core/models/profile.py:261
-#: core/models/profile.py:282
-msgid "Approximately"
-msgstr ""
-
-#: core/models/profile.py:250
-msgid "Sport"
-msgstr ""
-
-#: core/models/profile.py:251
-msgid "Average hours per week"
-msgstr ""
-
-#: core/models/profile.py:271
-msgid "Free time"
-msgstr ""
-
-#: core/models/profile.py:292 nutrition/templates/rate/form.html:66
-msgid "Total daily calories"
-msgstr ""
-
-#: core/models/profile.py:293
-msgid "Total caloric intake, including e.g. any surplus"
-msgstr ""
-
-#: core/models/profile.py:305 nutrition/models/ingredient_weight_unit.py:45
-#: nutrition/models/log.py:80 nutrition/models/meal_item.py:58
-msgid "Weight unit"
-msgstr ""
-
-#: core/models/profile.py:313
-msgid "Allow external access"
-msgstr ""
-
+#: core/models/profile.py:273 core/models/profile.py:294
 #: core/models/profile.py:315
-msgid ""
-"Allow external users to access your workouts and logs in a read-only mode. "
-"You need to set this before you can share links e.g. to social media."
-msgstr ""
+msgid "Approximately"
+msgstr "Aproximativ"
 
-#: core/models/profile.py:324
-msgid "Automatic reminders for weight entries"
-msgstr ""
+#: core/models/profile.py:283
+msgid "Sport"
+msgstr "Sport"
+
+#: core/models/profile.py:284
+msgid "Average hours per week"
+msgstr "Ore medii pe săptămână"
+
+#: core/models/profile.py:304
+msgid "Free time"
+msgstr "Timp liber"
+
+#: core/models/profile.py:325 nutrition/templates/rate/form.html:66
+msgid "Total daily calories"
+msgstr "Total calorii zilnice"
 
 #: core/models/profile.py:326
+msgid "Total caloric intake, including e.g. any surplus"
+msgstr "Aportul caloric total, incluzând de ex. orice surplus"
+
+#: core/models/profile.py:338
+msgid "Weight unit"
+msgstr "Unitate de greutate"
+
+#: core/models/profile.py:346
+msgid "Automatic reminders for weight entries"
+msgstr "Mementouri automate pentru înregistrările de greutate"
+
+#: core/models/profile.py:347
 msgid "Number of days after the last weight entry (enter 0 to deactivate)"
 msgstr ""
+"Numărul de zile după ultima înregistrare a greutății (introdu 0 pentru a "
+"dezactiva)"
+
+#: core/models/profile.py:391
+msgid "Enable trophies"
+msgstr "Activează trofeele"
 
 #: core/models/profile.py:392
-msgid "The sum of all hours has to be 24"
-msgstr ""
+msgid "Enable or disable the trophy system for this user"
+msgstr "Activează sau dezactivează sistemul de trofee pentru acest utilizator"
 
-#: core/models/rep_unit.py:35 core/models/weight_unit.py:35
-#: core/templates/user/overview.html:263 core/views/user.py:575
-#: exercises/models/category.py:32 exercises/models/equipment.py:29
-#: exercises/models/exercise.py:66 exercises/models/exercise.py:71
-#: exercises/models/muscle.py:36 exercises/templates/exercise/pending.html:15
-#: gym/models/contract.py:51 gym/models/contract.py:101 gym/models/gym.py:46
-#: gym/models/user_document.py:87 gym/templates/contract/view.html:50
-#: gym/templates/gym/member_list.html:28 gym/templates/gym/member_list.html:96
-#: gym/views/gym.py:156 manager/models/schedule.py:55
-#: manager/models/workout.py:56 nutrition/models/ingredient.py:96
-#: nutrition/models/ingredient_category.py:26
-#: nutrition/models/weight_unit.py:38
-#: nutrition/templates/ingredient/pending.html:15
-#: nutrition/templates/ingredient/view.html:185
+#: core/models/profile.py:470
+msgid "The sum of all hours has to be 24"
+msgstr "Suma tuturor orelor trebuie să fie 24"
+
+#: core/models/rep_unit.py:32 i18n.tpl:30
+msgid "Repetitions"
+msgstr "Repetări"
+
+#: core/models/rep_unit.py:33 core/templates/user/overview.html:89
+msgid "Time"
+msgstr "Timp"
+
+#: core/models/rep_unit.py:34
+msgid "Distance"
+msgstr "Distanță"
+
+#: core/models/rep_unit.py:47 core/models/weight_unit.py:42
+#: core/templates/user/overview.html:266 core/views/user.py:709
+#: exercises/models/muscle.py:36 gym/models/contract.py:52
+#: gym/models/contract.py:103 gym/models/gym.py:46
+#: gym/models/user_document.py:84 gym/templates/contract/view.html:50
+#: gym/templates/gym/member_list.html:28 gym/templates/gym/member_list.html:108
+#: gym/views/gym.py:168 nutrition/templates/ingredient/view.html:241
 msgid "Name"
-msgstr "Numele"
+msgstr "Nume"
+
+#: core/models/rep_unit.py:53
+msgid "Unit Type"
+msgstr "Tip de unitate"
+
+#: core/models/rep_unit.py:54
+msgid "The type of unit (repetitions, time, or distance)"
+msgstr ""
 
 #: core/templates/403.html:4
 msgid "Forbidden!"
-msgstr ""
+msgstr "Interzis!"
 
 #: core/templates/403.html:7
-msgid "Something happened that is not allowed."
-msgstr ""
+msgid "You are not allowed to access this page"
+msgstr "Nu ai permisiunea de a accesa această pagină"
 
 #: core/templates/404.html:4
 msgid "Page not found"
-msgstr ""
+msgstr "Pagina nu a fost găsită"
 
 #: core/templates/404.html:7
 msgid "The page you requested does not exist."
-msgstr ""
+msgstr "Pagina solicitată nu există."
 
 #: core/templates/500.html:4 core/templates/template_no_context.html:36
 msgid "An error occurred"
+msgstr "A apărut o eroare"
+
+#: core/templates/500.html:8
+msgid ""
+"There was an error on the server while processing your request. Try "
+"refreshing your browser and if that doesn't help, please try again at a "
+"later time. If the problem persists, you can seek help in ways listed below:"
+msgstr ""
+"A apărut o eroare pe server în timpul procesării solicitării tale. Încearcă "
+"să reîmprospătezi pagina din browser, iar dacă acest lucru nu ajută, te "
+"rugăm să încerci din nou mai târziu. Dacă problema persistă, poți solicita "
+"ajutor în modurile enumerate mai jos:"
+
+#: core/templates/account/email/email_confirmation_message.html:81
+#: core/templates/account/email/email_confirmation_message.txt:2
+msgid "Almost there!"
 msgstr ""
 
-#: core/templates/500.html:7
-msgid "Something happened that caused an error."
-msgstr ""
-
-#: core/templates/base.html:12 core/templates/base_wide.html:10
+#: core/templates/account/email/email_confirmation_message.html:85
 #, python-format
 msgid ""
-"You are\n"
-"    browsing the site as the user \"%(current_user)s\", all actions are "
-"performed on their data.\n"
-"    "
+"You're receiving this email because the user \"%(user_display)s\" has given "
+"your email address to register an account on %(site_domain)s."
+msgstr ""
+"Primești acest e-mail pentru că utilizatorul „%(user_display)s” a furnizat "
+"adresa ta de e-mail pentru a înregistra un cont pe %(site_domain)s."
+
+#: core/templates/account/email/email_confirmation_message.html:93
+#: core/templates/account/email/email_confirmation_message.txt:9
+msgid ""
+"Your email verification code is listed below. Please enter it in your open "
+"browser window."
 msgstr ""
 
-#: core/templates/base.html:16 core/templates/base_wide.html:14
+#: core/templates/account/email/email_confirmation_message.html:100
+msgid "Please click the button below to confirm your email address."
+msgstr ""
+"Te rugăm să apeși butonul de mai jos pentru a-ți confirma adresa de e-mail."
+
+#: core/templates/account/email/email_confirmation_message.html:106
+msgid "Confirm email"
+msgstr "Confirmă e-mailul"
+
+#: core/templates/account/email/email_confirmation_message.html:110
+#: core/templates/account/email/email_confirmation_message.txt:17
 #, python-format
-msgid "Back to \"%(target)s\""
-msgstr ""
-
-#: core/templates/base.html:42 core/templates/base_wide.html:40
-msgid "Share"
-msgstr ""
-
-#: core/templates/delete.html:15
-msgid "Are you sure you want to delete this? This action cannot be undone."
-msgstr ""
-
-#: core/templates/index.html:4
-msgid "Dashboard"
-msgstr ""
-
-#: core/templates/index.html:31 manager/templates/calendar/month.html:115
-msgid "Add log to day"
-msgstr ""
-
-#: core/templates/index.html:35 manager/templates/calendar/month.html:120
 msgid ""
-"Click to add weight logs to a training\n"
-"day in your current workout:"
+"The link is valid for %(expire_hours)s hour (until %(date)s, %(time)s). You "
+"can request a new one from your profile settings."
+msgid_plural ""
+"The link is valid for %(expire_hours)s hours (until %(date)s, %(time)s). You "
+"can request a new one from your profile settings."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: core/templates/account/email/email_confirmation_message.html:119
+msgid "If the button doesn't work, copy and paste this link into your browser:"
 msgstr ""
 
-#: core/templates/index.html:43 core/templates/index.html:83
-#: core/templates/misc/fragments/shariff_modal.html:29
-#: core/templates/template.html:125 manager/templates/calendar/month.html:138
-#: manager/templates/schedule/view.html:246
-#: manager/templates/schedule/view.html:266
-#: manager/templates/workout/view.html:132
-#: manager/templates/workout/view.html:181
-msgid "Close"
-msgstr ""
+#: core/templates/account/email/email_confirmation_message.html:128
+msgid "the wger Team"
+msgstr "Echipa wger"
 
-#: core/templates/index.html:54 core/templates/index.html:203
-msgid "Add new diary entry"
-msgstr ""
-
-#: core/templates/index.html:59
+#: core/templates/account/email/email_confirmation_message.txt:4
+#, python-format
 msgid ""
-"Click to add an entry to your nutrition diary for today. You can either log "
-"a meal as you defined it, or entry any number of custom entries."
+"You're receiving this email because the user %(user_display)s has given your "
+"email address to register an account on %(site_domain)s."
+msgstr ""
+"Primești acest e-mail pentru că utilizatorul %(user_display)s a furnizat "
+"adresa ta de e-mail pentru a înregistra un cont pe %(site_domain)s."
+
+#: core/templates/account/email/email_confirmation_message.txt:14
+#, python-format
+msgid "To confirm this is correct, go to %(activate_url)s"
 msgstr ""
 
-#: core/templates/index.html:67 core/templates/index.html:171
-#: core/templates/user/overview.html:171
-#: nutrition/templates/ingredient/view.html:79
-#: nutrition/templates/log/detail.html:40
-#: nutrition/templates/log/detail.html:41
-#: nutrition/templates/log/detail.html:187
-#: nutrition/templates/log/overview.html:7
-#: nutrition/templates/log/overview.html:44
-#: nutrition/templates/plan/overview.html:17
-#: nutrition/templates/plan/view.html:62 nutrition/templates/plan/view.html:242
-#: nutrition/templates/plan/view.html:301
-#: nutrition/templates/plan/view.html:321
-#: nutrition/templates/plan/view.html:363
-#: nutrition/templates/plan/view.html:373
-msgid "kcal"
-msgstr ""
+#: core/templates/account/email_change.html:4
+#: core/templates/user/preferences.html:26
+msgid "Email address"
+msgstr "Adresă de e-mail"
 
-#: core/templates/index.html:79 nutrition/templates/plan/view.html:348
-msgid "Add custom diary entry"
-msgstr ""
-
-#: core/templates/index.html:94 core/templates/index.html:102
-#: manager/models/day.py:34 manager/models/log.py:56
-#: manager/models/session.py:60 manager/models/workout.py:109
-#: manager/templates/schedule/view.html:105
-#: manager/templates/workout/view.html:11
-#: manager/templates/workout/view.html:19 manager/views/pdf.py:85
-#: manager/views/pdf.py:161 manager/views/schedule.py:152
-#: manager/views/schedule.py:222
-msgid "Workout"
-msgstr ""
-
-#: core/templates/index.html:128
-msgid "This workout is part of a schedule:"
-msgstr ""
-
-#: core/templates/index.html:133
+#: core/templates/account/email_change.html:9
 msgid ""
-"The current workout is selected from your active schedule or, if you don't "
-"have one, simply by date."
+"Your email address is used for password resets and, optionally, workout "
+"reminders. A new address only becomes active once you confirm it via the "
+"link sent to it."
 msgstr ""
 
-#: core/templates/index.html:142 manager/templates/calendar/month.html:188
-msgid "Add new log"
+#: core/templates/account/email_change.html:20
+msgid "Current email"
+msgstr "E-mailul curent"
+
+#: core/templates/account/email_change.html:30
+#, python-format
+msgid "Pending confirmation: <strong>%(email)s</strong>"
 msgstr ""
 
-#: core/templates/index.html:147 core/templates/user/overview.html:58
-#: manager/templates/calendar/month.html:128
-#: manager/templates/schedule/view.html:146
-#: manager/templates/workout/overview.html:28
-msgid "No workouts found."
+#: core/templates/account/email_change.html:38
+msgid "Resend confirmation email"
+msgstr "Retrimite e-mailul de confirmare"
+
+#: core/templates/account/email_change.html:42
+msgid "Cancel change"
+msgstr "Anulează modificarea"
+
+#: core/templates/account/email_change.html:54
+msgid "Change to"
+msgstr "Schimbă în"
+
+#: core/templates/account/email_change.html:66
+msgid "Change email"
+msgstr "Schimbă e-mailul"
+
+#: core/templates/account/login.html:4 core/templates/account/login.html:29
+#: core/templates/account/login.html:81 core/templates/account/signup.html:30
+#: core/templates/navigation.html:268 core/templates/navigation.html:275
+#: software/templates/features.html:84 software/templates/features.html:451
+msgid "Login"
+msgstr "Autentificare"
+
+#: core/templates/account/login.html:76
+msgid "Forgot password?"
+msgstr "Ai uitat parola?"
+
+#: core/templates/account/login.html:88
+msgid "No account?"
+msgstr "Nu ai cont?"
+
+#: core/templates/account/login.html:104
+msgid "Faster sign in"
 msgstr ""
 
-#: core/templates/index.html:157 nutrition/models/log.py:48
-#: nutrition/models/meal.py:49 nutrition/models/meal_item.py:47
-#: nutrition/models/plan.py:94 nutrition/templates/plan/view.html:11
-#: nutrition/templates/plan/view.html:19
-msgid "Nutrition plan"
+#: core/templates/account/login.html:113
+msgid "Sign in with a passkey"
 msgstr ""
 
-#: core/templates/index.html:169 core/templates/user/overview.html:155
-#: nutrition/models/ingredient.py:100
-#: nutrition/templates/ingredient/view.html:77
-#: nutrition/templates/log/detail.html:39
-#: nutrition/templates/log/detail.html:156
-#: nutrition/templates/plan/view.html:53 nutrition/templates/plan/view.html:241
-#: nutrition/templates/plan/view.html:358
-#: nutrition/templates/plan/view.html:362 nutrition/views/plan.py:384
-msgid "Energy"
+#: core/templates/account/login.html:120
+msgid "or sign in with"
 msgstr ""
 
-#: core/templates/index.html:175 core/templates/user/overview.html:156
-#: nutrition/models/ingredient.py:105
-#: nutrition/templates/ingredient/view.html:84
-#: nutrition/templates/log/detail.html:52
-#: nutrition/templates/log/detail.html:174
-#: nutrition/templates/plan/view.html:54 nutrition/templates/plan/view.html:249
-#: nutrition/views/plan.py:390
-msgid "Protein"
-msgstr ""
+#: core/templates/account/password_reset.html:4
+msgid "Password Reset"
+msgstr "Reseteaza parola"
 
-#: core/templates/index.html:181 core/templates/user/overview.html:157
-#: nutrition/models/ingredient.py:113
-#: nutrition/templates/ingredient/view.html:90
-#: nutrition/templates/log/detail.html:65
-#: nutrition/templates/log/detail.html:175
-#: nutrition/templates/plan/view.html:55 nutrition/templates/plan/view.html:255
-#: nutrition/views/plan.py:398
-msgid "Carbohydrates"
-msgstr ""
-
-#: core/templates/index.html:187 core/templates/user/overview.html:158
-#: nutrition/models/ingredient.py:131
-#: nutrition/templates/ingredient/view.html:106
-#: nutrition/templates/log/detail.html:91
-#: nutrition/templates/log/detail.html:176
-#: nutrition/templates/plan/view.html:56 nutrition/templates/plan/view.html:268
-#: nutrition/views/plan.py:412
-msgid "Fat"
-msgstr ""
-
-#: core/templates/index.html:199 nutrition/templates/plan/overview.html:22
-msgid "No nutrition plans."
-msgstr ""
-
-#: core/templates/index.html:213 core/templates/user/overview.html:112
-#: core/templates/user/overview.html:121 manager/forms.py:173
-#: manager/helpers.py:89 manager/models/log.py:84 manager/models/setting.py:67
-#: manager/templates/log/add.html:54 manager/templates/set/formset.html:12
-#: weight/models.py:34 weight/templates/import_csv_preview.html:14
-#: weight/templates/import_csv_preview.html:43 weight/views.py:150
-msgid "Weight"
-msgstr ""
-
-#: core/templates/index.html:217
-msgid "Your current weight is: "
-msgstr ""
-
-#: core/templates/index.html:248 core/templates/navigation.html:97
-#: weight/views.py:70
-msgid "Add weight entry"
-msgstr ""
-
-#: core/templates/license/list.html:4 core/templates/misc/license/list.html:4
-msgid "License list"
-msgstr ""
-
-#: core/templates/license/list.html:24 core/templates/misc/license/list.html:28
-#: core/templates/repetition_unit/list.html:26
-#: core/templates/user/overview.html:104 core/templates/user/overview.html:136
-#: core/templates/user/overview.html:186 core/templates/user/overview.html:348
-#: core/templates/user/overview.html:384 core/templates/user/overview.html:428
-#: core/templates/weight_unit/list.html:26
-#: exercises/templates/categories/admin-overview.html:24
-#: exercises/templates/equipment/admin-overview.html:24
-#: exercises/templates/exercise/pending.html:30
-#: exercises/templates/muscles/admin-overview.html:24
-#: gym/templates/admin_notes/list.html:52 gym/templates/contract/list.html:60
-#: gym/templates/contract_option/list.html:56
-#: gym/templates/contract_type/list.html:56 gym/templates/document/list.html:63
-#: gym/templates/gym/list.html:27 gym/templates/gym/member_list.html:229
-#: gym/templates/gym/member_list.html:262
-#: gym/templates/gym/member_list.html:299
-#: mailer/templates/mailer/gym/overview.html:30
-#: manager/templates/calendar/day.html:83
-#: nutrition/templates/ingredient/pending.html:30
-#: nutrition/templates/units/list.html:27
-msgid "Nothing found"
-msgstr ""
-
-#: core/templates/misc/about.html:4 core/templates/template.html:201
-#: core/templates/template_features.html:118
-#: core/templates/template_no_context.html:88
-msgid "Imprint"
-msgstr ""
-
-#: core/templates/misc/fragments/shariff_modal.html:6
-msgid "Share this page"
-msgstr ""
-
-#: core/templates/misc/fragments/shariff_modal.html:18
+#: core/templates/account/password_reset.html:9
 msgid ""
-"Before you share links on social media you need to allow external access."
+"Forgotten your password? Enter your email address below, and we'll send you "
+"an email allowing you to reset it."
 msgstr ""
 
-#: core/templates/misc/fragments/shariff_modal.html:22
-#: nutrition/templates/plan/view.html:385
-#: nutrition/templates/plan/view.html:394
-msgid "That's done here"
+#: core/templates/account/password_reset_from_key.html:4
+msgid "Bad Token"
 msgstr ""
 
-#: core/templates/misc/license/list.html:45
+#: core/templates/account/password_reset_from_key.html:4
+#: core/templates/account/password_reset_from_key.html:19
+msgid "Change Password"
+msgstr "Schimbă parola"
+
+#: core/templates/account/password_reset_from_key.html:11
+#, python-format
 msgid ""
-"If a license has been localized, e.g. the Creative Commons\n"
-"licenses for the different countries, add them as separate entries here."
+"The password reset link was invalid, possibly because it has already been "
+"used.  Please request a <a href=\"%(passwd_reset_url)s\">new password reset</"
+"a>."
 msgstr ""
 
-#: core/templates/navigation.html:22
-msgid "Training"
-msgstr "Antrenament"
-
-#: core/templates/navigation.html:28 core/templates/user/overview.html:25
-#: software/templates/features.html:72
-msgid "Workouts"
-msgstr ""
-
-#: core/templates/navigation.html:34
-msgid "Workouts schedules"
-msgstr ""
-
-#: core/templates/navigation.html:37 core/templates/user/overview.html:70
-#: manager/templates/calendar/month.html:10
-#: manager/templates/calendar/month.html:21
-#: software/templates/features.html:152
-msgid "Calendar"
-msgstr ""
-
-#: core/templates/navigation.html:44 gallery/templates/images/overview.html:6
-msgid "Gallery"
-msgstr ""
-
-#: core/templates/navigation.html:48
-#, fuzzy
-#| msgid "Workout reminders"
-msgid "Workout templates"
-msgstr "Mementouri de antrenament"
-
-#: core/templates/navigation.html:53 manager/views/workout.py:101
-msgid "Your templates"
-msgstr ""
-
-#: core/templates/navigation.html:59 manager/views/workout.py:115
-msgid "Public templates"
-msgstr ""
-
-#: core/templates/navigation.html:64
-msgctxt "as in sorted by category"
-msgid "by category"
-msgstr ""
-
-#: core/templates/navigation.html:65
-msgctxt "as in sorted by muscle"
-msgid "by muscle"
-msgstr ""
-
-#: core/templates/navigation.html:66
-msgctxt "as in sorted by equipment"
-msgid "by equipment"
-msgstr ""
-
-#: core/templates/navigation.html:70
-#: exercises/templates/equipment/overview.html:109
-#: exercises/templates/equipment/overview.html:113
-#: exercises/templates/exercise/overview.html:112
-#: exercises/templates/exercise/overview.html:116
-#: exercises/templates/muscles/overview.html:108
-#: exercises/templates/muscles/overview.html:112
-msgid "Add new exercise"
-msgstr "Adăugați un exercițiu nou"
-
-#: core/templates/navigation.html:75 core/templates/navigation.html:134
-#: core/templates/navigation.html:226
-msgid "Administration"
-msgstr "Administrație"
-
-#: core/templates/navigation.html:76
-#: exercises/templates/exercise/pending.html:6
-msgid "Exercises pending review"
-msgstr ""
-
-#: core/templates/navigation.html:77 exercises/models/base.py:72
-#: exercises/templates/exercise/view.html:80
-msgid "Equipment"
-msgstr ""
-
-#: core/templates/navigation.html:78 exercises/templates/exercise/view.html:208
-msgid "Muscles"
-msgstr "Mușchii"
-
-#: core/templates/navigation.html:79
-#: exercises/templates/categories/admin-overview.html:4
-msgid "Categories"
-msgstr ""
-
-#: core/templates/navigation.html:94
-msgid "Body weight"
-msgstr ""
-
-#: core/templates/navigation.html:96 core/templates/user/overview.html:114
-#: weight/templates/overview.html:7
-msgid "Weight overview"
-msgstr ""
-
-#: core/templates/navigation.html:111 software/templates/features.html:87
-msgid "Nutrition"
-msgstr ""
-
-#: core/templates/navigation.html:117 core/templates/user/overview.html:144
-msgid "Nutrition plans"
-msgstr ""
-
-#: core/templates/navigation.html:123 nutrition/templates/bmi/form.html:50
-msgid "BMI calculator"
-msgstr ""
-
-#: core/templates/navigation.html:129 nutrition/templates/rate/form.html:17
-msgid "Daily calories calculator"
-msgstr ""
-
-#: core/templates/navigation.html:131
-#: nutrition/templates/ingredient/overview.html:29
-msgid "Ingredient overview"
-msgstr ""
-
-#: core/templates/navigation.html:135 nutrition/templates/units/list.html:6
-msgid "Ingredient weight units"
-msgstr ""
-
-#: core/templates/navigation.html:136
-#: nutrition/templates/ingredient/pending.html:6
-msgid "Ingredients pending review"
-msgstr ""
-
-#: core/templates/navigation.html:149
-msgid "About this software"
-msgstr ""
-
-#: core/templates/navigation.html:151 core/templates/template_features.html:83
-#: software/templates/about_us.html:5
-msgid "About us"
-msgstr ""
-
-#: core/templates/navigation.html:153 software/templates/features.html:209
-msgid "REST API"
-msgstr ""
-
-#: core/templates/navigation.html:157 utils/models.py:40
-msgid "License"
-msgstr ""
-
-#: core/templates/navigation.html:163
-msgid "Developer documentation"
-msgstr ""
-
-#: core/templates/navigation.html:169
-msgid "Get the code"
-msgstr ""
-
-#: core/templates/navigation.html:175 core/templates/template.html:193
-#: core/templates/template_features.html:100
-msgid "Translate"
-msgstr ""
-
-#: core/templates/navigation.html:196 core/templates/user/login.html:28
-msgid "Reset password"
-msgstr ""
-
-#: core/templates/navigation.html:209
-msgid "My preferences"
-msgstr ""
-
-#: core/templates/navigation.html:216
-msgid "Logout"
-msgstr ""
-
-#: core/templates/navigation.html:231
-msgid "Licenses"
-msgstr ""
-
-#: core/templates/navigation.html:234
-#: core/templates/repetition_unit/list.html:4
-msgid "Repetition units"
-msgstr ""
-
-#: core/templates/navigation.html:237 core/templates/weight_unit/list.html:4
-#: nutrition/templates/ingredient/view.html:174
-msgid "Weight units"
-msgstr ""
-
-#: core/templates/navigation.html:240 core/templates/user/list.html:4
-msgid "User list"
-msgstr ""
-
-#: core/templates/navigation.html:241
-msgid "Gyms"
-msgstr ""
-
-#: core/templates/registration/password_reset_complete.html:4
+#: core/templates/account/password_reset_from_key_done.html:4
 msgid "Password reset complete"
-msgstr "Resetare completă a parolei"
+msgstr "Resetarea parolei finalizată"
 
-#: core/templates/registration/password_reset_complete.html:8
+#: core/templates/account/password_reset_from_key_done.html:8
 msgid "Your password has been set.  You may go ahead and log in now."
 msgstr ""
 "Parola dumneavoastră a fost stabilită. Acum puteți continua să vă\n"
 "autentificați."
 
-#: core/templates/registration/password_reset_complete.html:10
+#: core/templates/account/password_reset_from_key_done.html:10
 msgid "Log in"
-msgstr ""
+msgstr "Autentificare"
 
-#: core/templates/registration/password_reset_done.html:4
-msgid "Password reset successful"
-msgstr "Parolă resetată cu succes"
+#: core/templates/account/signup.html:26
+msgid "Already have an account?"
+msgstr "Ai deja un cont?"
 
-#: core/templates/registration/password_reset_done.html:8
-msgid ""
-"We've e-mailed you instructions for setting your password to the e-mail "
-"address you submitted. You should be receiving it shortly."
-msgstr ""
-
-#: core/templates/registration/password_reset_email.html:2
+#: core/templates/base.html:10
 #, python-format
 msgid ""
-"You're receiving this e-mail because you requested a password reset for your "
-"user account at %(site_name)s."
+"You are browsing the site as the user \"%(current_user)s\", all actions are "
+"performed on their data."
 msgstr ""
+"Navighezi pe site ca utilizatorul \"%(current_user)s\", toate acțiunile sunt "
+"efectuate pe datele acestuia."
 
-#: core/templates/registration/password_reset_email.html:4
-msgid "Please go to the following page and choose a new password:"
-msgstr "Mergeți la următoarea pagină și alegeți o parolă nouă:"
-
-#: core/templates/registration/password_reset_email.html:9
-msgid "Your username, in case you've forgotten:"
-msgstr "Numele de utilizator, în caz că l-ați uitat:"
-
-#: core/templates/registration/password_reset_email.html:11
-msgid "Thanks for using our site!"
-msgstr "Mulțumiri pentru utilizarea sitului nostru!"
-
-#: core/templates/registration/password_reset_email.html:13
+#: core/templates/base.html:17 core/templates/base_wide.html:14
 #, python-format
-msgid "The %(site_name)s team"
-msgstr "Echipa %(site_name)s"
+msgid "Back to \"%(target)s\""
+msgstr "Înapoi la \"%(target)s\""
 
-#: core/templates/tags/license-sidebar.html:3
-msgid "Free license"
+#: core/templates/base_wide.html:7
+#, python-format
+msgid ""
+"You are\n"
+"                browsing the site as the user \"%(current_user)s\", all "
+"actions are performed on\n"
+"                their data.\n"
+"            "
+msgstr ""
+"Navighezi pe\n"
+"\n"
+"                site ca utilizatorul \"%(current_user)s\", toate acțiunile "
+"sunt efectuate pe\n"
+"\n"
+"                datele acestuia.\n"
+"            "
+
+#: core/templates/delete.html:4
+msgid "Are you sure you want to delete this? This action cannot be undone."
+msgstr "Ești sigur că vrei să ștergi asta? Această acțiune este ireversibilă."
+
+#: core/templates/idp/oidc/authorization_form.html:9
+#: core/templates/idp/oidc/authorization_form.html:36
+msgid "Authorize"
+msgstr "Autorizează"
+
+#: core/templates/idp/oidc/authorization_form.html:24
+#, python-format
+msgid "%(client_name)s wants to access your %(site_name)s account."
 msgstr ""
 
-#: core/templates/tags/license-sidebar.html:5
-msgid "This content is available under the following license:"
+#: core/templates/idp/oidc/authorization_form.html:42
+#: exercises/templates/history/overview.html:213
+msgid "Cancel"
 msgstr ""
 
-#: core/templates/tags/license-sidebar.html:13
-msgid "Click here for more information"
-msgstr ""
+#: core/templates/language/overview.html:4 core/templates/navigation.html:345
+msgid "Languages"
+msgstr "Limbi"
 
-#: core/templates/tags/pagination.html:7 core/templates/tags/pagination.html:11
-msgid "previous"
-msgstr ""
+#: core/templates/language/overview.html:22
+msgid "Nothing found."
+msgstr "Nu am găsit nimic."
 
-#: core/templates/tags/pagination.html:31
-#: core/templates/tags/pagination.html:35
-msgid "next"
-msgstr ""
+#: core/templates/language/overview.html:22
+#: nutrition/templates/ingredient/overview.html:44
+msgid "Add one now."
+msgstr "Adaugă una acum."
 
-#: core/templates/tags/render_day.html:34
-msgid "Add weight log"
-msgstr ""
+#: core/templates/language/overview.html:34 core/templates/license/list.html:43
+#: core/templates/repetition_unit/list.html:44
+#: core/templates/user/overview.html:330 core/templates/user/overview.html:370
+#: core/templates/user/overview.html:408
+#: core/templates/weight_unit/list.html:46 core/views/languages.py:81
+#: core/views/license.py:66 core/views/repetition_units.py:76
+#: core/views/weight_units.py:66
+#: exercises/templates/categories/admin-overview.html:40
+#: exercises/templates/equipment/admin-overview.html:39
+#: exercises/templates/muscles/admin-overview.html:40
+#: gallery/views/images.py:63 gym/templates/admin_notes/list.html:64
+#: gym/templates/contract/list.html:69
+#: gym/templates/contract_option/list.html:65
+#: gym/templates/contract_type/list.html:66 gym/templates/document/list.html:78
+#: gym/templates/gym/member_list.html:228
+#: gym/templates/gym/member_list.html:264
+#: gym/templates/gym/member_list.html:303
+#: mailer/templates/mailer/gym/overview.html:43
+#: nutrition/templates/ingredient/overview.html:133
+msgid "Add"
+msgstr "Adaugă"
 
-#: core/templates/tags/render_day.html:114
-#: exercises/templates/equipment/overview.html:59
-#: exercises/templates/exercise/overview.html:63
-#: exercises/templates/muscles/overview.html:61
-msgid "Placeholder image for exercise"
-msgstr ""
+#: core/templates/language/view.html:61 gym/models/contract.py:203
+#: gym/templates/contract/view.html:41 gym/templates/gym/member_list.html:270
+#: nutrition/templates/ingredient/view.html:294
+msgid "Options"
+msgstr "Opțiuni"
 
-#: core/templates/tags/render_day.html:131
-msgid "This exercise has no repetitions."
-msgstr ""
+#: core/templates/license/list.html:4
+msgid "License list"
+msgstr "Lista licențelor"
 
-#: core/templates/tags/render_day.html:134
-msgid "Edit them now."
-msgstr ""
+#: core/templates/license/list.html:30
+#: core/templates/repetition_unit/list.html:32
+#: core/templates/user/overview.html:114 core/templates/user/overview.html:150
+#: core/templates/user/overview.html:207 core/templates/user/overview.html:351
+#: core/templates/user/overview.html:390 core/templates/user/overview.html:434
+#: core/templates/weight_unit/list.html:32
+#: exercises/templates/categories/admin-overview.html:30
+#: exercises/templates/equipment/admin-overview.html:30
+#: exercises/templates/muscles/admin-overview.html:29
+#: gym/templates/admin_notes/list.html:50 gym/templates/contract/list.html:57
+#: gym/templates/contract_option/list.html:52
+#: gym/templates/contract_type/list.html:53 gym/templates/document/list.html:64
+#: gym/templates/gym/list.html:32 gym/templates/gym/member_list.html:248
+#: gym/templates/gym/member_list.html:284
+#: gym/templates/gym/member_list.html:321
+#: mailer/templates/mailer/gym/overview.html:30
+msgid "Nothing found"
+msgstr "Nu am găsit nimic"
 
-#: core/templates/tags/render_day.html:159
-msgid "Add exercises to this workout day"
-msgstr ""
+#: core/templates/misc/about.html:4 core/templates/template.html:153
+msgid "Imprint"
+msgstr "Informații legale"
 
-#: core/templates/tags/render_weight_log.html:17 manager/helpers.py:89
-#: manager/models/setting.py:57 manager/templates/set/formset.html:10
-msgid "Reps"
-msgstr ""
+#: core/templates/navigation.html:28 software/templates/features.html:461
+msgid "Training"
+msgstr "Antrenament"
 
-#: core/templates/tags/render_weight_log.html:30 manager/forms.py:178
-#: manager/models/log.py:101 manager/models/setting.py:87
-#: manager/templates/log/add.html:56 manager/templates/set/formset.html:14
-msgid "RiR"
-msgstr ""
+#: core/templates/navigation.html:36 core/templates/user/overview.html:24
+msgid "Routines"
+msgstr "Rutine"
 
-#: core/templates/template.html:140
+#: core/templates/navigation.html:44 core/templates/user/overview.html:79
+msgid "Calendar"
+msgstr "Calendar"
+
+#: core/templates/navigation.html:53
+msgid "Measurements"
+msgstr "Măsurători"
+
+#: core/templates/navigation.html:64 gallery/templates/images/overview.html:6
+msgid "Gallery"
+msgstr "Galerie"
+
+#: core/templates/navigation.html:74 core/templates/navigation.html:404
+#: trophies/templates/trophies/overview.html:7
+msgid "Trophies"
+msgstr "Trofee"
+
+#: core/templates/navigation.html:79
+msgid "Workout templates"
+msgstr "Șabloane de antrenament"
+
+#: core/templates/navigation.html:86
+msgid "Your templates"
+msgstr "Șabloanele tale"
+
+#: core/templates/navigation.html:95
+msgid "Public templates"
+msgstr "Șabloane publice"
+
+#: core/templates/navigation.html:103 software/templates/features.html:51
+#: software/templates/features.html:483
+msgid "Exercises"
+msgstr "Exerciții"
+
+#: core/templates/navigation.html:109 core/templates/navigation.html:340
+msgid "Administration"
+msgstr "Administrare"
+
+#: core/templates/navigation.html:113
+msgid "Exercise edit history"
+msgstr "Istoricul editării exercițiilor"
+
+#: core/templates/navigation.html:119
+msgid "Equipment"
+msgstr "Echipament"
+
+#: core/templates/navigation.html:125
+msgid "Muscles"
+msgstr "Mușchi"
+
+#: core/templates/navigation.html:131
+#: exercises/templates/categories/admin-overview.html:4
+msgid "Categories"
+msgstr "Categorii"
+
+#: core/templates/navigation.html:146 software/templates/features.html:471
+msgid "Nutrition"
+msgstr "Nutriție"
+
+#: core/templates/navigation.html:154 core/templates/user/overview.html:158
+msgid "Nutrition plans"
+msgstr "Planuri nutriționale"
+
+#: core/templates/navigation.html:163
+msgid "BMI calculator"
+msgstr "Calculator IMC"
+
+#: core/templates/navigation.html:172 nutrition/templates/rate/form.html:17
+msgid "Daily calories calculator"
+msgstr "Calculator de calorii zilnice"
+
+#: core/templates/navigation.html:178
+#: nutrition/templates/ingredient/overview.html:10
+msgid "Ingredient overview"
+msgstr "Prezentare generală ingrediente"
+
+#: core/templates/navigation.html:193 software/templates/features.html:466
+msgid "Body weight"
+msgstr "Greutatea corpului"
+
+#: core/templates/navigation.html:200 core/templates/user/overview.html:127
+msgid "Weight overview"
+msgstr "Prezentare generală a greutății"
+
+#: core/templates/navigation.html:214
+msgid "About this software"
+msgstr "Despre această aplicație"
+
+#: core/templates/navigation.html:220 software/templates/about_us.html:5
+msgid "Support & Get Involved"
+msgstr "Suport și implicare"
+
+#: core/templates/navigation.html:226 software/templates/features.html:531
+msgid "REST API"
+msgstr "API REST"
+
+#: core/templates/navigation.html:232 utils/models.py:69
+msgid "License"
+msgstr "Licență"
+
+#: core/templates/navigation.html:238
+msgid "Developer documentation"
+msgstr "Documentație pentru dezvoltatori"
+
+#: core/templates/navigation.html:245
+msgid "Get the code"
+msgstr "Obține codul sursă"
+
+#: core/templates/navigation.html:252 core/templates/template.html:205
+#: software/templates/features.html:617
+msgid "Translate"
+msgstr "Traduceri"
+
+#: core/templates/navigation.html:289
+msgid "Reset password"
+msgstr "Resetează parola"
+
+#: core/templates/navigation.html:299 core/templates/navigation.html:329
+msgid "Logout"
+msgstr "Deconectare"
+
+#: core/templates/navigation.html:319
+msgid "My preferences"
+msgstr "Preferințele mele"
+
+#: core/templates/navigation.html:353
+msgid "Licenses"
+msgstr "Licențe"
+
+#: core/templates/navigation.html:361
+#: core/templates/repetition_unit/list.html:4
+msgid "Repetition units"
+msgstr "Unități pentru repetări"
+
+#: core/templates/navigation.html:369 core/templates/weight_unit/list.html:4
+#: nutrition/templates/ingredient/view.html:231
+msgid "Weight units"
+msgstr "Unități de greutate"
+
+#: core/templates/navigation.html:377 core/templates/user/list.html:4
+msgid "User list"
+msgstr "Lista utilizatorilor"
+
+#: core/templates/navigation.html:383
+msgid "Gyms"
+msgstr "Săli de fitness"
+
+#: core/templates/template.html:87
+#: exercises/templates/history/overview.html:202
+msgid "Close"
+msgstr "Închide"
+
+#: core/templates/template.html:103
 msgid ""
 "You are using a guest account, data entered will be deleted after a week."
 msgstr ""
+"Folosești un cont de vizitator (guest), datele introduse vor fi șterse după "
+"o săptămână."
 
-#: core/templates/template.html:144
+#: core/templates/template.html:108
 msgid "Create some demo entries"
-msgstr ""
+msgstr "Creează câteva intrări demonstrative"
 
-#: core/templates/template.html:202 core/templates/template_features.html:122
-#: core/templates/template_no_context.html:89 software/templates/tos.html:7
+#: core/templates/template.html:158 software/templates/features.html:571
+#: software/templates/tos.html:7
 msgid "Terms of service"
+msgstr "Termeni de utilizare"
+
+#: core/templates/template.html:184 software/templates/features.html:598
+msgid "Browser language"
 msgstr ""
 
-#: core/templates/template.html:209 core/templates/template.html:210
-msgid "Released under the Affero GPL"
-msgstr ""
-
-#: core/templates/template_features.html:62 software/templates/features.html:9
-#: software/templates/features.html:120
+#: core/templates/template_features.html:46 software/templates/features.html:9
 msgid "Features"
-msgstr ""
+msgstr "Funcționalități"
 
-#: core/templates/user/api_key.html:4 core/templates/user/preferences.html:37
-msgid "API key"
+#: core/templates/user/api_key.html:4
+msgid "API access"
 msgstr ""
 
 #: core/templates/user/api_key.html:9
+msgid ""
+"Theare are two ways to authenticate against the API: JWT is the preferred "
+"mechanism for client applications, the static API key is intended for "
+"personal scripts or one-off integrations."
+msgstr ""
+
+#: core/templates/user/api_key.html:16
+msgid "Long-lived refresh tokens"
+msgstr ""
+
+#: core/templates/user/api_key.html:19
+msgid ""
+"Refresh tokens let scripts and CLI tools talk to the wger API using the JWT "
+"flow without logging in interactively each time."
+msgstr ""
+
+#: core/templates/user/api_key.html:35
+msgid "Generate a new refresh token"
+msgstr "Generează un nou refresh token"
+
+#: core/templates/user/api_key.html:41
+msgid "Copy this token now."
+msgstr ""
+
+#: core/templates/user/api_key.html:42
+msgid ""
+"It is shown only once. If you lose it, generate a new one and revoke the old "
+"session below."
+msgstr ""
+
+#: core/templates/user/api_key.html:56
 #, python-format
 msgid ""
-"Generate an API key if you want to interact with wger via\n"
-"the <a href=\"%(url)s\" rel=\"nofollow\">REST API</a> it provides (for\n"
-"public resources such as the exercises or ingredients, you don't need to "
-"provide\n"
-"anything). You must pass this information in the header in the format shown "
-"below."
+"Refresh tokens expire %(days)s day after they were generated, unless you "
+"revoke them sooner."
+msgid_plural ""
+"Refresh tokens expire %(days)s days after they were generated, unless you "
+"revoke them sooner."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: core/templates/user/api_key.html:68
+msgid "Created"
+msgstr "Creat"
+
+#: core/templates/user/api_key.html:69
+msgid "Expires"
 msgstr ""
 
-#: core/templates/user/api_key.html:15
-msgid "For security reasons, you should only access the API via HTTPS."
+#: core/templates/user/api_key.html:88
+msgid "Revoke"
 msgstr ""
 
-#: core/templates/user/api_key.html:18
-msgid "Your API key"
+#: core/templates/user/api_key.html:106
+msgid "Revoke all refresh tokens"
 msgstr ""
 
-#: core/templates/user/api_key.html:24
-msgid "You have no API key yet"
+#: core/templates/user/api_key.html:111
+msgid "JWT sessions"
 msgstr ""
 
-#: core/templates/user/api_key.html:48
+#: core/templates/user/api_key.html:124
+msgid "Revoke all JWT sessions"
+msgstr ""
+
+#: core/templates/user/api_key.html:130
+#, python-format
+msgid ""
+"\n"
+"                There is currently <strong>%(counter)s</strong> active JWT "
+"session\n"
+"            "
+msgid_plural ""
+"\n"
+"                There are currently <strong>%(counter)s</strong> active JWT "
+"sessions\n"
+"            "
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: core/templates/user/api_key.html:139
+msgid ""
+"Revoking JWT sessions logs out every device that obtained a refresh token "
+"via the JWT login endpoint."
+msgstr ""
+
+#: core/templates/user/api_key.html:144 core/templates/user/preferences.html:67
+msgid "API key"
+msgstr "Cheie API"
+
+#: core/templates/user/api_key.html:157
 msgid "Delete current API key and generate new one"
-msgstr ""
+msgstr "Șterge cheia API curentă și generează una nouă"
 
-#: core/templates/user/api_key.html:50
+#: core/templates/user/api_key.html:159
 msgid "Generate new API key"
+msgstr "Generează o nouă cheie API"
+
+#: core/templates/user/api_key.html:175
+msgid "Delete API key"
+msgstr "Șterge cheia API"
+
+#: core/templates/user/api_key.html:185
+msgid "You have no API key yet"
+msgstr "Nu ai nicio cheie API încă"
+
+#: core/templates/user/api_key.html:191
+#, python-format
+msgid ""
+"\n"
+"            Pass <code>Token %(key)s</code> in the\n"
+"            <code>Authorization</code> header to use it.\n"
+"        "
 msgstr ""
 
-#: core/templates/user/api_key.html:55
+#: core/templates/user/api_key.html:197
+msgid "Example with curl:"
+msgstr ""
+
+#: core/templates/user/api_key.html:211 software/templates/features.html:536
 msgid "Documentation"
+msgstr "Documentație"
+
+#: core/templates/user/api_key.html:214
+msgid "API documentation"
+msgstr "Documentație API"
+
+#: core/templates/user/app_auth_handoff.html:7
+msgid "Return to app"
 msgstr ""
 
-#: core/templates/user/delete_account.html:4
-#: core/templates/user/preferences.html:42
+#: core/templates/user/app_auth_handoff.html:14
+msgid "Returning to the wger app…"
+msgstr ""
+
+#: core/templates/user/app_auth_handoff.html:16
+msgid ""
+"If nothing happens, tap the button below. Make sure the wger app is "
+"installed on this device."
+msgstr ""
+
+#: core/templates/user/app_auth_handoff.html:23
+msgid "Tap to return to app"
+msgstr ""
+
+#: core/templates/user/connected_applications.html:4
+#: core/templates/user/preferences.html:75
+msgid "Connected applications"
+msgstr "Aplicații conectate"
+
+#: core/templates/user/connected_applications.html:9
+msgid ""
+"These applications can use your account through the API. You gave them "
+"permission when you logged in with your wger account."
+msgstr ""
+
+#: core/templates/user/connected_applications.html:25
+#, python-format
+msgid "Access runs out on %(date)s if the application is not used again"
+msgstr ""
+
+#: core/templates/user/connected_applications.html:49
+msgid "Disconnect"
+msgstr ""
+
+#: core/templates/user/connected_applications.html:57
+msgid ""
+"Disconnecting takes the access away immediately. The application can ask for "
+"it again, and you will be shown the same page you saw the first time."
+msgstr ""
+
+#: core/templates/user/connected_applications.html:66
+msgid "No application has access to your account."
+msgstr ""
+
+#: core/templates/user/connected_applications.html:78
+msgid "Your account"
+msgstr "Contul tău"
+
+#: core/templates/user/connected_applications.html:81
+msgid ""
+"This list is about other applications using your wger account. To manage the "
+"accounts you use to log in to wger, see connected accounts in your settings."
+msgstr ""
+
+#: core/templates/user/connected_applications.html:89
+msgid "Settings"
+msgstr "Setări"
+
+#: core/templates/user/delete_account.html:3
+#: core/templates/user/preferences.html:92
 msgid "Delete account"
-msgstr ""
+msgstr "Șterge contul"
 
-#: core/templates/user/delete_account.html:17
+#: core/templates/user/delete_account.html:9
 msgid "Are you sure?"
-msgstr ""
+msgstr "Ești sigur?"
 
-#: core/templates/user/delete_account.html:22
+#: core/templates/user/delete_account.html:14
 #, python-format
 msgid ""
 "This action will delete the user account \"%(username)s\".\n"
@@ -1176,944 +1119,835 @@ msgid ""
 "logs, etc.)\n"
 "and can't be undone. "
 msgstr ""
+"Această acțiune va șterge contul utilizatorului \"%(username)s\".\n"
+"Va elimina definitiv și toate datele asociate (antrenamente, jurnale etc.)\n"
+"și este ireversibilă. "
 
-#: core/templates/user/login.html:16
-msgid "No account?"
-msgstr ""
-
-#: core/templates/user/login.html:24
-msgid "Forgot password?"
-msgstr ""
-
-#: core/templates/user/overview.html:25 core/templates/user/overview.html:68
-#: core/templates/user/overview.html:112 core/templates/user/overview.html:144
-#: core/templates/user/overview.html:331 core/templates/user/overview.html:370
-#: core/templates/user/overview.html:406
+#: core/templates/user/overview.html:24 core/templates/user/overview.html:74
+#: core/templates/user/overview.html:122 core/templates/user/overview.html:158
+#: core/templates/user/overview.html:334 core/templates/user/overview.html:376
+#: core/templates/user/overview.html:412
 #, python-format
 msgid "last %(number)s"
-msgstr ""
+msgstr "ultimele %(number)s"
 
-#: core/templates/user/overview.html:27 core/templates/user/overview.html:146
-#: core/templates/user/overview.html:326 core/templates/user/overview.html:365
-#: core/templates/user/overview.html:401 gym/templates/gym/member_list.html:210
-#: gym/templates/gym/member_list.html:243
-#: gym/templates/gym/member_list.html:280
+#: core/templates/user/overview.html:29 core/templates/user/overview.html:163
+#: core/templates/user/overview.html:329 core/templates/user/overview.html:368
+#: core/templates/user/overview.html:407 gym/templates/gym/member_list.html:226
+#: gym/templates/gym/member_list.html:262
+#: gym/templates/gym/member_list.html:302
 msgid "Overview"
-msgstr ""
+msgstr "Prezentare generală"
 
-#: core/templates/user/overview.html:28
-#: manager/templates/schedule/view.html:164
-#: manager/templates/workout/overview.html:39 manager/views/schedule_step.py:60
-msgid "Add workout"
-msgstr ""
-
-#: core/templates/user/overview.html:34 core/templates/user/overview.html:76
-#: core/templates/user/overview.html:120 core/templates/user/overview.html:153
-#: exercises/models/exercise.py:77 gallery/models/image.py:47
-#: manager/helpers.py:88 manager/models/log.py:98 manager/models/session.py:67
-#: nutrition/models/ingredient.py:85 nutrition/models/ingredient.py:87
-#: nutrition/models/ingredient.py:190 nutrition/templates/log/overview.html:30
-#: nutrition/templates/plan/view.html:307 weight/models.py:32
+#: core/templates/user/overview.html:36 core/templates/user/overview.html:86
+#: core/templates/user/overview.html:134 core/templates/user/overview.html:170
+#: manager/helpers.py:90 software/templates/about_us.html:170
 #: weight/templates/import_csv_preview.html:13
-#: weight/templates/import_csv_preview.html:42 weight/views.py:150
+#: weight/templates/import_csv_preview.html:42 weight/views.py:55
 msgid "Date"
-msgstr "Data"
+msgstr "Dată"
 
-#: core/templates/user/overview.html:35 core/templates/user/overview.html:154
-#: exercises/models/exercise.py:61 exercises/templates/exercise/view.html:88
-#: exercises/views/exercises.py:189 gallery/models/image.py:70
-#: gym/models/contract.py:57 gym/models/contract.py:107
-#: manager/models/day.py:37 manager/models/workout.py:62
-#: nutrition/models/plan.py:69
+#: core/templates/user/overview.html:37 core/templates/user/overview.html:171
+#: gym/models/contract.py:58 gym/models/contract.py:109
 msgid "Description"
 msgstr "Descriere"
 
-#: core/templates/user/overview.html:36
+#: core/templates/user/overview.html:38
 msgid "Number of logs (days)"
-msgstr ""
+msgstr "Numărul jurnalelor (zile)"
 
-#: core/templates/user/overview.html:37 core/views/user.py:576
-#: gym/templates/gym/email_inactive_members.html:4 gym/views/gym.py:157
+#: core/templates/user/overview.html:39 core/views/user.py:710
+#: gym/templates/gym/email_inactive_members.html:8 gym/views/gym.py:168
 msgid "Last activity"
-msgstr ""
+msgstr "Ultima activitate"
 
-#: core/templates/user/overview.html:68 manager/forms.py:267
-#: manager/templates/workout/view.html:151
+#: core/templates/user/overview.html:64
+msgid "No workouts found."
+msgstr "Nu am găsit antrenamente."
+
+#: core/templates/user/overview.html:74
 msgid "Log"
-msgstr ""
+msgstr "Înregistrează"
 
-#: core/templates/user/overview.html:77 manager/models/session.py:84
-#: manager/templates/calendar/partial_overview_table.html:52
+#: core/templates/user/overview.html:87
 msgid "General impression"
-msgstr ""
+msgstr "Impresie generală"
 
-#: core/templates/user/overview.html:78 core/templates/user/overview.html:370
-#: manager/models/session.py:73
-#: manager/templates/calendar/partial_overview_table.html:56
-#: manager/templates/workout/log.html:95
+#: core/templates/user/overview.html:88 core/templates/user/overview.html:376
 msgid "Notes"
-msgstr ""
+msgstr "Note"
 
-#: core/templates/user/overview.html:79
-#: manager/templates/calendar/partial_overview_table.html:42
-#: nutrition/templates/log/detail.html:154
-msgid "Time"
-msgstr ""
+#: core/templates/user/overview.html:122 core/templates/user/overview.html:135
+#: manager/helpers.py:91 weight/templates/import_csv_preview.html:14
+#: weight/templates/import_csv_preview.html:43 weight/views.py:55
+msgid "Weight"
+msgstr "Greutate"
 
-#: core/templates/user/overview.html:147
-#: nutrition/templates/plan/overview.html:36
-msgid "Add nutrition plan"
-msgstr ""
+#: core/templates/user/overview.html:172
+#: nutrition/templates/ingredient/view.html:83 nutrition/views/plan.py:246
+msgid "Energy"
+msgstr "Energie"
 
-#: core/templates/user/overview.html:202 core/templates/user/overview.html:323
-#: core/templates/user/overview.html:362 core/templates/user/overview.html:398
-#: core/templates/user/overview.html:443 gym/templates/gym/list.html:40
-#: gym/templates/gym/member_list.html:84 gym/templates/gym/member_list.html:137
-#: gym/templates/gym/member_list.html:173
-#: gym/templates/gym/member_list.html:207
-#: gym/templates/gym/member_list.html:240
-#: gym/templates/gym/member_list.html:277
-#: manager/templates/schedule/view.html:103
+#: core/templates/user/overview.html:173
+#: nutrition/templates/ingredient/view.html:90 nutrition/views/plan.py:252
+msgid "Protein"
+msgstr "Proteine"
+
+#: core/templates/user/overview.html:174
+#: nutrition/templates/ingredient/view.html:96 nutrition/views/plan.py:260
+msgid "Carbohydrates"
+msgstr "Carbohidrați"
+
+#: core/templates/user/overview.html:175
+#: nutrition/templates/ingredient/view.html:112 nutrition/views/plan.py:274
+msgid "Fat"
+msgstr "Grăsimi"
+
+#: core/templates/user/overview.html:192
+#: nutrition/templates/ingredient/view.html:85
+msgid "kcal"
+msgstr "kcal"
+
+#: core/templates/user/overview.html:195 core/templates/user/overview.html:198
+#: core/templates/user/overview.html:201
+#: nutrition/templates/ingredient/view.html:92
+#: nutrition/templates/ingredient/view.html:98
+#: nutrition/templates/ingredient/view.html:105
+#: nutrition/templates/ingredient/view.html:114
+#: nutrition/templates/ingredient/view.html:121
+#: nutrition/templates/ingredient/view.html:143
+#: nutrition/templates/ingredient/view.html:153
+msgctxt "weight unit, i.e. grams"
+msgid "g"
+msgstr "g"
+
+#: core/templates/user/overview.html:223 core/templates/user/overview.html:326
+#: core/templates/user/overview.html:365 core/templates/user/overview.html:404
+#: core/templates/user/overview.html:449 gym/templates/gym/list.html:45
+#: gym/templates/gym/member_list.html:91 gym/templates/gym/member_list.html:149
+#: gym/templates/gym/member_list.html:187
+#: gym/templates/gym/member_list.html:223
+#: gym/templates/gym/member_list.html:259
+#: gym/templates/gym/member_list.html:299
 msgid "Actions"
-msgstr ""
+msgstr "Acțiuni"
 
-#: core/templates/user/overview.html:208
+#: core/templates/user/overview.html:232
 msgid "Deactivate user"
-msgstr ""
+msgstr "Dezactivează utilizatorul"
 
-#: core/templates/user/overview.html:210
+#: core/templates/user/overview.html:236
 msgid "Activate user"
-msgstr ""
+msgstr "Activează utilizatorul"
 
-#: core/templates/user/overview.html:212
+#: core/templates/user/overview.html:240
 msgid "Reset user password"
-msgstr ""
+msgstr "Resetează parola utilizatorului"
 
-#: core/templates/user/overview.html:215 gym/templates/gym/member_list.html:30
+#: core/templates/user/overview.html:245 gym/templates/gym/member_list.html:30
 msgid "Roles"
-msgstr ""
+msgstr "Roluri"
 
-#: core/templates/user/overview.html:226
-msgid "Password reset confirmation"
-msgstr "Confirmare resetare parolă"
-
-#: core/templates/user/overview.html:230
-msgid "Do you really want to change this user&#39;s password?"
-msgstr ""
-
-#: core/templates/user/overview.html:233
-msgid "No"
-msgstr ""
-
-#: core/templates/user/overview.html:234
-msgid "Yes"
-msgstr ""
-
-#: core/templates/user/overview.html:255 gym/templates/gym/member_list.html:93
+#: core/templates/user/overview.html:258 gym/templates/gym/member_list.html:105
 msgid "Details"
-msgstr ""
+msgstr "Detalii"
 
-#: core/templates/user/overview.html:259 gym/views/export.py:59
-#: manager/helpers.py:89 manager/templates/schedule/view.html:101
-#: nutrition/views/plan.py:289 nutrition/views/plan.py:297
+#: core/templates/user/overview.html:262 gym/views/export.py:58
+#: manager/helpers.py:91 nutrition/views/plan.py:152
+#: nutrition/views/plan.py:158
 msgid "Nr."
 msgstr "Nr."
 
-#: core/templates/user/overview.html:281 gym/models/contract.py:284
+#: core/templates/user/overview.html:284 gym/models/contract.py:287
 #: gym/models/gym.py:50 gym/templates/contract/view.html:75
-#: gym/templates/gym/member_list.html:100 gym/views/export.py:70
+#: gym/templates/gym/member_list.html:112 gym/views/export.py:69
 msgid "Phone"
-msgstr ""
+msgstr "Telefon"
 
-#: core/templates/user/overview.html:285 gym/templates/contract/view.html:87
-#: gym/templates/gym/member_list.html:118
+#: core/templates/user/overview.html:288 gym/templates/contract/view.html:87
+#: gym/templates/gym/member_list.html:130
 msgid "Address"
-msgstr ""
+msgstr "Adresă"
 
-#: core/templates/user/overview.html:296
+#: core/templates/user/overview.html:299
 msgid "Registered"
-msgstr ""
+msgstr "Înregistrat"
 
-#: core/templates/user/overview.html:300
+#: core/templates/user/overview.html:303
 msgid "Last login"
-msgstr ""
-
-#: core/templates/user/overview.html:305
-msgid "Status"
-msgstr ""
+msgstr "Ultima autentificare"
 
 #: core/templates/user/overview.html:308
+msgid "Status"
+msgstr "Status"
+
+#: core/templates/user/overview.html:311
 msgid "Active"
-msgstr ""
+msgstr "Activ"
 
-#: core/templates/user/overview.html:310
+#: core/templates/user/overview.html:313
 msgid "Inactive"
-msgstr ""
+msgstr "Inactiv"
 
-#: core/templates/user/overview.html:331 gym/templates/contract/list.html:4
-#: gym/templates/gym/member_list.html:202
+#: core/templates/user/overview.html:334 gym/templates/contract/list.html:4
+#: gym/templates/gym/member_list.html:218
 msgid "Contracts"
-msgstr ""
+msgstr "Contracte"
 
-#: core/templates/user/overview.html:406 gym/templates/document/list.html:4
+#: core/templates/user/overview.html:412 gym/templates/document/list.html:4
 msgid "Documents"
-msgstr ""
+msgstr "Documente"
 
-#: core/templates/user/overview.html:413 gym/templates/document/list.html:32
-#: manager/forms.py:279 manager/templates/workout/view.html:176
+#: core/templates/user/overview.html:419 gym/templates/document/list.html:33
 msgid "Download"
-msgstr ""
+msgstr "Descarcă"
 
-#: core/templates/user/overview.html:454 gym/models/user_config.py:92
+#: core/templates/user/overview.html:460 gym/views/admin_config.py:47
+#: gym/views/admin_config.py:61 gym/views/user_config.py:46
+msgid "Configuration"
+msgstr "Configurare"
+
+#: core/templates/user/overview.html:463 gym/models/user_config.py:92
 msgid "Include in inactive overview"
-msgstr ""
+msgstr "Include în prezentarea generală a inactivității"
 
-#: core/templates/user/overview.html:487
+#: core/templates/user/overview.html:494 core/templates/user/overview.html:501
+msgid "Log in as this user"
+msgstr "Autentifică-te ca acest utilizator"
+
+#: core/templates/user/overview.html:499
 #, python-format
 msgid "Admin login is only available for users in %(gym_name)s"
 msgstr ""
-
-#: core/templates/user/overview.html:491
-msgid "Log in as this user"
-msgstr ""
+"Autentificarea de admin este disponibilă doar pentru utilizatorii din "
+"%(gym_name)s"
 
 #: core/templates/user/preferences.html:4
 msgid "Preferences"
+msgstr "Preferințe"
+
+#: core/templates/user/preferences.html:19
+msgid "Account & security"
 msgstr ""
 
-#: core/templates/user/preferences.html:33 core/views/user.py:587
+#: core/templates/user/preferences.html:28
+msgid "Verified email"
+msgstr "E-mail verificat"
+
+#: core/templates/user/preferences.html:30
+msgid "Unverified email"
+msgstr "E-mail neverificat"
+
+#: core/templates/user/preferences.html:37 core/views/user.py:721
 msgid "Change password"
+msgstr "Schimbă parola"
+
+#: core/templates/user/preferences.html:43
+msgid "Set password"
+msgstr "Setează parola"
+
+#: core/templates/user/preferences.html:49
+msgid "Two-factor authentication"
 msgstr ""
 
-#: core/templatetags/wger_extras.py:217
+#: core/templates/user/preferences.html:51
+msgid "On"
+msgstr ""
+
+#: core/templates/user/preferences.html:53
+msgid "Off"
+msgstr ""
+
+#: core/templates/user/preferences.html:61
+msgid "Connected accounts"
+msgstr "Conturi conectate"
+
+#: core/templates/user/preferences.html:84
+msgid "Danger zone"
+msgstr ""
+
+#: core/templates/user/preferences.html:89
+msgid "Your account and all training data will be permanently deleted."
+msgstr ""
+
+#: core/templatetags/wger_extras.py:105 i18n.tpl:39
 msgid "kg"
-msgstr ""
+msgstr "kg"
 
-#: core/templatetags/wger_extras.py:219
-#: nutrition/templates/ingredient/view.html:86
-#: nutrition/templates/ingredient/view.html:92
-#: nutrition/templates/ingredient/view.html:99
-#: nutrition/templates/ingredient/view.html:108
-#: nutrition/templates/ingredient/view.html:115
-#: nutrition/templates/ingredient/view.html:137
-#: nutrition/templates/ingredient/view.html:147
-msgctxt "weight unit, i.e. grams"
-msgid "g"
-msgstr ""
-
-#: core/templatetags/wger_extras.py:222
+#: core/templatetags/wger_extras.py:106 i18n.tpl:40
 msgid "lb"
-msgstr ""
+msgstr "lb"
 
-#: core/templatetags/wger_extras.py:224
-msgctxt "weight unit, i.e. ounces"
-msgid "oz"
-msgstr ""
-
-#: core/views/languages.py:85 exercises/views/categories.py:121
-#: exercises/views/equipment.py:106 exercises/views/exercises.py:422
-#: exercises/views/images.py:128 exercises/views/muscles.py:118
-#: manager/views/schedule.py:311 manager/views/schedule_step.py:129
-#: manager/views/workout.py:268 manager/views/workout_session.py:141
-#: nutrition/views/ingredient.py:144 nutrition/views/plan.py:120
-#: nutrition/views/unit.py:111
+#: core/views/languages.py:92 exercises/views/categories.py:122
+#: exercises/views/equipment.py:103 exercises/views/muscles.py:99
+#: nutrition/views/ingredient.py:212
 msgid "Successfully deleted"
-msgstr ""
+msgstr "Șters cu succes"
 
-#: core/views/languages.py:93 core/views/license.py:103
-#: core/views/repetition_units.py:115 core/views/weight_units.py:115
-#: exercises/views/categories.py:127 exercises/views/exercises.py:430
-#: exercises/views/muscles.py:125 gallery/views/images.py:121
-#: gym/views/admin_notes.py:196 gym/views/document.py:206 gym/views/gym.py:486
-#: manager/views/schedule.py:318 manager/views/schedule_step.py:139
-#: manager/views/workout.py:272 manager/views/workout_session.py:156
-#: nutrition/views/ingredient.py:151 nutrition/views/plan.py:127
-#: nutrition/views/unit.py:118
+#: core/views/languages.py:100 core/views/license.py:103
+#: core/views/repetition_units.py:114 core/views/weight_units.py:115
+#: exercises/views/categories.py:128 exercises/views/muscles.py:106
+#: gallery/views/images.py:124 gym/views/admin_notes.py:196
+#: gym/views/document.py:207 gym/views/gym.py:527
+#: nutrition/views/ingredient.py:219
 #, python-brace-format
 msgid "Delete {0}?"
-msgstr "Ștergere {0}?"
+msgstr "Șterge {0}?"
 
-#: core/views/languages.py:111 core/views/license.py:84
-#: core/views/repetition_units.py:85 core/views/user.py:456
-#: core/views/weight_units.py:85 exercises/views/categories.py:97
-#: exercises/views/equipment.py:83 exercises/views/exercises.py:304
-#: exercises/views/muscles.py:105 gym/views/admin_notes.py:160
-#: gym/views/config.py:68 gym/views/contract.py:186
-#: gym/views/contract_option.py:123 gym/views/contract_type.py:123
-#: gym/views/document.py:170 gym/views/gym.py:459 manager/views/day.py:100
-#: manager/views/schedule.py:335 manager/views/workout.py:286
-#: nutrition/views/ingredient.py:170 nutrition/views/plan.py:144
-#: nutrition/views/unit.py:144
+#: core/views/languages.py:118 core/views/license.py:85
+#: core/views/repetition_units.py:96 core/views/user.py:493
+#: core/views/weight_units.py:86 exercises/views/categories.py:98
+#: exercises/views/equipment.py:81 exercises/views/muscles.py:87
+#: gym/views/admin_notes.py:161 gym/views/config.py:68
+#: gym/views/contract.py:187 gym/views/contract_option.py:123
+#: gym/views/contract_type.py:123 gym/views/document.py:172
+#: gym/views/gym.py:509 nutrition/views/ingredient.py:238
 #, python-brace-format
 msgid "Edit {0}"
-msgstr "Editare {0}?"
+msgstr "Editează {0}"
 
-#: core/views/misc.py:100
+#: core/views/misc.py:73
 msgid ""
 "We have created sample workout, workout schedules, weight logs, (body) "
 "weight and nutrition plan entries so you can better see what  this site can "
 "do. Feel free to edit or delete them!"
 msgstr ""
+"Am creat un antrenament demonstrativ, programe de antrenament, jurnale de "
+"greutate, înregistrări ale greutății corporale și ale planului nutrițional, "
+"astfel încât să poți vedea mai bine  ce poate face acest site. Simte-te "
+"liber să le editezi sau să le ștergi!"
 
-#: core/views/misc.py:155
-msgid "Rest day"
+#: core/views/oidc.py:130
+#, python-brace-format
+msgid "{name} no longer has access"
 msgstr ""
 
-#: core/views/misc.py:184
-msgid "Feedback"
-msgstr ""
-
-#: core/views/misc.py:203 weight/templates/import_csv_form.html:9
-msgid "Submit"
-msgstr ""
-
-#: core/views/misc.py:211
-msgid "Your feedback was successfully sent. Thank you!"
-msgstr ""
-
-#: core/views/user.py:156
+#: core/views/user.py:180
 #, python-brace-format
 msgid "Account \"{0}\" was successfully deleted"
-msgstr ""
+msgstr "Contul \"{0}\" a fost șters cu succes"
 
-#: core/views/user.py:287
-msgid "You were successfully registered"
-msgstr ""
-
-#: core/views/user.py:339
+#: core/views/user.py:313
 msgid "Settings successfully updated"
-msgstr ""
+msgstr "Setările au fost actualizate cu succes"
 
-#: core/views/user.py:376
+#: core/views/user.py:316
+msgid "Please correct the errors below."
+msgstr "Te rugăm să corectezi erorile de mai jos."
+
+#: core/views/user.py:384
+msgid "Deactivate this user?"
+msgstr "Dezactivezi acest utilizator?"
+
+#: core/views/user.py:385
 msgid "The user was successfully deactivated"
-msgstr ""
+msgstr "Utilizatorul a fost dezactivat cu succes"
 
-#: core/views/user.py:411
+#: core/views/user.py:421
+msgid "Activate this user?"
+msgstr "Activezi acest utilizator?"
+
+#: core/views/user.py:422
 msgid "The user was successfully activated"
-msgstr ""
+msgstr "Utilizatorul a fost activat cu succes"
 
-#: core/views/user.py:426
+#: core/views/user.py:457
 msgid "Edit user"
+msgstr "Editează utilizatorul"
+
+#: core/views/user.py:523
+msgid "API key was deleted"
+msgstr "Cheia API a fost ștearsă"
+
+#: core/views/user.py:528
+msgid "All API sessions were revoked"
 msgstr ""
 
-#: core/views/user.py:573 gym/templates/gym/member_list.html:26
-#: gym/views/gym.py:156
+#: core/views/user.py:544
+msgid "Refresh token was revoked"
+msgstr ""
+
+#: core/views/user.py:552
+#, python-brace-format
+msgid "Revoked {count} refresh token(s)"
+msgstr ""
+
+#: core/views/user.py:707 gym/templates/gym/member_list.html:26
+#: gym/views/gym.py:168
 msgid "ID"
-msgstr ""
+msgstr "ID"
 
-#: core/views/user.py:574 gym/forms.py:94 gym/templates/contract/view.html:55
-#: gym/templates/gym/member_list.html:27 gym/views/export.py:61
-#: gym/views/gym.py:156 gym/views/gym.py:218
+#: core/views/user.py:708 gym/forms.py:95 gym/templates/contract/view.html:55
+#: gym/templates/gym/member_list.html:27 gym/views/export.py:60
+#: gym/views/gym.py:168 gym/views/gym.py:227
 msgid "Username"
-msgstr ""
+msgstr "Nume de utilizator"
 
-#: core/views/user.py:577 gym/templates/gym/new_user.html:34
-#: gym/views/export.py:60 gym/views/gym.py:218
+#: core/views/user.py:711 gym/templates/gym/new_user.html:34
+#: gym/views/export.py:59 gym/views/gym.py:227
 msgid "Gym"
-msgstr ""
-
-#: exercises/models/base.py:51 exercises/templates/exercise/view.html:76
-#: nutrition/models/ingredient.py:204
-msgid "Category"
-msgstr "Categoria"
-
-#: exercises/models/base.py:58
-msgid "Primary muscles"
-msgstr "Mușchii primari"
-
-#: exercises/models/base.py:64 exercises/templates/equipment/overview.html:71
-#: exercises/templates/exercise/overview.html:76
-#: exercises/templates/exercise/view.html:218
-#: exercises/templates/muscles/overview.html:73
-msgid "Secondary muscles"
-msgstr "Mușchii secundari"
-
-#: exercises/models/base.py:79
-msgid "Variations"
-msgstr ""
-
-#: exercises/models/category.py:37
-msgid "Exercise Categories"
-msgstr "Categorii de Exerciții"
-
-#: exercises/models/comment.py:34 exercises/models/image.py:62
-#: manager/forms.py:165 manager/helpers.py:89 manager/models/log.py:51
-msgid "Exercise"
-msgstr "Exercițiu"
-
-#: exercises/models/comment.py:41
-msgid "A comment about how to correctly do this exercise."
-msgstr "Comentariu despre modul de a face acest exercițiu corect."
-
-#: exercises/models/exercise.py:86 nutrition/models/ingredient.py:80
-#: nutrition/models/plan.py:61 nutrition/models/weight_unit.py:32
-msgid "Language"
-msgstr "Limba"
-
-#: exercises/models/exercise.py:233 exercises/views/exercises.py:460
-msgid "Exercise was successfully added to the general database"
-msgstr ""
-
-#: exercises/models/exercise.py:261
-msgid "New user submitted exercise"
-msgstr ""
-
-#: exercises/models/exercise.py:263
-#, python-brace-format
-msgid "The user {0} submitted a new exercise \"{1}\"."
-msgstr ""
-
-#: exercises/models/image.py:68 gallery/models/image.py:56
-msgid "Image"
-msgstr ""
-
-#: exercises/models/image.py:69 gallery/models/image.py:57
-msgid "Only PNG and JPEG formats are supported"
-msgstr ""
-
-#: exercises/models/image.py:75
-msgid "Main picture"
-msgstr ""
-
-#: exercises/models/image.py:78
-msgid ""
-"Tick the box if you want to set this image as the main one for the exercise "
-"(will be shown e.g. in the search). The first image is automatically marked "
-"by the system."
-msgstr ""
-
-#: exercises/models/image.py:166
-msgid "New user submitted image"
-msgstr ""
-
-#: exercises/models/image.py:167
-#, python-brace-format
-msgid "The user {0} submitted a new image \"{1}\" for exercise {2}."
-msgstr ""
+msgstr "Sală de fitness"
 
 #: exercises/models/muscle.py:37
 msgid "In latin, e.g. \"Pectoralis major\""
-msgstr ""
+msgstr "În latină, de ex. \"Pectoralis major\""
+
+#: exercises/models/muscle.py:47
+msgid "Alternative name"
+msgstr "Nume alternativ"
+
+#: exercises/models/muscle.py:48
+msgid "A more basic name for the muscle"
+msgstr "Un nume mai simplu pentru mușchi"
+
+#: exercises/models/video.py:69
+#, python-format
+msgid "Maximum file size is %(size)sMB."
+msgstr "Dimensiunea maximă a fișierului este de %(size)sMB."
+
+#: exercises/models/video.py:75 exercises/models/video.py:84
+msgid "File is not a valid video"
+msgstr "Fișierul nu este un videoclip valid"
 
 #: exercises/templates/equipment/admin-overview.html:4
 msgid "Equipment list"
+msgstr "Lista de echipamente"
+
+#: exercises/templates/history/overview.html:7
+msgid "Exercise admin history"
+msgstr "Istoricul de administrare a exercițiilor"
+
+#: exercises/templates/history/overview.html:16
+msgid "Edits last 24h"
 msgstr ""
 
-#: exercises/templates/equipment/admin-overview.html:37
-#: exercises/views/equipment.py:94
+#: exercises/templates/history/overview.html:24
+msgid "Edits last 7d"
+msgstr ""
+
+#: exercises/templates/history/overview.html:32
+msgid "Edits last 30d"
+msgstr ""
+
+#: exercises/templates/history/overview.html:49
+#: nutrition/templates/ingredient/overview.html:119
+msgid "Apply"
+msgstr ""
+
+#: exercises/templates/history/overview.html:50
+#: nutrition/templates/ingredient/overview.html:121
+msgid "Reset"
+msgstr ""
+
+#: exercises/templates/history/overview.html:88
+msgid "Account younger than 60 days"
+msgstr ""
+
+#: exercises/templates/history/overview.html:89
+msgid "new"
+msgstr ""
+
+#: exercises/templates/history/overview.html:94
+msgid "created"
+msgstr "creat"
+
+#: exercises/templates/history/overview.html:96
+msgid "edited"
+msgstr ""
+
+#: exercises/templates/history/overview.html:98
+msgid "deleted"
+msgstr "șters"
+
+#: exercises/templates/history/overview.html:100
+msgid "merged"
+msgstr ""
+
+#: exercises/templates/history/overview.html:113
+msgid "into"
+msgstr ""
+
+#: exercises/templates/history/overview.html:123
+msgid "media"
+msgstr ""
+
+#: exercises/templates/history/overview.html:126
+msgid "translations"
+msgstr "traduceri"
+
+#: exercises/templates/history/overview.html:129
+msgid "Object was deleted"
+msgstr "Obiectul a fost șters"
+
+#: exercises/templates/history/overview.html:180
+msgid "Revert change"
+msgstr "Anulează modificarea"
+
+#: exercises/templates/history/overview.html:187
+msgid "Open object"
+msgstr "Deschide obiectul"
+
+#: exercises/templates/history/overview.html:198
+msgid "Revert this change?"
+msgstr "Anulezi această modificare?"
+
+#: exercises/templates/history/overview.html:206
+msgid "The object will be restored to its previous state."
+msgstr ""
+
+#: exercises/templates/history/overview.html:220
+msgid "Revert"
+msgstr "Revocare"
+
+#: exercises/templates/history/overview.html:236
+msgid "No changes match the filters."
+msgstr ""
+
+#: exercises/templates/history/overview.html:238
+msgid "Reset filters"
+msgstr ""
+
+#: exercises/templates/history/overview.html:246
+msgid "History pagination"
+msgstr "Paginare istoric"
+
+#: exercises/templates/history/overview.html:251
+#: exercises/templates/history/overview.html:260
+msgid "First"
+msgstr "Prima"
+
+#: exercises/templates/history/overview.html:256
+#: exercises/templates/history/overview.html:261
+msgid "Previous"
+msgstr "Anterioara"
+
+#: exercises/templates/history/overview.html:266
+#, python-format
+msgid "Page %(current)s of %(total)s"
+msgstr ""
+
+#: exercises/templates/history/overview.html:273
+#: exercises/templates/history/overview.html:282
+msgid "Next"
+msgstr ""
+
+#: exercises/templates/history/overview.html:278
+#: exercises/templates/history/overview.html:283
+msgid "Last"
+msgstr "Ultima"
+
+#: exercises/templates/muscles/admin-overview.html:4
+msgid "Muscle overview"
+msgstr "Prezentare generală mușchi"
+
+#: exercises/views/categories.py:72
+msgid "Add category"
+msgstr "Adaugă categorie"
+
+#: exercises/views/categories.py:121
+msgid "This will also delete all exercises in this category."
+msgstr "Acest lucru va șterge și toate exercițiile din această categorie."
+
+#: exercises/views/equipment.py:92
 msgid "Add new equipment"
-msgstr ""
+msgstr "Adaugă echipament nou"
 
-#: exercises/templates/equipment/overview.html:11
-msgid "Equipment overview"
-msgstr ""
+#: exercises/views/equipment.py:104 exercises/views/equipment.py:115
+msgid "Delete equipment?"
+msgstr "Șterge echipament?"
 
-#: exercises/templates/equipment/overview.html:69
-#: exercises/templates/exercise/overview.html:74
-#: exercises/templates/exercise/view.html:214
-#: exercises/templates/muscles/overview.html:71
-msgid "Main muscles"
-msgstr "Mușchii principali"
-
-#: exercises/templates/equipment/overview.html:79
-msgid ""
-"No exercises for this equipment. Add or edit an exercise and set the "
-"equipment."
-msgstr ""
-
-#: exercises/templates/equipment/overview.html:96
-#: exercises/templates/exercise/overview.html:99
-#: nutrition/templates/ingredient/overview.html:57
-msgid "Search"
-msgstr "Căutare"
-
-#: exercises/templates/equipment/overview.html:101
-#: exercises/templates/exercise/overview.html:104
-msgid "exercise name"
-msgstr "numele exercițiului"
-
-#: exercises/templates/equipment/overview.html:115
-#: exercises/templates/exercise/overview.html:118
-#: exercises/templates/muscles/overview.html:114
-#: nutrition/templates/ingredient/overview.html:85
-msgid "Only registered users can do this"
-msgstr ""
-
-#: exercises/templates/exercise/email_new.tpl:1
-#, python-format
-msgid ""
-"Your exercise '%(exercise)s' was successfully added to the general\n"
-"database."
-msgstr ""
-
-#: exercises/templates/exercise/email_new.tpl:4
-msgid ""
-"It is now available on the exercise and muscle overview and can be\n"
-"added to workouts. You can access it on this address:"
-msgstr ""
-
-#: exercises/templates/exercise/email_new.tpl:8
-#: nutrition/templates/ingredient/email_new.tpl:8
-msgid "Thank you for contributing and making this site better!"
-msgstr ""
-
-#: exercises/templates/exercise/email_new.tpl:9
-#: manager/templates/workout/email_reminder.tpl:15
-#: manager/templates/workout/email_weight_reminder.tpl:12
-#: nutrition/templates/ingredient/email_new.tpl:9
-#, python-format
-msgid "The %(site)s team"
-msgstr ""
-
-#: exercises/templates/exercise/form.html:4
-msgid "Submitting an exercise"
-msgstr "Depunerea unui exercițiu"
-
-#: exercises/templates/exercise/form.html:5
-msgid ""
-"Thank you for submitting an exercise. This is much\n"
-"appreciated!"
-msgstr ""
-"Vă mulțumim pentru trimiterea unui exercițiu. E mult ⏎\n"
-"apreciat!"
-
-#: exercises/templates/exercise/form.html:8
-msgid ""
-"After you submit the form, the administrators will be notified.\n"
-"Once it is reviewed, it will be added to the database. Till this happens,\n"
-"it will not be visible in the overview or the search. In case you added your "
-"email\n"
-"when you registered, you will get notified when the process is completed "
-"successfully."
-msgstr ""
-
-#: exercises/templates/exercise/form_correct.html:4
-msgid "Correcting an exercise"
-msgstr ""
-
-#: exercises/templates/exercise/form_correct.html:5
-msgid ""
-"Thank you for correcting and improving this exercise.\n"
-"This is much appreciated!"
-msgstr ""
-
-#: exercises/templates/exercise/form_correct.html:8
-msgid ""
-"After you submit the form, the administrators will be notified.\n"
-"Once the changes are reviewed the exercise will be updated."
-msgstr ""
-
-#: exercises/templates/exercise/overview.html:88
-msgid "No categories."
-msgstr "Nici o categorie."
-
-#: exercises/templates/exercise/overview.html:88
-msgid "Use link to create one"
-msgstr "Folosiți link-ul pentru a crea una"
-
-#: exercises/templates/exercise/pending.html:14
-#: nutrition/templates/ingredient/pending.html:14
-msgid "Submission date"
-msgstr "Data depunerii"
-
-#: exercises/templates/exercise/pending.html:16 gallery/models/image.py:51
-#: gym/forms.py:57 gym/templates/gym/email_inactive_members.html:4
+#: exercises/views/history.py:111 gym/forms.py:58
+#: gym/templates/gym/email_inactive_members.html:8
 #: gym/templates/gym/new_user.html:22
-#: gym/templates/gym/reset_user_password.html:20 manager/models/log.py:45
-#: manager/models/schedule.py:44 manager/models/session.py:49
-#: manager/models/workout.py:89 nutrition/models/plan.py:55
-#: nutrition/templates/ingredient/pending.html:16 weight/models.py:41
+#: gym/templates/gym/reset_user_password.html:20
 msgid "User"
 msgstr "Utilizator"
 
-#: exercises/templates/exercise/view.html:48
-msgid "Exercise is pending review"
-msgstr "Exercițiul este în așteptare revizuire"
+#: exercises/views/history.py:117
+msgid "Type"
+msgstr "Tip"
 
-#: exercises/templates/exercise/view.html:51
-msgid ""
-"This user submitted exercise is pending a decision to be\n"
-"        included in the database."
+#: exercises/views/history.py:118 exercises/views/history.py:125
+msgid "All"
 msgstr ""
 
-#: exercises/templates/exercise/view.html:53
-msgid "Till then, it will not be shown in the overview or the search."
-msgstr ""
-"Până atunci el nu va fi indicat in prezentarea generală sau in căutare."
+#: exercises/views/history.py:124
+msgid "Action"
+msgstr "Acțiune"
 
-#: exercises/templates/exercise/view.html:54
-#: nutrition/templates/ingredient/view.html:31
-msgid "Please select one of the options below."
-msgstr "Selectați una dintre opțiunile de mai jos."
-
-#: exercises/templates/exercise/view.html:60
-#: exercises/templates/exercise/view.html:153
-#: nutrition/templates/ingredient/view.html:38
-msgid "Accept"
-msgstr "Acceptare"
-
-#: exercises/templates/exercise/view.html:64
-#: exercises/templates/exercise/view.html:154
-#: nutrition/templates/ingredient/view.html:42
-msgid "Decline"
-msgstr "Declinare"
-
-#: exercises/templates/exercise/view.html:96
-msgid "Images"
+#: exercises/views/history.py:131
+msgid "From"
 msgstr ""
 
-#: exercises/templates/exercise/view.html:137 exercises/views/images.py:93
-msgid "Add new image"
+#: exercises/views/history.py:139
+msgid "To"
 msgstr ""
 
-#: exercises/templates/exercise/view.html:147
-msgid "Images pending review"
-msgstr ""
-
-#: exercises/templates/exercise/view.html:168
-msgid "Comments for this exercise"
-msgstr "Comentarii pentru acest exercițiu"
-
-#: exercises/templates/exercise/view.html:196
-msgid "Add new comment"
-msgstr "Adaugați un comentariu"
-
-#: exercises/templates/exercise/view.html:210
-msgid "The diagram shows the most used muscles on this exercise"
-msgstr "Diagrama arată cele mai utilizate mușchi la acest exercițiu"
-
-#: exercises/templates/exercise/view.html:251
-#: manager/templates/workout/log.html:10 manager/templates/workout/log.html:11
-msgid "Weight log"
-msgstr "Jurnalul de greutate"
-
-#: exercises/templates/exercise/view.html:256
-msgid "Exercise Variations"
-msgstr ""
-
-#: exercises/templates/exercise/view.html:277
-msgid "Submit a correction"
-msgstr ""
-
-#: exercises/templates/muscles/admin-overview.html:4
-#: exercises/templates/muscles/overview.html:7
-msgid "Muscle overview"
-msgstr "Prezentarea generală de muschi"
-
-#: exercises/templates/muscles/admin-overview.html:36
-#: exercises/views/muscles.py:86
+#: exercises/views/muscles.py:68
 msgid "Add muscle"
-msgstr "Adaugă un mușchi"
+msgstr "Adaugă mușchi"
 
-#: exercises/templates/muscles/overview.html:81
-msgid ""
-"No exercises for this muscle. Add or edit an exercise and set the muscle."
+#: gallery/forms.py:35
+msgid "If date is left empty, it will be read from the image instead"
 msgstr ""
 
-#: exercises/views/categories.py:71
-msgid "Add category"
-msgstr "Adăugați categoria"
-
-#: exercises/views/categories.py:120
-msgid "This will also delete all exercises in this category."
-msgstr ""
-
-#: exercises/views/comments.py:82
-msgid "Add exercise comment"
-msgstr ""
-
-#: exercises/views/equipment.py:107 exercises/views/equipment.py:118
-msgid "Delete equipment?"
-msgstr ""
-
-#: exercises/views/exercises.py:228
-#, python-format
-msgid ""
-"%(name_original)s is too similar to existing exercise \"%(exercise_name)s\""
-msgstr ""
-
-#: exercises/views/exercises.py:246
-msgid "Add exercise"
-msgstr ""
-
-#: exercises/views/exercises.py:366
-msgid "Thank you. Once the changes are reviewed the exercise will be updated."
-msgstr ""
-
-#: exercises/views/exercises.py:379
-#, python-brace-format
-msgid "Correct {0}"
-msgstr ""
-
-#: exercises/views/exercises.py:421
-msgid "This will delete the exercise from all workouts."
-msgstr ""
-
-#: exercises/views/exercises.py:473
-msgid "Exercise was successfully marked as rejected"
-msgstr ""
-
-#: exercises/views/images.py:68
-msgid "Edit exercise image"
-msgstr ""
-
-#: exercises/views/images.py:143
-msgid "Delete exercise image?"
-msgstr ""
-
-#: gallery/templates/images/overview.html:62
-#, fuzzy
-#| msgid "Add muscle"
+#: gallery/templates/images/overview.html:69
 msgid "Add image"
-msgstr "Adaugă un mușchi"
+msgstr "Adaugă imagine"
 
-#: gym/forms.py:59 gym/templates/gym/member_list.html:44
+#: gym/forms.py:60 gym/templates/gym/member_list.html:44
 msgid "Trainer"
-msgstr ""
+msgstr "Antrenor"
 
-#: gym/forms.py:61
+#: gym/forms.py:62
 msgid "Gym administrator"
-msgstr ""
+msgstr "Administratorul sălii de fitness"
 
-#: gym/forms.py:63 gym/templates/gym/member_list.html:52
+#: gym/forms.py:64 gym/templates/gym/member_list.html:52
 msgid "General manager"
-msgstr ""
+msgstr "Manager general"
 
-#: gym/forms.py:97
+#: gym/forms.py:98
 msgid "Required. 30 characters or fewer. Letters, digits and @/./+/-/_ only."
 msgstr ""
+"Obligatoriu. 30 de caractere sau mai puțin. Doar litere, cifre și @/./+/-/_."
 
-#: gym/forms.py:101
+#: gym/forms.py:100
 msgid "This value may contain only letters, numbers and @/.//-/_ characters."
 msgstr ""
+"Această valoare poate conține doar litere, cifre și caracterele @/.//-/_."
 
-#: gym/forms.py:116
+#: gym/forms.py:114
 msgid "A user with that username already exists."
-msgstr ""
+msgstr "Un utilizator cu acest nume există deja."
 
-#: gym/management/commands/inactive-members.py:97 gym/models/gym_config.py:44
+#: gym/management/commands/inactive-members.py:95 gym/models/gym_config.py:44
 msgid "Reminder of inactive members"
-msgstr ""
+msgstr "Memento pentru membrii inactivi"
 
-#: gym/models/admin_user_note.py:66 gym/models/contract.py:302
-#: gym/models/user_document.py:96 gym/templates/contract/view.html:96
+#: gym/models/admin_user_note.py:67 gym/models/contract.py:305
+#: gym/models/user_document.py:93 gym/templates/contract/view.html:96
 msgid "Note"
-msgstr ""
-
-#: gym/models/contract.py:141
-msgid "Yearly"
-msgstr ""
-
-#: gym/models/contract.py:142
-msgid "Half yearly"
-msgstr ""
+msgstr "Notă"
 
 #: gym/models/contract.py:143
-msgid "Monthly"
-msgstr ""
+msgid "Yearly"
+msgstr "Anual"
 
 #: gym/models/contract.py:144
-msgid "Biweekly"
-msgstr ""
+msgid "Half yearly"
+msgstr "Semestrial"
 
 #: gym/models/contract.py:145
-msgid "Weekly"
-msgstr ""
+msgid "Monthly"
+msgstr "Lunar"
 
 #: gym/models/contract.py:146
+msgid "Biweekly"
+msgstr "Bilunar"
+
+#: gym/models/contract.py:147
+msgid "Weekly"
+msgstr "Săptămânal"
+
+#: gym/models/contract.py:148
 msgid "Daily"
-msgstr ""
+msgstr "Zilnic"
 
-#: gym/models/contract.py:191 gym/templates/contract/view.html:34
+#: gym/models/contract.py:194 gym/templates/contract/view.html:34
 msgid "Contract type"
-msgstr ""
+msgstr "Tip contract"
 
-#: gym/models/contract.py:208 gym/templates/contract/view.html:59
-#: manager/templates/log/add.html:52 nutrition/forms.py:58
-#: nutrition/models/ingredient_weight_unit.py:54 nutrition/models/log.py:92
-#: nutrition/models/meal_item.py:72
+#: gym/models/contract.py:211 gym/templates/contract/view.html:59
+#: nutrition/forms.py:73
 msgid "Amount"
-msgstr ""
+msgstr "Sumă"
 
-#: gym/models/contract.py:218 gym/templates/contract/view.html:63
+#: gym/models/contract.py:221 gym/templates/contract/view.html:63
 msgid "Payment type"
-msgstr ""
+msgstr "Tip plată"
 
-#: gym/models/contract.py:222
+#: gym/models/contract.py:225
 msgid "How often the amount will be charged to the member"
-msgstr ""
+msgstr "Cât de des va fi percepută suma membrului"
 
-#: gym/models/contract.py:228 gym/templates/contract/view.html:24
+#: gym/models/contract.py:231 gym/templates/contract/view.html:24
 msgid "Contract is active"
-msgstr ""
+msgstr "Contractul este activ"
 
-#: gym/models/contract.py:234 gym/templates/contract/view.html:69
-#: manager/models/schedule.py:62 manager/templates/schedule/view.html:70
+#: gym/models/contract.py:237 gym/templates/contract/view.html:69
 msgid "Start date"
-msgstr ""
+msgstr "Data de început"
 
-#: gym/models/contract.py:244 gym/templates/contract/view.html:71
+#: gym/models/contract.py:247 gym/templates/contract/view.html:71
 msgid "End date"
-msgstr ""
+msgstr "Data de sfârșit"
 
-#: gym/models/contract.py:260 gym/models/gym.py:73 gym/views/export.py:67
+#: gym/models/contract.py:263 gym/models/gym.py:73 gym/views/export.py:66
 msgid "ZIP code"
-msgstr ""
+msgstr "Cod poștal"
 
-#: gym/models/contract.py:268 gym/models/gym.py:81 gym/views/export.py:68
+#: gym/models/contract.py:271 gym/models/gym.py:81 gym/views/export.py:67
 msgid "City"
-msgstr ""
+msgstr "Oraș"
 
-#: gym/models/contract.py:276 gym/models/gym.py:89 gym/views/export.py:69
+#: gym/models/contract.py:279 gym/models/gym.py:89 gym/views/export.py:68
 msgid "Street"
-msgstr ""
+msgstr "Stradă"
 
-#: gym/models/contract.py:292 gym/templates/contract/view.html:92
+#: gym/models/contract.py:295 gym/templates/contract/view.html:92
 msgid "Profession"
-msgstr ""
+msgstr "Profesie"
 
 #: gym/models/gym.py:33
 msgid "Trainer: can see the users for a gym"
-msgstr ""
+msgstr "Antrenor: poate vedea utilizatorii unei săli de fitness"
 
 #: gym/models/gym.py:34
 msgid "Admin: can manage users for a gym"
-msgstr ""
+msgstr "Admin: poate gestiona utilizatorii unei săli de fitness"
 
 #: gym/models/gym.py:35
 msgid "Admin: can administrate the different gyms"
-msgstr ""
+msgstr "Admin: poate administra diferitele săli de fitness"
 
-#: gym/models/gym.py:65 gym/templates/gym/member_list.html:114
+#: gym/models/gym.py:65 gym/templates/gym/member_list.html:126
 msgid "Owner"
-msgstr ""
+msgstr "Proprietar"
 
 #: gym/models/gym_config.py:46
 msgid ""
 "Number of weeks since the last time a user logged his presence to be "
 "considered inactive"
 msgstr ""
+"Numărul de săptămâni de când un utilizator și-a înregistrat ultima dată "
+"prezența pentru a fi considerat inactiv"
 
-#: gym/models/gym_config.py:56 gym/templates/gym/member_list.html:152
+#: gym/models/gym_config.py:56 gym/templates/gym/member_list.html:166
 msgid "Show name in header"
-msgstr ""
+msgstr "Arată numele în antet"
 
 #: gym/models/gym_config.py:57
 msgid "Show the name of the gym in the site header"
-msgstr ""
+msgstr "Afișează numele sălii de fitness în antetul site-ului"
 
-#: gym/models/gym_config.py:68
-msgid "Configuration for {}"
-msgstr ""
-
-#: gym/models/user_config.py:65 gym/templates/gym/member_list.html:184
+#: gym/models/user_config.py:65 gym/templates/gym/member_list.html:200
 msgid "Overview of inactive members"
-msgstr ""
+msgstr "Prezentare generală a membrilor inactivi"
 
 #: gym/models/user_config.py:66
 msgid "Receive email overviews of inactive members"
-msgstr ""
+msgstr "Primește rapoarte prin e-mail cu membrii inactivi"
 
 #: gym/models/user_config.py:93
 msgid "Include this user in the email list with inactive members"
-msgstr ""
+msgstr "Include acest utilizator în lista de e-mailuri cu membrii inactivi"
 
-#: gym/models/user_document.py:75
+#: gym/models/user_document.py:72
 msgid "Document"
-msgstr ""
+msgstr "Document"
 
-#: gym/models/user_document.py:88
+#: gym/models/user_document.py:85
 msgid "Will use file name if nothing provided"
-msgstr ""
+msgstr "Va folosi numele fișierului dacă nu este furnizat nimic"
 
 #: gym/templates/admin_notes/list.html:4
 msgid "User notes"
-msgstr ""
+msgstr "Notele utilizatorului"
+
+#: gym/templates/contract/list.html:34
+msgid "Show"
+msgstr "Afișează"
 
 #: gym/templates/contract/view.html:4
 msgid "Contract"
-msgstr ""
+msgstr "Contract"
 
 #: gym/templates/contract_option/list.html:4
 msgid "Contract options"
-msgstr ""
+msgstr "Opțiuni contract"
 
 #: gym/templates/contract_type/list.html:4
 msgid "Contract types"
-msgstr ""
+msgstr "Tipuri contract"
 
 #: gym/templates/gym/email_inactive_members.html:2
 #, python-format
-msgid ""
+msgid "The following users have not visited the gym in the last %(weeks)s week"
+msgid_plural ""
 "The following users have not visited the gym in the last %(weeks)s weeks"
-msgstr ""
+msgstr[0] ""
+"Următorii utilizatori nu au vizitat sala de fitness în ultimele %(weeks)s "
+"săptămâni"
+msgstr[1] ""
+"Următorii utilizatori nu au vizitat sala de fitness în ultimele %(weeks)s "
+"săptămâni"
+msgstr[2] ""
+"Următorii utilizatori nu au vizitat sala de fitness în ultimele %(weeks)s "
+"săptămâni"
 
 #: gym/templates/gym/list.html:6
 msgid "Gym list"
-msgstr ""
+msgstr "Lista sălilor de fitness"
 
-#: gym/templates/gym/list.html:47
+#: gym/templates/gym/list.html:53
 msgid "Global gym configuration"
-msgstr ""
+msgstr "Configurația globală a sălii de fitness"
 
-#: gym/templates/gym/list.html:64 gym/views/gym.py:170
+#: gym/templates/gym/list.html:69 gym/views/gym.py:181
 msgid "Add new gym"
-msgstr ""
+msgstr "Adaugă o nouă sală de fitness"
 
 #: gym/templates/gym/member_list.html:22
 msgid "Administrators and trainers"
-msgstr ""
+msgstr "Administratori și antrenori"
 
 #: gym/templates/gym/member_list.html:48
 msgid "Gym manager"
-msgstr ""
+msgstr "Managerul sălii de fitness"
 
-#: gym/templates/gym/member_list.html:69
+#: gym/templates/gym/member_list.html:76
 msgid "This gym has no administrators or trainers"
-msgstr ""
+msgstr "Această sală de fitness nu are administratori sau antrenori"
 
-#: gym/templates/gym/member_list.html:88
+#: gym/templates/gym/member_list.html:99
 msgid "Export"
-msgstr ""
+msgstr "Exportă"
 
-#: gym/templates/gym/member_list.html:125
+#: gym/templates/gym/member_list.html:137
+#: gym/templates/gym/partial_user_list.html:9
 msgid "Members"
-msgstr ""
+msgstr "Membri"
 
-#: gym/templates/gym/member_list.html:145
+#: gym/templates/gym/member_list.html:159
 msgid "Gym configuration"
-msgstr ""
+msgstr "Configurația sălii de fitness"
 
-#: gym/templates/gym/member_list.html:148
+#: gym/templates/gym/member_list.html:162
 msgid "Inactive members"
-msgstr ""
+msgstr "Membri inactivi"
 
-#: gym/templates/gym/member_list.html:149
+#: gym/templates/gym/member_list.html:163
 msgid "weeks"
-msgstr ""
+msgstr "săptămâni"
 
-#: gym/templates/gym/member_list.html:181
+#: gym/templates/gym/member_list.html:197
 msgid "My configuration"
-msgstr ""
+msgstr "Configurația mea"
 
-#: gym/templates/gym/member_list.html:215
+#: gym/templates/gym/member_list.html:234
 msgid "Types"
-msgstr ""
+msgstr "Tipuri"
 
-#: gym/templates/gym/member_list.html:285
+#: gym/templates/gym/member_list.html:307
 msgid "Emails"
-msgstr ""
+msgstr "E-mailuri"
 
-#: gym/templates/gym/member_list.html:315
+#: gym/templates/gym/member_list.html:336
 msgid "Add member"
-msgstr ""
+msgstr "Adaugă membru"
 
-#: gym/templates/gym/new_user.html:38
-msgid "Date of Birth"
-msgstr ""
-
-#: gym/templates/gym/new_user.html:48 manager/templates/calendar/month.html:144
-#: manager/templates/log/add.html:75 nutrition/templates/rate/form.html:120
+#: gym/templates/gym/new_user.html:48 nutrition/templates/rate/form.html:120
 msgid "Info"
 msgstr "Informații"
 
@@ -2124,49 +1958,63 @@ msgid ""
 "password\n"
 "cannot be recovered later."
 msgstr ""
+"Te rugăm să notezi parola utilizatorului sau să salvezi fișierul\n"
+"exportat, care conține toate datele utilizatorului, și să îl păstrezi într-"
+"un loc sigur. Parola\n"
+"nu poate fi recuperată ulterior."
 
 #: gym/templates/gym/new_user.html:57
 msgid "Export user data"
-msgstr ""
+msgstr "Exportă datele utilizatorului"
 
 #: gym/templates/gym/reset_user_password.html:32
 msgid ""
 "This user's password has been reset. Please notify the user of their new "
 "password."
 msgstr ""
+"Parola acestui utilizator a fost resetată. Te rugăm să notifici utilizatorul "
+"de noua sa parolă."
 
-#: gym/views/admin_notes.py:94 gym/views/document.py:94
+#: gym/views/admin_notes.py:96 gym/views/document.py:96
 msgid "Add note"
-msgstr ""
+msgstr "Adaugă notă"
 
-#: gym/views/contract.py:69
+#: gym/views/contract.py:70
 msgid "Add contract"
-msgstr ""
+msgstr "Adaugă contract"
 
 #: gym/views/contract_option.py:60
 msgid "Add option"
-msgstr ""
+msgstr "Adaugă opțiune"
 
-#: gym/views/contract_option.py:160 gym/views/contract_type.py:160
+#: gym/views/contract_option.py:159 gym/views/contract_type.py:159
 #, python-brace-format
 msgid "Delete {0}"
-msgstr ""
+msgstr "Șterge {0}"
 
 #: gym/views/contract_type.py:60
 msgid "Add contract type"
-msgstr ""
+msgstr "Adaugă tip contract"
 
-#: gym/views/export.py:65
+#: gym/views/export.py:64
 msgid "Gender"
-msgstr ""
+msgstr "Sex"
 
-#: gym/views/gym.py:342
+#: gym/views/gym.py:281
+msgid "Yes, reset the password"
+msgstr "Da, resetează parola"
+
+#: gym/views/gym.py:288
+msgid "Reset the password for this user?"
+msgstr "Resetezi parola acestui utilizator?"
+
+#: gym/views/gym.py:385
 msgid "Add user to gym"
-msgstr ""
+msgstr "Adaugă utilizator la sala de fitness"
 
-#: gym/views/gym.py:438
+#: gym/views/gym.py:489
 msgid "Edit gym"
-msgstr ""
+msgstr "Editează sala de fitness"
 
 #: i18n.tpl:2
 msgid "Abs"
@@ -2174,186 +2022,344 @@ msgstr "Abdomen"
 
 #: i18n.tpl:3
 msgid "Arms"
-msgstr "Brate"
+msgstr "Brațe"
 
 #: i18n.tpl:4
 msgid "Back"
-msgstr "Înapoi"
+msgstr "Spate"
 
 #: i18n.tpl:5
-msgid "Calves"
-msgstr ""
+msgid "Barbell"
+msgstr "Halteră"
 
 #: i18n.tpl:6
-msgid "Chest"
-msgstr "Piept"
-
-#: i18n.tpl:7
-msgid "Legs"
-msgstr "Picioare"
-
-#: i18n.tpl:8
-msgid "Shoulders"
-msgstr "Umeri"
-
-#: i18n.tpl:9
-msgid "Barbell"
-msgstr "Barbell"
-
-#: i18n.tpl:10
 msgid "Bench"
 msgstr "Bancă"
 
+#: i18n.tpl:7
+msgid "Biceps"
+msgstr "Biceps"
+
+#: i18n.tpl:8
+msgid "Body Weight"
+msgstr "Greutatea corpului"
+
+#: i18n.tpl:9
+msgid "Calves"
+msgstr "Gambe"
+
+#: i18n.tpl:10
+msgid "Cardio"
+msgstr "Cardio"
+
 #: i18n.tpl:11
-msgid "Dumbbell"
-msgstr "Haltere"
+msgid "Chest"
+msgstr "Piept"
 
 #: i18n.tpl:12
-msgid "Gym mat"
-msgstr "Saltea de gimnastica"
+msgid "Dumbbell"
+msgstr "Ganteră"
 
 #: i18n.tpl:13
+msgid "Glutes"
+msgstr "Fesieri"
+
+#: i18n.tpl:14
+msgid "Gym mat"
+msgstr "Saltea de fitness"
+
+#: i18n.tpl:15
+msgid "Hamstrings"
+msgstr "Ischiogambieri (Femurali)"
+
+#: i18n.tpl:16
 msgid "Incline bench"
 msgstr "Bancă înclinată"
 
-#: i18n.tpl:14
+#: i18n.tpl:17
 msgid "Kettlebell"
 msgstr "Kettlebell"
 
-#: i18n.tpl:15
-msgid "none (bodyweight exercise)"
-msgstr "nici unul (exercițiu cu greutate corporală)"
-
-#: i18n.tpl:16
-msgid "Pull-up bar"
-msgstr "Bara de tragere"
-
-#: i18n.tpl:17
-msgid "Swiss Ball"
-msgstr "Minge Elvețiană"
-
 #: i18n.tpl:18
-msgid "SZ-Bar"
-msgstr "SZ-Bar"
-
-#: i18n.tpl:19
-msgid "Anterior deltoid"
-msgstr "Deltoidul anterior"
-
-#: i18n.tpl:20
-msgid "Biceps brachii"
-msgstr "Biceps brachii"
-
-#: i18n.tpl:21
-msgid "Biceps femoris"
-msgstr "Biceps femoral"
-
-#: i18n.tpl:22
-msgid "Brachialis"
-msgstr "Brahial"
-
-#: i18n.tpl:23
-msgid "Gastrocnemius"
-msgstr "Gastrocnemius"
-
-#: i18n.tpl:24
-msgid "Gluteus maximus"
-msgstr "Gluteus maximus"
-
-#: i18n.tpl:25
-msgid "Latissimus dorsi"
-msgstr "Dorsal mare"
-
-#: i18n.tpl:26
-msgid "Obliquus externus abdominis"
-msgstr "Obliquus externus abdominis"
-
-#: i18n.tpl:27
-msgid "Pectoralis major"
-msgstr "Pectoral major"
-
-#: i18n.tpl:28
-msgid "Quadriceps femoris"
-msgstr "Quadriceps femoris"
-
-#: i18n.tpl:29
-msgid "Rectus abdominis"
-msgstr "Drept abdominal"
-
-#: i18n.tpl:30
-msgid "Serratus anterior"
-msgstr "Serratus anterior"
-
-#: i18n.tpl:31
-msgid "Soleus"
-msgstr "Soleus"
-
-#: i18n.tpl:32
-msgid "Trapezius"
-msgstr "Trapez"
-
-#: i18n.tpl:33
-msgid "Triceps brachii"
-msgstr "Triceps brachii"
-
-#: i18n.tpl:34
 msgid "Kilometers"
 msgstr "Kilometri"
 
-#: i18n.tpl:35
-msgid "Max Reps"
-msgstr ""
+#: i18n.tpl:19
+msgid "Kilometers Per Hour"
+msgstr "Kilometri pe oră"
 
-#: i18n.tpl:36
+#: i18n.tpl:20
+msgid "Lats"
+msgstr "Marele dorsal"
+
+#: i18n.tpl:21
+msgid "Legs"
+msgstr "Picioare"
+
+#: i18n.tpl:22
+msgid "Lower back"
+msgstr "Zona lombară"
+
+#: i18n.tpl:23
+msgid "Max Reps"
+msgstr "Repetări maxime"
+
+#: i18n.tpl:24
 msgid "Miles"
 msgstr "Mile"
 
-#: i18n.tpl:37
+#: i18n.tpl:25
+msgid "Miles Per Hour"
+msgstr "Mile pe oră"
+
+#: i18n.tpl:26
 msgid "Minutes"
 msgstr "Minute"
 
-#: i18n.tpl:38 manager/forms.py:169 manager/models/log.py:71
-#: manager/templates/set/add.html:53
-msgid "Repetitions"
-msgstr ""
+#: i18n.tpl:27
+msgid "Plates"
+msgstr "Discuri"
 
-#: i18n.tpl:39
+#: i18n.tpl:28
+msgid "Pull-up bar"
+msgstr "Bară de tracțiuni"
+
+#: i18n.tpl:29
+msgid "Quads"
+msgstr "Cvadricepși"
+
+#: i18n.tpl:31
+msgid "Resistance band"
+msgstr "Bandă de rezistență"
+
+#: i18n.tpl:32
+msgid "SZ-Bar"
+msgstr "Bară Z"
+
+#: i18n.tpl:33
 msgid "Seconds"
 msgstr "Secunde"
 
-#: i18n.tpl:40
+#: i18n.tpl:34
+msgid "Shoulders"
+msgstr "Umeri"
+
+#: i18n.tpl:35
+msgid "Swiss Ball"
+msgstr "Minge de fitness (Swiss ball)"
+
+#: i18n.tpl:36
+msgid "Triceps"
+msgstr "Triceps"
+
+#: i18n.tpl:37
 msgid "Until Failure"
-msgstr "Până la eșec"
+msgstr "Până la epuizare"
+
+#: i18n.tpl:38
+msgid "Meters"
+msgstr "Metri"
+
+#: i18n.tpl:41
+msgid "none (bodyweight exercise)"
+msgstr "fără echipament (exercițiu cu greutatea corpului)"
+
+#: i18n.tpl:42
+msgid "Beginner"
+msgstr "Începător"
+
+#: i18n.tpl:43
+msgid "Consistent"
+msgstr "Consecvent"
+
+#: i18n.tpl:44
+msgid "Dedicated"
+msgstr "Dedicat"
+
+#: i18n.tpl:45
+msgid "Obsessed"
+msgstr "Obsedat"
+
+#: i18n.tpl:46
+msgid "Legend"
+msgstr "Legendă"
+
+#: i18n.tpl:47
+msgid "Veteran"
+msgstr "Veteran"
+
+#: i18n.tpl:48
+msgid "Titan"
+msgstr "Titan"
+
+#: i18n.tpl:49
+msgid "Unstoppable"
+msgstr "De neoprit"
+
+#: i18n.tpl:50
+msgid "Weekend Warrior"
+msgstr "Luptător de weekend"
+
+#: i18n.tpl:51
+msgid "Elephant lifter"
+msgstr "Ridicătoul de elefanți"
+
+#: i18n.tpl:52
+msgid "Bus lifter"
+msgstr "Ridicătoul de autobuze"
+
+#: i18n.tpl:53
+msgid "Plane lifter"
+msgstr "Ridicătoul de avioane"
+
+#: i18n.tpl:54
+msgid "Blue whale lifter"
+msgstr "Ridicătoul de balene albastre"
+
+#: i18n.tpl:55
+msgid "Space Station lifter"
+msgstr "Ridicătoul Stației Spațiale"
+
+#: i18n.tpl:56
+msgid "Millionaire"
+msgstr "Milionar"
+
+#: i18n.tpl:57
+msgid "Atlas"
+msgstr "Atlas"
+
+#: i18n.tpl:58
+msgid "Early Bird"
+msgstr "Matinal"
+
+#: i18n.tpl:59
+msgid "Night Owl"
+msgstr "Pasăre de noapte"
+
+#: i18n.tpl:60
+msgid "New Year, New Me"
+msgstr "An Nou, Eu Nou"
+
+#: i18n.tpl:61
+msgid "Phoenix"
+msgstr "Phoenix"
+
+#: i18n.tpl:62
+msgid "Personal Record"
+msgstr "Record Personal"
+
+#: i18n.tpl:63
+msgid "Complete your first workout"
+msgstr "Finalizează primul tău antrenament"
+
+#: i18n.tpl:64
+msgid "Complete 10 workouts"
+msgstr "Finalizează 10 antrenamente"
+
+#: i18n.tpl:65
+msgid "Complete 50 workouts"
+msgstr "Finalizează 50 de antrenamente"
+
+#: i18n.tpl:66
+msgid "Complete 100 workouts"
+msgstr "Finalizează 100 de antrenamente"
+
+#: i18n.tpl:67
+msgid "Complete 200 workouts"
+msgstr "Finalizează 200 de antrenamente"
+
+#: i18n.tpl:68
+msgid "Complete 500 workouts"
+msgstr "Finalizează 500 de antrenamente"
+
+#: i18n.tpl:69
+msgid "Complete 1000 workouts"
+msgstr "Finalizează 1000 de antrenamente"
+
+#: i18n.tpl:70
+msgid "Maintain a 30-day workout streak"
+msgstr "Menține o serie de 30 de zile de antrenamente"
+
+#: i18n.tpl:71
+msgid "Work out on Saturday and Sunday for 4 consecutive weekends"
+msgstr "Antrenează-te sâmbătă și duminică timp de 4 weekenduri consecutive"
+
+#: i18n.tpl:72
+msgid "Lift a cumulative total of 5.000 kg"
+msgstr "Ridic un total cumulativ de 5.000 kg"
+
+#: i18n.tpl:73
+msgid "Lift a cumulative total of 20.000 kg"
+msgstr "Ridic un total cumulativ de 20.000 kg"
+
+#: i18n.tpl:74
+msgid "Lift a cumulative total of 50.000 kg"
+msgstr "Ridic un total cumulativ de 50.000 kg"
+
+#: i18n.tpl:75
+msgid "Lift a cumulative total of 150.000 kg"
+msgstr "Ridic un total cumulativ de 150.000 kg"
+
+#: i18n.tpl:76
+msgid "Lift a cumulative total of 450.000 kg"
+msgstr "Ridic un total cumulativ de 450.000 kg"
+
+#: i18n.tpl:77
+msgid "Lift a cumulative total of 1.000.000 kg"
+msgstr "Ridic un total cumulativ de 1.000.000 kg"
+
+#: i18n.tpl:78
+msgid "Lift a cumulative total of 10.000.000 kg"
+msgstr "Ridic un total cumulativ de 10.000.000 kg"
+
+#: i18n.tpl:79
+msgid "Complete a workout before 6:00 AM"
+msgstr "Finalizează un antrenament înainte de 6:00 AM"
+
+#: i18n.tpl:80
+msgid "Complete a workout after 9:00 PM"
+msgstr "Finalizează un antrenament după 9:00 PM"
+
+#: i18n.tpl:81
+msgid "Work out on January 1st"
+msgstr "Antrenează-te pe 1 ianuarie"
+
+#: i18n.tpl:82
+msgid "Return to training after being inactive for 30 days"
+msgstr "Revino la antrenamente după ce ai fost inactiv timp de 30 de zile"
+
+#: i18n.tpl:83
+msgid "Achieve a new Personal Record on any exercise"
+msgstr "Atinge un nou Record Personal la orice exercițiu"
 
 #: mailer/forms.py:34 mailer/templates/mailer/gym/preview.html:32
 msgctxt "As in \"email subject\""
 msgid "Subject"
-msgstr ""
+msgstr "Subiect"
 
 #: mailer/forms.py:35 mailer/templates/mailer/gym/preview.html:40
 msgctxt "As in \"content of an email\""
 msgid "Content"
-msgstr ""
+msgstr "Conținut"
 
 #: mailer/templates/mailer/gym/form.html:23
 msgid "Generate preview"
-msgstr ""
+msgstr "Generează previzualizare"
 
 #: mailer/templates/mailer/gym/form.html:28
 #: mailer/templates/mailer/gym/preview.html:62
-#: manager/templates/workout/view.html:88
 msgid "Steps"
-msgstr ""
+msgstr "Pași"
 
 #: mailer/templates/mailer/gym/form.html:30
 #: mailer/templates/mailer/gym/preview.html:64
 msgid "Fill in the form"
-msgstr ""
+msgstr "Completează formularul"
 
 #: mailer/templates/mailer/gym/form.html:31
 #: mailer/templates/mailer/gym/preview.html:65
 msgid "You will receive a preview email for you to review"
-msgstr ""
+msgstr "Vei primi un e-mail de previzualizare pentru a-l revizui"
 
 #: mailer/templates/mailer/gym/form.html:32
 #: mailer/templates/mailer/gym/preview.html:66
@@ -2361,420 +2367,112 @@ msgid ""
 "You can update and correct the content as often as you need before sending "
 "the emails"
 msgstr ""
+"Poți actualiza și corecta conținutul de câte ori este nevoie înainte de a "
+"trimite e-mailurile"
 
 #: mailer/templates/mailer/gym/preview.html:22
+#: software/templates/about_us.html:167
 msgid "Current version"
-msgstr ""
+msgstr "Versiunea curentă"
 
 #: mailer/templates/mailer/gym/preview.html:47
 msgid "Send emails"
-msgstr ""
+msgstr "Trimite e-mailuri"
 
 #: mailer/templates/mailer/gym/preview.html:51
 #: mailer/templates/mailer/gym/preview.html:56
 msgid "Correction"
-msgstr ""
+msgstr "Corectare"
 
-#: manager/forms.py:89 manager/models/workout.py:59
-msgid "The name of the workout"
-msgstr ""
+#: manager/dataclasses.py:114
+msgid "Sets"
+msgstr "Serii"
 
-#: manager/forms.py:93 manager/models/workout.py:66
-msgid ""
-"A short description or goal of the workout. For example 'Focus on back' or "
-"'Week 1 of program xy'."
-msgstr ""
+#: manager/dataclasses.py:132 manager/helpers.py:91
+msgid "Reps"
+msgstr "Repetări"
 
-#: manager/forms.py:126
-msgid ""
-"You can search for more than one exercise, they will be grouped together for "
-"a superset."
-msgstr ""
+#: manager/dataclasses.py:179
+msgid "RiR"
+msgstr "RiR"
 
-#: manager/forms.py:155 manager/forms.py:160 manager/models/log.py:62
-#: manager/models/log.py:90 manager/models/setting.py:47
-#: manager/models/setting.py:78 manager/templates/log/add.html:53
-#: manager/templates/log/add.html:55 manager/templates/set/formset.html:11
-#: manager/templates/set/formset.html:13 nutrition/forms.py:62
-msgid "Unit"
-msgstr ""
+#: manager/dataclasses.py:186
+msgid "rest"
+msgstr "pauză"
 
-#: manager/forms.py:266
-msgid "Type"
-msgstr ""
+#: manager/helpers.py:78
+msgid "Rest day"
+msgstr "Zi de pauză"
 
-#: manager/forms.py:267 manager/templates/workout/view.html:157
-msgid "Table"
-msgstr ""
+#: manager/helpers.py:91
+msgid "Exercise"
+msgstr "Exercițiu"
 
-#: manager/forms.py:269 manager/templates/workout/view.html:163
-msgid "with images"
-msgstr ""
-
-#: manager/forms.py:270 manager/templates/workout/view.html:169
-msgid "with comments"
-msgstr ""
-
-#: manager/management/commands/email-reminders.py:125
-msgid "Workout will expire soon"
-msgstr ""
-
-#: manager/models/day.py:39
-msgid ""
-"A description of what is done on this day (e.g. \"Pull day\") or what body "
-"parts are trained (e.g. \"Arms and abs\")"
-msgstr ""
-
-#: manager/models/day.py:44
-msgid "Day"
-msgstr ""
-
-#: manager/models/schedule.py:57
-msgid "Name or short description of the schedule. For example 'Program XYZ'."
-msgstr ""
-
-#: manager/models/schedule.py:66 manager/templates/schedule/view.html:74
-msgid "Schedule active"
-msgstr ""
-
-#: manager/models/schedule.py:69
-msgid ""
-"Tick the box if you want to mark this schedule as your active one (will be "
-"shown e.g. on your dashboard). All other schedules will then be marked as "
-"inactive"
-msgstr ""
-
-#: manager/models/schedule.py:78 manager/templates/schedule/view.html:84
-msgid "Is a loop"
-msgstr ""
-
-#: manager/models/schedule.py:81
-msgid ""
-"Tick the box if you want to repeat the schedules in a loop (i.e. A, B, C, A, "
-"B, C, and so on)"
-msgstr ""
-
-#: manager/models/schedule_step.py:49
-msgid "schedule"
-msgstr ""
-
-#: manager/models/schedule_step.py:56
-msgid "Duration"
-msgstr ""
-
-#: manager/models/schedule_step.py:57
-msgid "The duration in weeks"
-msgstr ""
-
-#: manager/models/schedule_step.py:63 manager/models/set.py:52
-#: manager/models/setting.py:98 nutrition/models/meal.py:54
-#: nutrition/models/meal_item.py:65
-msgid "Order"
-msgstr ""
+#: manager/management/commands/email-reminders.py:89
+msgid "Routine will expire soon"
+msgstr "Rutina va expira în curând"
 
 #: manager/models/session.py:42
 msgid "Bad"
-msgstr ""
+msgstr "Rea"
 
 #: manager/models/session.py:43
 msgid "Neutral"
-msgstr ""
+msgstr "Neutră"
 
 #: manager/models/session.py:44
 msgid "Good"
-msgstr ""
+msgstr "Bună"
 
-#: manager/models/session.py:76
-msgid "Any notes you might want to save about this workout session."
-msgstr ""
-
-#: manager/models/session.py:89
-msgid ""
-"Your impression about this workout session. Did you exercise as well as you "
-"could?"
-msgstr ""
-
-#: manager/models/session.py:97
-msgid "Start time"
-msgstr ""
-
-#: manager/models/session.py:102
-msgid "Finish time"
-msgstr ""
-
-#: manager/models/session.py:128
-msgid "If you enter a time, you must enter both start and end time."
-msgstr ""
-
-#: manager/models/session.py:131
+#: manager/models/session.py:189
 msgid "The start time cannot be after the end time."
-msgstr ""
+msgstr "Ora de începere nu poate fi după ora de finalizare."
 
-#: manager/models/set.py:46
-msgid "Exercise day"
-msgstr ""
-
-#: manager/models/set.py:56
-msgid "Number of sets"
-msgstr ""
-
-#: manager/models/setting.py:43
-msgid "Sets"
-msgstr ""
-
-#: manager/models/workout.py:54 nutrition/models/plan.py:65
-msgid "Creation date"
-msgstr ""
-
-#: manager/models/workout.py:72 manager/templates/workout/template_view.html:11
-#: manager/templates/workout/template_view.html:19
-#, fuzzy
-#| msgid "Workout reminders"
-msgid "Workout template"
-msgstr "Mementouri de antrenament"
-
-#: manager/models/workout.py:74
-msgid ""
-"Marking a workout as a template will freeze it and allow you to make copies "
-"of it"
-msgstr ""
-
-#: manager/models/workout.py:81
-msgid "Public template"
-msgstr ""
-
-#: manager/models/workout.py:82
-msgid "A public template is available to other users"
-msgstr ""
-
-#: manager/models/workout.py:114
-msgid "You must mark this workout as a template before declaring it public"
-msgstr ""
-
-#: manager/templates/calendar/day.html:9 manager/templates/calendar/day.html:31
-msgid "Workout log"
-msgstr ""
-
-#: manager/templates/calendar/day.html:12
+#: manager/models/session.py:194
 #, python-format
-msgid "Workout log for %(username)s for %(date)s"
-msgstr ""
-
-#: manager/templates/calendar/month.html:13
-#, python-format
-msgid "Calendar for %(username)s"
-msgstr ""
-
-#: manager/templates/calendar/month.html:53
-msgid "Detail page"
-msgstr ""
-
-#: manager/templates/calendar/month.html:145
-msgid ""
-"The coloured days in the calendar have weight logs,\n"
-"you can click on them to see the details."
-msgstr ""
-
-#: manager/templates/calendar/month.html:157
-msgid "Go to current month"
-msgstr ""
-
-#: manager/templates/calendar/partial_overview_table.html:5
-msgid "Log overview"
-msgstr ""
-
-#: manager/templates/calendar/partial_overview_table.html:12
-msgid "Workout session"
-msgstr ""
-
-#: manager/templates/calendar/partial_overview_table.html:27
-msgid "Delete with logs"
-msgstr ""
-
-#: manager/templates/calendar/partial_overview_table.html:33
-msgid "Add workout impression"
-msgstr ""
-
-#: manager/templates/log/add.html:20
-msgid "New weight log"
-msgstr ""
-
-#: manager/templates/log/add.html:76
-msgid ""
-"A new workout session (impression, notes, time) will\n"
-"be created if there isn't already one for the selected date. If there is, "
-"it\n"
-"will simply be edited. Weight entries are always added."
-msgstr ""
-
-#: manager/templates/schedule/overview.html:5
-msgid "Your schedules"
-msgstr ""
-
-#: manager/templates/schedule/overview.html:19
-#: manager/templates/schedule/view.html:134
-#: manager/templates/schedule/view.html:190
-#: manager/templates/workout/overview.html:16
-msgid "active"
-msgstr ""
-
-#: manager/templates/schedule/overview.html:28
-msgid "No schedules found."
-msgstr ""
-
-#: manager/templates/schedule/overview.html:36
-msgid ""
-"Schedules are collections of workouts that you do in\n"
-"succession."
-msgstr ""
-
-#: manager/templates/schedule/overview.html:39
-msgid ""
-"You can indicate how long you want to do each workout\n"
-"before jumping to the next. It is also possible to create a loop, so you\n"
-"always do the same workouts in succession, e.g. A > B > C > A > B > C and so "
-"on."
-msgstr ""
-
-#: manager/templates/schedule/overview.html:43
-msgid ""
-"The currently active schedule will remain active (and be\n"
-"shown e.g. in your dashboard) till it reaches the last workout or till you\n"
-"deactivate it, if it is a loop."
-msgstr ""
-
-#: manager/templates/schedule/overview.html:51
-msgid "Add schedule"
-msgstr ""
-
-#: manager/templates/schedule/view.html:10
-msgid "Schedule"
-msgstr ""
-
-#: manager/templates/schedule/view.html:88
-msgid ""
-"This schedule is a loop and will go through the workouts above till you "
-"deactivate it"
-msgstr ""
-
-#: manager/templates/schedule/view.html:106 manager/views/schedule.py:168
-#: manager/views/schedule.py:238
-msgid "Weeks"
-msgstr ""
-
-#: manager/templates/schedule/view.html:118
-msgid "Move me"
-msgstr ""
-
-#: manager/templates/schedule/view.html:158
-msgid "Start schedule"
-msgstr ""
-
-#: manager/templates/schedule/view.html:183
-#, python-format
-msgid ""
-"%(weeks)s Week\n"
-"                    "
-msgid_plural ""
-"%(weeks)s Weeks\n"
-"                    "
+msgid "A session cannot be longer than %(hours)s hour."
+msgid_plural "A session cannot be longer than %(hours)s hours."
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#: manager/templates/schedule/view.html:220
-msgid "Adding workouts"
-msgstr ""
-
-#: manager/templates/schedule/view.html:222
-msgid ""
-"Add as many workouts to the schedule as you want. You can\n"
-"edit the order by dragging and dropping them. It's also possible to add one "
-"workout more\n"
-"than once."
-msgstr ""
-
-#: manager/templates/schedule/view.html:231
-#: manager/templates/schedule/view.html:241
-#: manager/templates/schedule/view.html:286
-#: manager/templates/workout/view.html:117
-#: manager/templates/workout/view.html:127
-#: manager/templates/workout/view.html:221
-msgid "Export calendar file"
-msgstr ""
-
-#: manager/templates/schedule/view.html:235
-msgid "Export this schedule as a calendar file."
-msgstr ""
-
-#: manager/templates/schedule/view.html:236
-#: manager/templates/workout/view.html:122
-msgid ""
-"You can then import the file it into your calendar\n"
-"application for example google calendar, outlook or iCal. This will create\n"
-"an appointment for each training day with the appropriate exercises."
-msgstr ""
-
-#: manager/templates/schedule/view.html:256
-#: manager/templates/schedule/view.html:290
-#: manager/templates/workout/view.html:142
-#: manager/templates/workout/view.html:217
-#: nutrition/templates/plan/view.html:415
-msgid "Download as PDF"
-msgstr ""
-
-#: manager/templates/schedule/view.html:295
-msgid "Edit schedule"
-msgstr ""
-
-#: manager/templates/schedule/view.html:300
-msgid "Delete schedule"
-msgstr ""
-
-#: manager/templates/set/add.html:9
+#: manager/templates/routines/email_reminder.tpl:3
 #, python-format
-msgid "Add exercises to day \"%(day_name)s\""
-msgstr ""
+msgid "Your current workout '%(routine)s' expired %(days)s days ago."
+msgstr "Antrenamentul tău curent '%(routine)s' a expirat acum %(days)s zile."
 
-#: manager/templates/set/add.html:55
-msgid ""
-"If you do the same repetitions for all sets,\n"
-"you can just enter one value: e.g. for 4 sets just enter one \"10\" for the "
-"repetitions, this\n"
-"automatically becomes \"4 x 10\"."
-msgstr ""
-
-#: manager/templates/set/edit.html:10
-msgid "Edit set"
-msgstr ""
-
-#: manager/templates/set/edit.html:25
-msgid "Update"
-msgstr ""
-
-#: manager/templates/workout/email_reminder.tpl:3
+#: manager/templates/routines/email_reminder.tpl:5
 #, python-format
-msgid "Your current workout '%(workout)s' expired %(days)s days ago."
+msgid "Your current workout '%(routine)s' is about to expire in %(days)s days."
 msgstr ""
+"Antrenamentul tău curent '%(routine)s' urmează să expire în %(days)s zile."
 
-#: manager/templates/workout/email_reminder.tpl:5
-#, python-format
-msgid "Your current workout '%(workout)s' is about to expire in %(days)s days."
-msgstr ""
-
-#: manager/templates/workout/email_reminder.tpl:9
+#: manager/templates/routines/email_reminder.tpl:9
 msgid ""
 "You will regularly receive such reminders till you add a new workout.\n"
 "Alternatively you can add workouts to a loop schedule, such schedules\n"
 "never produce reminders."
 msgstr ""
+"Vei primi regulat astfel de mementouri până când adaugi un antrenament nou.\n"
+"Alternativ, poți adăuga antrenamente într-un program ciclic, astfel de "
+"programe\n"
+"nu generează niciodată mementouri."
 
-#: manager/templates/workout/email_reminder.tpl:12
+#: manager/templates/routines/email_reminder.tpl:12
 #: manager/templates/workout/email_weight_reminder.tpl:9
 msgid ""
 "If you don't want to ever receive email reminders, deactivate the\n"
 "option in your settings."
 msgstr ""
+"Dacă nu vrei să mai primești niciodată mementouri prin e-mail, dezactivează\n"
+"opțiunea din setările tale."
+
+#: manager/templates/routines/email_reminder.tpl:15
+#: manager/templates/workout/email_weight_reminder.tpl:12
+#: nutrition/templates/ingredient/email_new.tpl:9
+#, python-format
+msgid "The %(site)s team"
+msgstr "Echipa %(site)s"
 
 #: manager/templates/workout/email_weight_reminder.tpl:3
 #, python-format
@@ -2782,341 +2480,78 @@ msgid ""
 "Your last weight entry is from %(date)s (%(days)s days ago).\n"
 "Please click the link to access the application and enter a new one."
 msgstr ""
+"Ultima ta înregistrare a greutății este din %(date)s (acum %(days)s zile).\n"
+"Te rugăm să accesezi linkul pentru a deschide aplicația și a introduce una "
+"nouă."
 
 #: manager/templates/workout/email_weight_reminder.tpl:8
 msgid ""
 "You will regularly receive such reminders till you enter your current weight."
 msgstr ""
+"Vei primi regulat astfel de mementouri până când introduci greutatea ta "
+"curentă."
 
-#: manager/templates/workout/log.html:29
-msgid "Weight log for workout"
-msgstr ""
+#: manager/views/pdf.py:76 manager/views/pdf.py:146
+msgid "Workout"
+msgstr "Antrenament"
 
-#: manager/templates/workout/log.html:49
-msgid "Add weight log to this day"
-msgstr ""
-
-#: manager/templates/workout/log.html:75
-msgid "No weight entries here."
-msgstr ""
-
-#: manager/templates/workout/log.html:83
-msgid "No exercises for this day."
-msgstr ""
-
-#: manager/templates/workout/log.html:96
-msgid ""
-"This page shows the weight logs belonging to this workout\n"
-"only. Click on an exercise to see all the historical data for\n"
-"it."
-msgstr ""
-
-#: manager/templates/workout/log.html:100
-msgid ""
-"If on a single day there is more than one entry with the\n"
-"same number of repetitions, but different weights, only the entry with the\n"
-"higher weight is shown in the diagram."
-msgstr ""
-
-#: manager/templates/workout/log.html:104
-msgid ""
-"Note that only entries with a weight unit (kg or lb) and\n"
-"repetitions are charted, other combinations such as time or until failure\n"
-"are ignored here."
-msgstr ""
-
-#: manager/templates/workout/overview.html:25
-msgid "No templates found."
-msgstr ""
-
-#: manager/templates/workout/template_view.html:53
-msgid "Mark as workout"
-msgstr ""
-
-#: manager/templates/workout/template_view.html:65
-#: manager/templates/workout/view.html:97
-msgid "Muscles trained"
-msgstr ""
-
-#: manager/templates/workout/template_view.html:68
-#: manager/templates/workout/view.html:100
-msgid ""
-"Images show combined muscles as trained by the exercises on the workout."
-msgstr ""
-
-#: manager/templates/workout/template_view.html:89
-msgid "Use this template"
-msgstr ""
-
-#: manager/templates/workout/view.html:72
-msgid "Add training day"
-msgstr ""
-
-#: manager/templates/workout/view.html:76
-msgid "Show/Hide exercise comments"
-msgstr ""
-
-#: manager/templates/workout/view.html:91
-msgid "Add training days"
-msgstr ""
-
-#: manager/templates/workout/view.html:92
-msgid "Add workout sets to days"
-msgstr ""
-
-#: manager/templates/workout/view.html:93
-msgid "Set the repetitions for each set"
-msgstr ""
-
-#: manager/templates/workout/view.html:121
-msgid "Export this workout as a calendar file."
-msgstr ""
-
-#: manager/templates/workout/view.html:188
-msgid "Logs"
-msgstr ""
-
-#: manager/templates/workout/view.html:190
-msgid "View logs"
-msgstr ""
-
-#: manager/templates/workout/view.html:212 manager/views/schedule_step.py:99
-msgid "Edit workout"
-msgstr ""
-
-#: manager/templates/workout/view.html:225 manager/views/workout.py:300
-msgid "Mark as template"
-msgstr ""
-
-#: manager/views/day.py:109
-msgid "Add workout day"
-msgstr ""
-
-#: manager/views/log.py:92
-#, python-format
-msgid "Edit log entry for %s"
-msgstr ""
-
-#: manager/views/log.py:111
-msgid "Delete workout log"
-msgstr ""
-
-#: manager/views/pdf.py:87 manager/views/pdf.py:163
+#: manager/views/pdf.py:78 manager/views/pdf.py:148
 #, python-format
 msgid "Workout for %s"
+msgstr "Antrenament pentru %s"
+
+#: nutrition/extract_info/off.py:71 nutrition/extract_info/off.py:90
+#: nutrition/tests/test_off.py:311
+msgid "Serving"
 msgstr ""
 
-#: manager/views/schedule.py:292
-msgid "Create schedule"
-msgstr ""
+#: nutrition/forms.py:77 nutrition/forms.py:226
+msgid "Unit"
+msgstr "Unitate"
 
-#: manager/views/workout.py:87
-msgid "Your workouts"
-msgstr ""
-
-#: manager/views/workout.py:227
-msgid "Copy workout"
-msgstr ""
-
-#: manager/views/workout.py:230
-msgid "Copy"
-msgstr ""
-
-#: manager/views/workout_session.py:69
-#, python-brace-format
-msgid "Edit workout impression for {0}"
-msgstr ""
-
-#: manager/views/workout_session.py:115
-#, python-brace-format
-msgid "New workout impression for the {0}"
-msgstr ""
-
-#: manager/views/workout_session.py:158
-msgid "This will delete all weight logs for this day as well."
-msgstr ""
-
-#: nutrition/forms.py:121
-msgid "Calculate"
-msgstr ""
-
-#: nutrition/forms.py:194 nutrition/templates/rate/form.html:76
+#: nutrition/forms.py:197 nutrition/templates/rate/form.html:76
 msgid "Basic caloric intake"
-msgstr ""
+msgstr "Aportul caloric de bază"
 
-#: nutrition/forms.py:195
+#: nutrition/forms.py:198
 msgid "Your basic caloric intake as calculated for your data"
-msgstr ""
-
-#: nutrition/forms.py:201
-msgid "Additional calories"
-msgstr ""
+msgstr "Aportul caloric de bază calculat pentru datele tale"
 
 #: nutrition/forms.py:203
+msgid "Additional calories"
+msgstr "Calorii adiționale"
+
+#: nutrition/forms.py:205
 msgid ""
 "Additional calories to add to the base rate (to substract, enter a negative "
 "number)"
 msgstr ""
+"Caloriile adiționale de adăugat la rata de bază (pentru a scădea, introdu un "
+"număr negativ)"
 
-#: nutrition/forms.py:231 nutrition/models/ingredient_weight_unit.py:39
-#: nutrition/models/log.py:71 nutrition/models/meal_item.py:53
-#: nutrition/templates/log/detail.html:155
+#: nutrition/forms.py:227
+msgid "grams (g)"
+msgstr ""
+
+#: nutrition/forms.py:237
 msgid "Ingredient"
+msgstr "Ingredient"
+
+#: nutrition/forms.py:241
+msgid "Also search for names in English"
+msgstr "Caută nume și în engleză"
+
+#: nutrition/forms.py:257
+msgid "Quantity"
 msgstr ""
 
-#: nutrition/models/ingredient.py:100
-msgid "In kcal per 100g"
+#: nutrition/forms.py:259
+msgid "Enter a quantity and choose grams (g) or one of the serving units."
 msgstr ""
 
-#: nutrition/models/ingredient.py:106 nutrition/models/ingredient.py:114
-#: nutrition/models/ingredient.py:124 nutrition/models/ingredient.py:132
-#: nutrition/models/ingredient.py:142 nutrition/models/ingredient.py:152
-#: nutrition/models/ingredient.py:162
-msgid "In g per 100g of product"
-msgstr ""
-
-#: nutrition/models/ingredient.py:123
-#: nutrition/templates/ingredient/view.html:96
-#: nutrition/templates/log/detail.html:78
-#: nutrition/templates/plan/view.html:262 nutrition/views/plan.py:406
-msgid "Sugar content in carbohydrates"
-msgstr ""
-
-#: nutrition/models/ingredient.py:141
-#: nutrition/templates/ingredient/view.html:112
-#: nutrition/templates/log/detail.html:104
-#: nutrition/templates/plan/view.html:274 nutrition/views/plan.py:420
-msgid "Saturated fat content in fats"
-msgstr ""
-
-#: nutrition/models/ingredient.py:151
-#: nutrition/templates/ingredient/view.html:134
-#: nutrition/templates/log/detail.html:122
-#: nutrition/templates/log/detail.html:178
-#: nutrition/templates/plan/view.html:285 nutrition/views/plan.py:426
-msgid "Fibres"
-msgstr ""
-
-#: nutrition/models/ingredient.py:161
-#: nutrition/templates/ingredient/view.html:144
-#: nutrition/templates/log/detail.html:135
-#: nutrition/templates/log/detail.html:181
-#: nutrition/templates/plan/view.html:291 nutrition/views/plan.py:432
-msgid "Sodium"
-msgstr ""
-
-#: nutrition/models/ingredient.py:183
-msgid "Link to product"
-msgstr ""
-
-#: nutrition/models/ingredient.py:212
-msgid "Brand name of product"
-msgstr ""
-
-#: nutrition/models/ingredient.py:272
-#, python-brace-format
-msgid ""
-"The total energy ({energy}kcal) is not the approximate sum of the energy "
-"provided by protein, carbohydrates and fat ({energy_calculated}kcal +/-"
-"{energy_approx}%)"
-msgstr ""
-
-#: nutrition/models/ingredient.py:357 nutrition/views/ingredient.py:225
-msgid "Ingredient was successfully added to the general database"
-msgstr ""
-
-#: nutrition/models/ingredient.py:381
-msgid "New user submitted ingredient"
-msgstr ""
-
-#: nutrition/models/ingredient.py:383
-#, python-brace-format
-msgid "The user {0} submitted a new ingredient \"{1}\"."
-msgstr ""
-
-#: nutrition/models/ingredient_category.py:30
-msgid "Ingredient Categories"
-msgstr ""
-
-#: nutrition/models/ingredient_weight_unit.py:49
-msgid "Amount in grams"
-msgstr ""
-
-#: nutrition/models/ingredient_weight_unit.py:55
-msgid "Unit amount, e.g. \"1 Cup\" or \"1/2 spoon\""
-msgstr ""
-
-#: nutrition/models/meal.py:61
-msgid "Time (approx)"
-msgstr ""
-
-#: nutrition/models/plan.py:71
-msgid ""
-"A description of the goal of the plan, e.g. \"Gain mass\" or \"Prepare for "
-"summer\""
-msgstr ""
-
-#: nutrition/models/plan.py:76
-msgid "Use daily calories"
-msgstr ""
-
-#: nutrition/models/plan.py:79
-msgid ""
-"Tick the box if you want to mark this plan as having a goal amount of "
-"calories. You can use the calculator or enter the value yourself."
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:62
-msgid "Results"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:63
-msgid "Your BMI is: "
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:71
-msgid "Legend"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:75
-msgid "Adipositas III"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:79
-msgid "Adipositas II"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:83
-msgid "Adipositas I"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:87
-msgid "Overweight"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:91
-msgid "Normal weight"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:95
-msgid "Slight underweight"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:99
-msgid "Moderate underweight"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:103
-msgid "Strong underweight"
-msgstr ""
-
-#: nutrition/templates/bmi/form.html:117
-msgid ""
-"Use the form to calculate your BMI (Body Mass Index).\n"
-"If you have entered data in the weight section, the last entry will\n"
-"be used automatically. Otherwise the weight you enter here will be saved\n"
-"in a new entry."
-msgstr ""
+#: nutrition/models/ingredient.py:478
+msgid "Portion"
+msgstr "Porție"
 
 #: nutrition/templates/ingredient/email_new.tpl:1
 #, python-format
@@ -3124,22 +2559,32 @@ msgid ""
 "Your ingredient '%(ingredient)s' was successfully added to the general\n"
 "database."
 msgstr ""
+"Ingredientul tău '%(ingredient)s' a fost adăugat cu succes în baza\n"
+"de date generală."
 
 #: nutrition/templates/ingredient/email_new.tpl:4
 msgid ""
 "It is now available on the ingredient overview and can be\n"
 "added to nutrition plans. You can access it on this address:"
 msgstr ""
+"Este acum disponibil în prezentarea generală a ingredientelor și poate fi\n"
+"adăugat la planurile nutriționale. Îl poți accesa la această adresă:"
+
+#: nutrition/templates/ingredient/email_new.tpl:8
+msgid "Thank you for contributing and making this site better!"
+msgstr "Îți mulțumim pentru contribuție și pentru că faci acest site mai bun!"
 
 #: nutrition/templates/ingredient/form.html:4
 msgid "Submitting an ingredient"
-msgstr ""
+msgstr "Trimiterea unui ingredient"
 
 #: nutrition/templates/ingredient/form.html:5
 msgid ""
 "Thank you for submitting an ingredient. This is much\n"
 "appreciated!"
 msgstr ""
+"Îți mulțumim pentru trimiterea ingredientului. Este foarte\n"
+"apreciat!"
 
 #: nutrition/templates/ingredient/form.html:8
 msgid ""
@@ -3150,212 +2595,120 @@ msgid ""
 "when you registered, you will get notified when the process is completed "
 "sucessfully."
 msgstr ""
-"După ce trimiteți formularul, administratorii vor fi notificați.\n"
-"După analizarea lui, el va fi adăugat la baza de date. Până atunci, el nu va "
-"fi indicat in prezentarea generală sau in căutare.\n"
-"Dacă ați adăugat adresa de e-mail când v-ați înregistrat, veți fi anunțat "
-"când procesul este finalizat cu succes."
+"După ce trimiți formularul, administratorii vor fi notificați.\n"
+"Odată ce este revizuit, va fi adăugat în baza de date. Până când se întâmplă "
+"acest lucru,\n"
+"nu va fi vizibil în prezentarea generală sau în căutare. În cazul în care ți-"
+"ai adăugat e-mailul\n"
+"când te-ai înregistrat, vei fi notificat când procesul este finalizat cu "
+"succes."
 
-#: nutrition/templates/ingredient/overview.html:45
-msgid "No ingredients."
+#: nutrition/templates/ingredient/overview.html:32
+#: nutrition/templates/ingredient/overview.html:104
+#: nutrition/templates/ingredient/view.html:172
+msgid "Vegan"
 msgstr ""
+
+#: nutrition/templates/ingredient/overview.html:34
+#: nutrition/templates/ingredient/overview.html:115
+#: nutrition/templates/ingredient/view.html:187
+msgid "Vegetarian"
+msgstr ""
+
+#: nutrition/templates/ingredient/overview.html:44
+#: nutrition/templates/ingredient/overview.html:47
+msgid "No ingredients."
+msgstr "Nu există ingrediente."
+
+#: nutrition/templates/ingredient/overview.html:54
+msgid "Ingredient pagination"
+msgstr "Paginare ingrediente"
+
+#: nutrition/templates/ingredient/overview.html:59
+msgid "First page"
+msgstr "Prima pagină"
 
 #: nutrition/templates/ingredient/overview.html:66
-msgid "ingredient name"
-msgstr ""
+#: nutrition/templates/ingredient/overview.html:71
+msgid "previous"
+msgstr "anterior"
 
-#: nutrition/templates/ingredient/overview.html:79
-#: nutrition/templates/ingredient/overview.html:83
-msgid "Add ingredient"
-msgstr ""
+#: nutrition/templates/ingredient/overview.html:77
+#: nutrition/templates/ingredient/overview.html:82
+msgid "next"
+msgstr "următorul"
 
-#: nutrition/templates/ingredient/view.html:27
-msgid "Ingredient is pending review"
-msgstr ""
+#: nutrition/templates/ingredient/overview.html:90
+msgid "Search"
+msgstr "Caută"
 
-#: nutrition/templates/ingredient/view.html:28
-msgid ""
-"This user submitted ingredient is pending a decision to be\n"
-"included in the database. Till then, it will not be shown in the overview "
-"or\n"
-"the search."
-msgstr ""
+#: nutrition/templates/ingredient/overview.html:93
+msgid "Filter"
+msgstr "Filtru"
 
-#: nutrition/templates/ingredient/view.html:71
-#: nutrition/templates/log/detail.html:31
-#: nutrition/templates/plan/view.html:227 nutrition/views/plan.py:376
+#: nutrition/templates/ingredient/view.html:77 nutrition/views/plan.py:238
 msgid "Macronutrients"
-msgstr ""
+msgstr "Macronutrienți"
 
-#: nutrition/templates/ingredient/view.html:80
-#: nutrition/templates/plan/view.html:62 nutrition/templates/plan/view.html:244
+#: nutrition/templates/ingredient/view.html:86
 msgid "kJ"
-msgstr ""
+msgstr "kJ"
 
-#: nutrition/templates/ingredient/view.html:101
-#: nutrition/templates/ingredient/view.html:117
-#: nutrition/templates/ingredient/view.html:139
-#: nutrition/templates/ingredient/view.html:149
+#: nutrition/templates/ingredient/view.html:102 nutrition/views/plan.py:268
+msgid "Sugar content in carbohydrates"
+msgstr "Conținutul de zahăr din carbohidrați"
+
+#: nutrition/templates/ingredient/view.html:107
+#: nutrition/templates/ingredient/view.html:123
+#: nutrition/templates/ingredient/view.html:145
+#: nutrition/templates/ingredient/view.html:155
+#: nutrition/templates/ingredient/view.html:175
+#: nutrition/templates/ingredient/view.html:190
+#: nutrition/templates/ingredient/view.html:211
 msgid "n.A."
-msgstr ""
+msgstr "N/A"
 
-#: nutrition/templates/ingredient/view.html:128
-#: nutrition/templates/log/detail.html:119
-#: nutrition/templates/plan/view.html:282
+#: nutrition/templates/ingredient/view.html:118 nutrition/views/plan.py:282
+msgid "Saturated fat content in fats"
+msgstr "Conținutul de grăsimi saturate din grăsimi"
+
+#: nutrition/templates/ingredient/view.html:134
 msgid "Others"
-msgstr ""
+msgstr "Altele"
 
-#: nutrition/templates/ingredient/view.html:165
-msgid "User submitted ingredient"
-msgstr ""
+#: nutrition/templates/ingredient/view.html:140 nutrition/views/plan.py:288
+msgid "Fiber"
+msgstr "Fibre"
 
-#: nutrition/templates/ingredient/view.html:167
-#, python-format
-msgid "This exercise was submitted by <strong>%(username)s</strong>."
-msgstr "Acest exercițiu a fost prezentat de <strong>%(username)s</strong>."
+#: nutrition/templates/ingredient/view.html:150 nutrition/views/plan.py:294
+msgid "Sodium"
+msgstr "Sodiu"
+
+#: nutrition/templates/ingredient/view.html:166
+msgid "Dietary information"
+msgstr "Informații dietetice"
 
 #: nutrition/templates/ingredient/view.html:177
-#: nutrition/templates/units/list.html:44 nutrition/views/unit.py:86
-msgid "Add new weight unit"
-msgstr ""
+#: nutrition/templates/ingredient/view.html:192
+msgid "Yes"
+msgstr "Da"
 
-#: nutrition/templates/ingredient/view.html:230
+#: nutrition/templates/ingredient/view.html:179
+#: nutrition/templates/ingredient/view.html:194
+msgid "No"
+msgstr "Nu"
+
+#: nutrition/templates/ingredient/view.html:202
+msgid "Nutri-Score"
+msgstr "Nutri-Score"
+
 #: nutrition/templates/ingredient/view.html:233
-msgid "Edit ingredient"
-msgstr ""
-
-#: nutrition/templates/ingredient/view.html:237
-msgid "Delete ingredient"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:7
-#: nutrition/templates/log/overview.html:7
-#: nutrition/templates/plan/view.html:300
-msgid "Nutrition diary"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:32
-msgid "Planned"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:33
-#: nutrition/templates/log/overview.html:31
-#: nutrition/templates/plan/view.html:308
-msgid "Logged"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:34
-#: nutrition/templates/log/overview.html:32
-#: nutrition/templates/plan/view.html:309
-msgid "Difference"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:150
-msgid "Entries"
-msgstr ""
-
-#: nutrition/templates/log/detail.html:170
-msgid "g"
-msgstr ""
-
-#: nutrition/templates/log/overview.html:53
-#: nutrition/templates/plan/view.html:330
-msgid "nothing found"
-msgstr ""
-
-#: nutrition/templates/plan/overview.html:5
-msgid "Your nutrition plans"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:52
-msgid "Contents"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:79
-msgid "Log this meal"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:84
-msgid "Add ingredient to meal"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:150
-msgid "No items for this meal."
-msgstr ""
-
-#: nutrition/templates/plan/view.html:188
-msgid "No meals for this plan."
-msgstr ""
-
-#: nutrition/templates/plan/view.html:200
-msgid "Log this Plan"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:206
-msgid "Add a new meal"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:216 nutrition/views/plan.py:369
-msgid "Nutritional data"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:219
-#, python-format
-msgid "Based on the weight entry dated %(date)s (%(weight)s)"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:228 nutrition/views/plan.py:377
-msgid "Total"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:229 nutrition/views/plan.py:378
-msgid "Percent of energy"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:232 nutrition/views/plan.py:379
-msgid "g per body kg"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:234
-msgid "oz per body lb"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:338
-msgid "View complete nutrition log"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:371
-msgid "Goal"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:382
-msgid ""
-"You have selected that this nutritional plan has a\n"
-"            goal amount of calories. Use the calculator or enter the value\n"
-"            yourself."
-msgstr ""
-
-#: nutrition/templates/plan/view.html:392
-msgid ""
-"If you find the ingredient list too short, you might want to activate the "
-"preference to also show English ingredients."
-msgstr ""
-
-#: nutrition/templates/plan/view.html:421
-msgid "Edit nutrition plan"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:425
-msgid "Make a copy of this nutrition plan"
-msgstr ""
-
-#: nutrition/templates/plan/view.html:431
-msgid "Delete nutrition plan"
-msgstr ""
+msgid "Add new weight unit"
+msgstr "Adaugă o nouă unitate de greutate"
 
 #: nutrition/templates/rate/form.html:25
 msgid "Basal metabolic rate"
-msgstr ""
+msgstr "Rata metabolică bazală"
 
 #: nutrition/templates/rate/form.html:26
 msgid ""
@@ -3364,14 +2717,18 @@ msgid ""
 "any\n"
 "additional physical activity."
 msgstr ""
+"Rata metabolică bazală este cantitatea de energie consumată zilnic\n"
+"în repaus. Aceasta este energia minimă necesară pentru ca organismul să "
+"funcționeze, fără\n"
+"nicio activitate fizică suplimentară."
 
 #: nutrition/templates/rate/form.html:37
 msgid "Your basic metabolic rate is: "
-msgstr ""
+msgstr "Rata ta metabolică bazală este: "
 
 #: nutrition/templates/rate/form.html:47
 msgid "Physical activities"
-msgstr ""
+msgstr "Activități fizice"
 
 #: nutrition/templates/rate/form.html:48
 msgid ""
@@ -3379,20 +2736,26 @@ msgid ""
 "the additional physical activity and is used to calculate the total energy\n"
 "required per day."
 msgstr ""
+"Nivelul de activitate fizică (PAL) este un factor folosit pentru a exprima\n"
+"activitatea fizică suplimentară și este folosit pentru a calcula energia "
+"totală\n"
+"necesară pe zi."
 
 #: nutrition/templates/rate/form.html:59
 msgid "Factor for daily activities: "
-msgstr ""
+msgstr "Factor pentru activitățile zilnice: "
 
 #: nutrition/templates/rate/form.html:67
 msgid ""
 "The base caloric intake is the amount of calories your metabolism\n"
 "needs based on your level of physical activity."
 msgstr ""
+"Aportul caloric de bază este cantitatea de calorii de care metabolismul tău\n"
+"are nevoie pe baza nivelului tău de activitate fizică."
 
 #: nutrition/templates/rate/form.html:81
 msgid "Calculate basic caloric intake"
-msgstr ""
+msgstr "Calculează aportul caloric de bază"
 
 #: nutrition/templates/rate/form.html:88
 msgid ""
@@ -3401,18 +2764,22 @@ msgid ""
 "Alternatively\n"
 "you might just enter yourself the amount of calories if you know the value."
 msgstr ""
+"Caloriile totale reprezintă numărul real de calorii totale pe zi. Acesta\n"
+"poate include, de ex., un surplus sau un deficit dacă ești la faza de masă "
+"musculară sau de definire. Alternativ\n"
+"poți introduce tu însuți cantitatea de calorii dacă cunoști valoarea."
 
 #: nutrition/templates/rate/form.html:102
 msgid "Transfer basic intake to total daily calories"
-msgstr ""
+msgstr "Transferă aportul de bază la totalul de calorii zilnice"
 
 #: nutrition/templates/rate/form.html:106
 msgid "Add additional calories to total daily calories"
-msgstr ""
+msgstr "Adaugă calorii suplimentare la totalul de calorii zilnice"
 
 #: nutrition/templates/rate/form.html:110
 msgid "Save total calories to profile"
-msgstr ""
+msgstr "Salvează caloriile totale în profil"
 
 #: nutrition/templates/rate/form.html:121
 msgid ""
@@ -3420,284 +2787,521 @@ msgid ""
 "approximation. If you base your nutrition plan on these values, observe\n"
 "yourself for some weeks and change the total amount if needed."
 msgstr ""
+"Te rugăm să reții că aceste calcule pot fi doar o\n"
+"aproximație. Dacă îți bazezi planul nutrițional pe aceste valori, observă-"
+"te\n"
+"timp de câteva săptămâni și modifică cantitatea totală dacă este necesar."
 
-#: nutrition/views/ingredient.py:181
+#: nutrition/views/ingredient.py:250
 msgid "Add a new ingredient"
-msgstr ""
+msgstr "Adaugă un ingredient nou"
 
-#: nutrition/views/ingredient.py:238
-msgid "Ingredient was successfully marked as rejected"
-msgstr ""
-
-#: nutrition/views/log.py:229 nutrition/views/unit_ingredient.py:139
-msgid "Delete?"
-msgstr ""
-
-#: nutrition/views/meal.py:55
-msgid "Add new meal"
-msgstr ""
-
-#: nutrition/views/meal.py:80
-msgid "Edit meal"
-msgstr ""
-
-#: nutrition/views/meal_item.py:112
-msgid "Edit meal item"
-msgstr ""
-
-#: nutrition/views/plan.py:265
+#: nutrition/views/plan.py:129
 msgid "Nutritional plan"
-msgstr ""
+msgstr "Plan nutrițional"
 
-#: nutrition/views/plan.py:267
+#: nutrition/views/plan.py:131
 #, python-format
 msgid "Nutritional plan for %s"
-msgstr ""
+msgstr "Plan nutrițional pentru %s"
 
-#: nutrition/views/plan.py:341
+#: nutrition/views/plan.py:203
 msgid "<i>This is an empty plan, what did you expect on the PDF?</i>"
-msgstr ""
+msgstr "<i>Acesta este un plan gol, la ce te așteptai pe PDF?</i>"
 
-#: nutrition/views/unit_ingredient.py:69
+#: nutrition/views/plan.py:231
+msgid "Nutritional data"
+msgstr "Date nutriționale"
+
+#: nutrition/views/plan.py:239
+msgid "Total"
+msgstr "Total"
+
+#: nutrition/views/plan.py:240
+msgid "Percent of energy"
+msgstr "Procentaj din energie"
+
+#: nutrition/views/plan.py:241
+msgid "g per body kg"
+msgstr "g per kg-corp"
+
+#: nutrition/views/unit_ingredient.py:64
 msgid "Add a new weight unit"
-msgstr ""
+msgstr "Adaugă o nouă unitate de greutate"
 
-#: nutrition/views/unit_ingredient.py:106
+#: nutrition/views/unit_ingredient.py:99
 msgid "Edit a weight unit to ingredient connection"
-msgstr ""
+msgstr "Editează conexiunea dintre o unitate de greutate și un ingredient"
+
+#: nutrition/views/unit_ingredient.py:129
+msgid "Delete?"
+msgstr "Șterge?"
 
 #: software/templates/about_us.html:9
 msgid ""
-"Thank you for using wger! wger is a collaborative open source project, made "
-"by fitness enthusiasts from around the world."
+"wger helps you track your workouts, manage your nutrition, and reach your "
+"fitness goals. We offer it as free, open-source software you can host "
+"yourself, and also provide a convenient, free, and hosted version for easy "
+"access."
 msgstr ""
+"wger te ajută să-ți urmărești antrenamentele, să-ți gestionezi nutriția și "
+"să-ți atingi obiectivele de fitness. Îl oferim ca software open-source "
+"gratuit, pe care îl poți găzdui chiar tu, și îți oferim, de asemenea, o "
+"versiune găzduită convenabilă și gratuită pentru acces facil."
 
 #: software/templates/about_us.html:18
-msgid "Source code"
-msgstr ""
+msgid "Open Source & free to use ❤️"
+msgstr "Open Source și gratuit de utilizat ❤️"
 
 #: software/templates/about_us.html:20
-msgid "Get the source code of this application and its server on github"
-msgstr ""
-
-#: software/templates/about_us.html:25
-msgid "Have a problem or idea?"
-msgstr ""
-
-#: software/templates/about_us.html:27
 msgid ""
-"Get in touch if something didn't behave as expected or if there is a feature "
-"that you feel is missing."
+"wger is built on the principles of open source. Its code is publicly "
+"available, developed by our community, ensuring transparency and giving you "
+"control over your data (especially if self-hosting). The free hosted service "
+"runs entirely on this open-source foundation. We believe powerful fitness "
+"tools should be accessible to everyone."
 msgstr ""
+"wger este construit pe principiile open source. Codul său este disponibil "
+"public, dezvoltat de comunitatea noastră, asigurând transparența și oferindu-"
+"ți control asupra datelor tale (mai ales dacă îl găzduiești pe serverul "
+"propriu). Serviciul găzduit gratuit rulează în întregime pe această bază "
+"open-source. Credem că instrumentele de fitness puternice ar trebui să fie "
+"accesibile tuturor."
 
-#: software/templates/about_us.html:32
-msgid "Say hi!"
-msgstr ""
+#: software/templates/about_us.html:30
+msgid "How you can help"
+msgstr "Cum poți ajuta"
 
-#: software/templates/about_us.html:34
-msgid "If you want to chat with us, hop on the Discord server and get in touch"
-msgstr ""
+#: software/templates/about_us.html:40
+msgid "Join the Community"
+msgstr "Alătură-te comunității"
 
-#: software/templates/about_us.html:39
-msgid "Translation"
-msgstr ""
+#: software/templates/about_us.html:46
+msgid "Join the Discord server"
+msgstr "Alătură-te serverului de Discord"
 
-#: software/templates/about_us.html:41
+#: software/templates/about_us.html:47
 msgid ""
-"This application is translated on weblate. If you also want to help, click "
-"the link and start translating"
+"Hop on the Discord server to chat with the developers and other users, ask "
+"questions, or discuss new features."
 msgstr ""
+"Intră pe serverul de Discord pentru a discuta cu dezvoltatorii și cu alți "
+"utilizatori, a pune întrebări sau a discuta funcționalități noi."
 
-#: software/templates/about_us.html:50
+#: software/templates/about_us.html:55
+msgid "Get news, updates, and announcements about the project on Mastodon."
+msgstr "Află noutăți, actualizări și anunțuri despre proiect pe Mastodon."
+
+#: software/templates/about_us.html:61
+msgid ""
+"Spread the word: Tell your friends, gym buddies, or share on social media! "
+"Your enthusiasm helps us grow and reach more people."
+msgstr ""
+"Dă vestea mai departe: Spune-le prietenilor, colegilor de sală sau "
+"distribuie pe rețelele sociale! Entuziasmul tău ne ajută să creștem și să "
+"ajungem la mai mulți oameni."
+
+#: software/templates/about_us.html:71
+msgid "Contribute your skills"
+msgstr "Contribuie cu abilitățile tale"
+
+#: software/templates/about_us.html:76
+msgid "Report bugs or suggest features"
+msgstr "Raportează probleme sau sugerează funcționalități"
+
+#: software/templates/about_us.html:78
+msgid "Have a problem or idea? Let us know!"
+msgstr "Ai o problemă sau o idee? Spune-ne!"
+
+#: software/templates/about_us.html:81
+msgid "Improve the exercises"
+msgstr "Îmbunătățește exercițiile"
+
+#: software/templates/about_us.html:82
+msgid "Contribute new exercises, and edit or translate the existing ones."
+msgstr ""
+"Contribuie cu exerciții noi și editează-le sau tradu-le pe cele existente."
+
+#: software/templates/about_us.html:85
+msgid "Translate the application"
+msgstr "Tradu aplicația"
+
+#: software/templates/about_us.html:86
+msgid ""
+"Help make the app accessible in more languages for users around the world."
+msgstr ""
+"Ajută la a face aplicația accesibilă în mai multe limbi pentru utilizatorii "
+"din întreaga lume."
+
+#: software/templates/about_us.html:89
+msgid "Contribute code or documentation"
+msgstr "Contribuie cu cod sau documentație"
+
+#: software/templates/about_us.html:90
+msgid "Check out the source code and help us build the next version."
+msgstr "Vezi codul sursă și ajută-ne să construim următoarea versiune."
+
+#: software/templates/about_us.html:96
+msgid "Make a donation"
+msgstr "Fă o donație"
+
+#: software/templates/about_us.html:100
+msgid ""
+"While the project is free and will always remain it, running the server "
+"isn’t! Providing the hosted version of wger involves real, ongoing costs for "
+"server hosting, bandwidth, backups, etc. Development also takes significant "
+"time and effort from volunteers. Your contribution directly supports these "
+"essential costs, helping to keep the service reliable, improving, and free "
+"for everyone."
+msgstr ""
+"Deși proiectul este gratuit și va rămâne mereu așa, menținerea serverului "
+"costă! Furnizarea versiunii găzduite a wger implică costuri reale și "
+"continue pentru găzduirea serverului, lățime de bandă, copii de siguranță "
+"etc. Dezvoltarea necesită, de asemenea, timp și efort semnificativ din "
+"partea voluntarilor. Contribuția ta susține direct aceste costuri esențiale, "
+"ajutând la menținerea serviciului de încredere, în continuă îmbunătățire și "
+"gratuit pentru toți."
+
+#: software/templates/about_us.html:135
+msgid "Sponsor on GitHub"
+msgstr "Sponsorizează pe GitHub"
+
+#: software/templates/about_us.html:142
+msgid "Thank You!"
+msgstr "Îți mulțumim!"
+
+#: software/templates/about_us.html:144
+msgid ""
+"Thank you for being part of the community! We appreciate your usage, "
+"feedback, and any support you can offer."
+msgstr ""
+"Îți mulțumim că faci parte din comunitate! Apreciem că folosești aplicația, "
+"feedbackul tău și orice sprijin pe care ni-l poți oferi."
+
+#: software/templates/about_us.html:155
 msgid "Our goal"
-msgstr ""
+msgstr "Obiectivul nostru"
 
-#: software/templates/about_us.html:53
+#: software/templates/about_us.html:158
 msgid ""
-"The goal is to build an awesome\n"
-"and flexible fitness manager, along with a comprehensive and complete list "
-"of exercises and\n"
-"ingredients, all released under a free license."
+"The goal is to build an awesome and flexible fitness manager, along with a "
+"comprehensive and complete list of exercises and ingredients, all released "
+"under a free license."
 msgstr ""
+"Obiectivul este de a construi un manager de fitness excelent și flexibil, "
+"alături de o listă completă și cuprinzătoare de exerciții și ingrediente, "
+"totul lansat sub o licență gratuită."
 
-#: software/templates/features.html:12
-msgid ""
-"wger Workout Manager is a free, open source web application that manages "
-"your exercises and workouts. "
-msgstr ""
-
-#: software/templates/features.html:24
-msgid "Welcome to wger"
-msgstr ""
-
-#: software/templates/features.html:25
-msgid "Your body."
-msgstr ""
-
-#: software/templates/features.html:26
-msgid "Your workouts."
-msgstr ""
-
-#: software/templates/features.html:27
-msgid "Your data."
-msgstr ""
-
-#: software/templates/features.html:28
-msgid "Your progress."
-msgstr ""
-
-#: software/templates/features.html:31
-msgid "Try it now"
-msgstr ""
-
-#: software/templates/features.html:55
-msgid "Your advantages"
-msgstr ""
-
-#: software/templates/features.html:57
+#: software/templates/features.html:11
 msgid ""
 "wger Workout Manager is a free, open source web application that manages "
-"your exercises, workouts and nutrition. It started as a pet project of mine "
-"to replace my growing collection of different spreadsheets, but it has "
-"become something other people could also find useful."
+"your exercises and workouts."
 msgstr ""
+"wger Workout Manager este o aplicație web gratuită, open source, care îți "
+"gestionează exercițiile și antrenamentele."
 
-#: software/templates/features.html:74
+#: software/templates/features.html:45
+msgid "Contact"
+msgstr "Contact"
+
+#: software/templates/features.html:58
+msgid "Mobile app"
+msgstr "Aplicație de mobil"
+
+#: software/templates/features.html:65 software/templates/features.html:339
+msgid "Donate"
+msgstr "Donații"
+
+#: software/templates/features.html:70
+msgid "Develop"
+msgstr "Dezvoltare"
+
+#: software/templates/features.html:75 software/templates/features.html:479
+msgid "Community"
+msgstr "Comunitate"
+
+#: software/templates/features.html:112
+msgid "Track your <br> way to your <br> ideal body"
+msgstr "Urmărește-ți <br> calea către <br> corpul tău ideal"
+
+#: software/templates/features.html:115
 msgid ""
-"You can create and manage flexible workout routines for any goals you have. "
-"Select exactly which exercises you'll do and how many repetitions, time or "
-"distance you want to do them. You can also combine different workouts into a "
-"schedule."
+"Join wger, the community-driven <b>free and open-source fitness tracker</b>"
 msgstr ""
+"Alătură-te wger, <b>aplicația de fitness gratuită și open-source</b>, creată "
+"de comunitate"
 
-#: software/templates/features.html:89
-msgid ""
-"Create your personal diet plan by creating as many meals with as many "
-"different ingredients as you need. The application will calculate the "
-"nutritional values (total energy, protein, carbohydrates, and so on) about "
-"the whole plan as well as the indivual meals."
-msgstr ""
+#: software/templates/features.html:125
+msgid "Get Started"
+msgstr "Începe acum"
 
-#: software/templates/features.html:102
-msgid "Diary"
-msgstr ""
+#: software/templates/features.html:135
+msgid "people <br> using wger"
+msgstr "oameni <br> care folosesc wger"
 
-#: software/templates/features.html:104
-msgid ""
-"Enter the weights and repetitions you did for each exercise to generate "
-"diagrams that let you see at a glance how well you are doing. The raw "
-"numbers are of course still accessible."
-msgstr ""
+#: software/templates/features.html:139
+msgid "exercises <br> for workout creation"
+msgstr "exerciții <br> pentru crearea antrenamentelor"
 
-#: software/templates/features.html:109
-msgid ""
-"You can also enter notes and a general impression (great, neutral, etc.)"
-msgstr ""
+#: software/templates/features.html:143
+msgid "foods <br> for meal planning"
+msgstr "alimente <br> pentru planificarea meselor"
 
-#: software/templates/features.html:121
-msgid "Among many others"
-msgstr ""
-
-#: software/templates/features.html:133
-msgid "Weight tracker"
-msgstr ""
-
-#: software/templates/features.html:137
-msgid ""
-"Keep track of your progress with the body weight chart. This makes it easy "
-"to see if you are reaching your goals or need to adjust something."
-msgstr ""
-
-#: software/templates/features.html:156
-msgid ""
-"Get an overview of how and when you trained as well as how you personally "
-"felt you performed. Access all your individual diary entries with one click."
-msgstr ""
-
-#: software/templates/features.html:171
-msgid "Exercise database"
-msgstr ""
+#: software/templates/features.html:147
+msgid "stars <br> on GitHub"
+msgstr "stele <br> pe GitHub"
 
 #: software/templates/features.html:175
-msgid ""
-"The exercise database contains more than hundred exercises from which you "
-"can choose when creating a workout. You can view them by category and "
-"equipment used or muscles trained."
-msgstr ""
+msgid "Craft your perfect <span>workout routines</span>"
+msgstr "Creează-ți <span>rutinele perfecte de antrenament</span>"
 
-#: software/templates/features.html:190
-msgid "Gym management"
-msgstr ""
+#: software/templates/features.html:179
+msgid "Design a weekly workout plan from more than 100 exercises"
+msgstr "Creează un plan săptămânal de antrenament din peste 100 de exerciții"
 
-#: software/templates/features.html:194
-msgid ""
-"Use the application for your gym to manage its members, their workouts and "
-"attendance. You can manage the members' contracts, keep notes and upload any "
-"files you might need."
+#: software/templates/features.html:182
+msgid "Set reps and sets, duration, or distance goals for each exercise"
 msgstr ""
+"Setează serii și repetări, durata sau obiective de distanță pentru fiecare "
+"exercițiu"
+
+#: software/templates/features.html:185
+msgid "Get guided through your workouts step by step"
+msgstr "Fii ghidat pas cu pas prin antrenamentele tale"
+
+#: software/templates/features.html:188
+msgid ""
+"Keep track of the workouts you've done, including how you felt you performed"
+msgstr ""
+"Ține evidența antrenamentelor pe care le-ai făcut, inclusiv cum ai simțit că "
+"te-ai descurcat"
 
 #: software/templates/features.html:213
-msgid ""
-"wger provides a REST API with full read and write access to all data so you "
-"can integrate your own application and tools."
+msgid "Plan your <span>daily meals</span>"
+msgstr "Planifică-ți <span>mesele zilnice</span>"
+
+#: software/templates/features.html:217
+msgid "Fill your week with nutritious meals that help you perform better"
 msgstr ""
+"Umple-ți săptămâna cu mese nutritive care te ajută să ai performanțe mai bune"
+
+#: software/templates/features.html:220
+msgid "Build meals from a database of more than 2 million foods"
+msgstr "Construiește mese dintr-o bază de date cu peste 2 milioane de alimente"
 
 #: software/templates/features.html:223
-#, python-format
-msgid "100%% Free <br>and <br>Open Source"
-msgstr ""
-
-#: utils/generic_views.py:261
-msgid "Yes, delete"
-msgstr ""
-
-#: utils/models.py:47
-msgid "Author"
-msgstr ""
-
-#: utils/models.py:52
 msgid ""
-"If you are not the author, enter the name or source here. This is needed for "
-"some licenses e.g. the CC-BY-SA."
+"Get automatically calculated nutritional values (energy, protein, "
+"carbs, ...) for both individual meals and your entire weekly plan"
+msgstr ""
+"Obține valori nutriționale calculate automat (energie, proteine, "
+"carbohidrați, ...) atât pentru mesele individuale, cât și pentru întregul "
+"plan săptămânal"
+
+#: software/templates/features.html:253
+msgid "Keep track of <span>your progress</span>"
+msgstr "Urmărește-ți <span>progresul</span>"
+
+#: software/templates/features.html:258
+msgid "Track and annotate everything about your meals and workouts"
+msgstr ""
+"Urmărește și adaugă notițe la tot ce ține de mesele și antrenamentele tale"
+
+#: software/templates/features.html:261
+msgid "Add custom notes"
+msgstr "Adaugă notițe personalizate"
+
+#: software/templates/features.html:264
+msgid "Record your weight"
+msgstr "Înregistrează-ți greutatea"
+
+#: software/templates/features.html:267
+msgid "Keep a photo log to see your progress"
+msgstr "Ține un jurnal foto pentru a-ți vedea progresul"
+
+#: software/templates/features.html:270
+msgid "Use the calendar view to see past entries"
+msgstr "Folosește vizualizarea calendaristică pentru a vedea intrările trecute"
+
+#: software/templates/features.html:289
+msgid "Try wger now"
+msgstr "Încearcă wger acum"
+
+#: software/templates/features.html:310
+msgid "Powered By <span>the community</span>"
+msgstr "Susținut de <span>comunitate</span>"
+
+#: software/templates/features.html:313
+msgid ""
+"wger is funded and created by the open-source community: people like you "
+"translating, adding exercises and nutritional info, developing, and more."
+msgstr ""
+"wger este finanțat și creat de comunitatea open-source: oameni ca tine care "
+"traduc, adaugă exerciții și informații nutriționale, programează și multe "
+"altele."
+
+#: software/templates/features.html:319
+msgid ""
+"We don't use ads, don't sell your personal info, and we share the code under "
+"a free and open-source license."
+msgstr ""
+"Nu folosim reclame, nu vindem informațiile tale personale și distribuim "
+"codul sub o licență gratuită și open-source."
+
+#: software/templates/features.html:324
+msgid "Pitch in and help make wger even better!"
+msgstr "Implică-te și ajută-ne să facem wger și mai bun!"
+
+#: software/templates/features.html:333
+msgid "Contribute"
+msgstr "Contribuie"
+
+#: software/templates/features.html:358
+msgid "Sign Up Now For Free"
+msgstr "Înregistrează-te acum gratuit"
+
+#: software/templates/features.html:372
+msgid "Web version not enough?"
+msgstr "Versiunea web nu este de ajuns?"
+
+#: software/templates/features.html:374
+msgid "Get the code, too!"
+msgstr "Obține și codul!"
+
+#: software/templates/features.html:385
+msgid "Set up a private server for your gym"
+msgstr "Configurează un server privat pentru sala ta"
+
+#: software/templates/features.html:388
+msgid ""
+"Don't want your data on an online service? Set up a wger instance on your "
+"own server for free!"
+msgstr ""
+"Nu vrei datele tale pe un serviciu online? Configurează o instanță wger pe "
+"propriul tău server gratuit!"
+
+#: software/templates/features.html:402
+msgid "Integrate with your own app"
+msgstr "Integrează cu propria ta aplicație"
+
+#: software/templates/features.html:405
+msgid "wger offers an open API that you can use for your app."
+msgstr "wger oferă un API deschis pe care îl poți folosi pentru aplicația ta."
+
+#: software/templates/features.html:416
+msgid "Create your own version"
+msgstr "Creează-ți propria versiune"
+
+#: software/templates/features.html:419
+msgid ""
+"The source code is available under the GNU AGPLv3 license! Feel free to fork "
+"it on GitHub."
+msgstr ""
+"Codul sursă este disponibil sub licența GNU AGPLv3! Simte-te liber să-i dai "
+"un fork pe GitHub."
+
+#: software/templates/features.html:440
+msgid "Account"
+msgstr "Cont"
+
+#: software/templates/features.html:456
+msgid "Dashboard"
+msgstr "Panou de control"
+
+#: software/templates/features.html:488
+msgid "Workout routines"
+msgstr "Rutine de antrenament"
+
+#: software/templates/features.html:494
+msgid "Discord"
+msgstr "Discord"
+
+#: software/templates/features.html:509
+msgid "Software"
+msgstr "Software"
+
+#: software/templates/features.html:515
+msgid "Report an issue"
+msgstr "Raportează o problemă"
+
+#: software/templates/features.html:521
+msgid "Source Code"
+msgstr "Cod sursă"
+
+#: software/templates/features.html:527
+msgid "Translation"
+msgstr "Traducere"
+
+#: utils/generic_views.py:241
+msgid "Yes, delete"
+msgstr "Da, șterge"
+
+#: utils/models.py:75
+msgid "The original title of this object, if available"
+msgstr "Titlul original al acestui obiect, dacă este disponibil"
+
+#: utils/models.py:81
+msgid "Link to original object, if available"
+msgstr "Link către obiectul original, dacă este disponibil"
+
+#: utils/models.py:87
+msgid "Author(s)"
+msgstr "Autor(i)"
+
+#: utils/models.py:91
+msgid "If you are not the author, enter the name or source here."
+msgstr "Dacă nu ești autorul, introdu numele sau sursa aici."
+
+#: utils/models.py:95
+msgid "Link to author profile, if available"
+msgstr "Link către site-ul sau profilul autorului, dacă este disponibil"
+
+#: utils/models.py:101
+msgid "Link to the original source, if this is a derivative work"
+msgstr "Link către sursa originală, dacă aceasta este o lucrare derivată"
+
+#: utils/models.py:103
+msgid ""
+"Note that a derivative work is one which is not only based on a previous "
+"work, but which also contains sufficient new, creative content to entitle it "
+"to its own copyright."
+msgstr ""
+"Reține că o lucrare derivată nu este doar bazată pe o lucrare anterioară, ci "
+"conține suficient conținut nou, creativ, pentru a beneficia de propriile "
+"drepturi de autor."
+
+#: utils/oidc_auth.py:44
+msgid "View your training, nutrition and body data"
 msgstr ""
 
-#: utils/models.py:77
-msgid "Pending"
-msgstr "în așteptare"
+#: utils/oidc_auth.py:45
+msgid "Add and change your training, nutrition and body data"
+msgstr ""
 
-#: utils/models.py:78
-msgid "Accepted"
-msgstr "Acceptat"
-
-#: utils/models.py:79
-msgid "Declined"
-msgstr "Declinat"
+#: weight/forms.py:52
+msgid "Input"
+msgstr "Date de intrare"
 
 #: weight/forms.py:53
-msgid "Input"
-msgstr ""
-
-#: weight/forms.py:54
 msgid "Date format"
-msgstr ""
+msgstr "Formatul datei"
 
-#: weight/management/commands/email-weight-reminder.py:82
+#: weight/management/commands/email-weight-reminder.py:78
 msgid "You have to enter your weight"
-msgstr ""
-
-#: weight/models.py:58
-msgid "Weight entry"
-msgstr ""
+msgstr "Trebuie să introduci greutatea ta"
 
 #: weight/templates/import_csv_form.html:4
 msgid "Import weight logs"
-msgstr ""
+msgstr "Importă jurnale de greutate"
 
 #: weight/templates/import_csv_form.html:15
 msgid ""
 "Use this import field to import your weight logs into Workout\n"
 "Manager."
 msgstr ""
+"Folosește acest câmp de import pentru a-ți importa jurnalele de greutate în "
+"Workout\n"
+"Manager."
 
 #: weight/templates/import_csv_form.html:18
 msgid ""
@@ -3708,32 +3312,40 @@ msgid ""
 "<strong>weight</strong>.\n"
 "All further columns are ignored. There is a 1000 row limit.\n"
 msgstr ""
+"Poți copia și lipi din fișierul tău tabelar în câmpul de text,\n"
+"sistemul va încerca să ghicească formatul pentru a-l importa. Singurele "
+"lucruri de luat în considerare sunt\n"
+"că prima coloană este <strong>data</strong>, iar a doua este "
+"<strong>greutatea</strong>.\n"
+"Toate celelalte coloane sunt ignorate. Există o limită de 1000 de rânduri.\n"
 
 #: weight/templates/import_csv_form.html:24
 msgid ""
 "If there are errors, you can correct or discard them in a\n"
 "second step."
 msgstr ""
+"Dacă există erori, le poți corecta sau elimina într-un\n"
+"al doilea pas."
 
 #: weight/templates/import_csv_preview.html:4
 msgid "Preview imported CSV entries"
-msgstr ""
+msgstr "Previzualizează intrările CSV importate"
 
 #: weight/templates/import_csv_preview.html:9
 msgid "Successfully converted values"
-msgstr ""
+msgstr "Valori convertite cu succes"
 
 #: weight/templates/import_csv_preview.html:10
 msgid "The following values could be converted."
-msgstr ""
+msgstr "Următoarele valori au putut fi convertite."
 
 #: weight/templates/import_csv_preview.html:26
 msgid "Errors"
-msgstr ""
+msgstr "Erori"
 
 #: weight/templates/import_csv_preview.html:29
 msgid "The following values could not be converted."
-msgstr ""
+msgstr "Următoarele valori nu au putut fi convertite."
 
 #: weight/templates/import_csv_preview.html:31
 msgid ""
@@ -3746,20 +3358,29 @@ msgid ""
 "are!)\n"
 "    and try to import the list again."
 msgstr ""
+"Aceste valori nu au putut fi convertite într-o înregistrare în jurnalul de "
+"greutate.\n"
+"    Motivele pentru aceasta ar putea fi orice, de la un format nerecunoscut\n"
+"    de dată sau număr, o problemă de codare sau altceva. Te rugăm să "
+"verifici\n"
+"    dacă nu există erori evidente în listă (și corectează-le dacă există!)\n"
+"    și încearcă să imporți lista din nou."
 
 #: weight/templates/import_csv_preview.html:37
 msgid ""
 "Remember that the expected structure is <strong>date</strong>\n"
 "    on the first columns and <strong>weight</strong> on the second."
 msgstr ""
+"Amintește-ți că structura așteptată este <strong>data</strong>\n"
+"    pe prima coloană și <strong>greutatea</strong> pe a doua."
 
 #: weight/templates/import_csv_preview.html:54
 msgid "There were no errors, all entries could be converted!"
-msgstr ""
+msgstr "Nu au existat erori, toate intrările au putut fi convertite!"
 
 #: weight/templates/import_csv_preview.html:58
 msgid "Import all successfully converted entries"
-msgstr ""
+msgstr "Importă toate intrările convertite cu succes"
 
 #: weight/templates/import_csv_preview.html:59
 msgid ""
@@ -3769,48 +3390,380 @@ msgid ""
 "will simply be ignored. It's up to you to decide whether they are useful\n"
 "(unrecognised entries) or not (e.g. headers, comments, etc.)."
 msgstr ""
+"Continuă aici dacă vrei să imporți în jurnalul tău de greutate toate\n"
+"intrările care au fost convertite cu succes. Toate intrările care au produs "
+"o eroare\n"
+"vor fi pur și simplu ignorate. Rămâne la latitudinea ta să decizi dacă sunt "
+"utile\n"
+"(intrări nerecunoscute) sau nu (de ex. anteturi, comentarii etc.)."
 
 #: weight/templates/import_csv_preview.html:69
 msgid "Import"
-msgstr "Import"
+msgstr "Importă"
 
 #: weight/templates/import_csv_preview.html:74
 msgid "Or try it again"
-msgstr "Sau încercați din nou"
+msgstr "Sau încearcă din nou"
 
 #: weight/templates/import_csv_preview.html:76
 msgid ""
 "You can correct the list here and re-submit it as often as\n"
 "you want."
 msgstr ""
-"Puteți corecta lista aici și o puteți retrimite de câte ori\n"
-"vreți."
+"Poți corecta lista aici și o poți retrimite de câte ori\n"
+"dorești."
 
 #: weight/templates/import_csv_preview.html:85
 msgid "Re-Submit"
-msgstr "Retrimiteți"
+msgstr "Retrimite"
 
-#: weight/templates/overview.html:68
-msgid "Export as CSV"
-msgstr "Exportați ca CSV"
+#~ msgid "Password reset successful"
+#~ msgstr "Resetarea parolei a avut succes"
 
-#: weight/templates/overview.html:72
-msgid "Import from spreadsheet"
-msgstr "Importați din foaie de calcul"
+#~ msgid ""
+#~ "We've e-mailed you instructions for setting your password to the e-mail "
+#~ "address you submitted. You should be receiving it shortly."
+#~ msgstr ""
+#~ "Ți-am trimis prin e-mail instrucțiunile pentru setarea parolei pe adresa "
+#~ "furnizată. Ar trebui să le primești în scurt timp."
 
-#: weight/views.py:104
 #, python-format
-msgid "Edit weight entry for the %s"
-msgstr "Editați intrarea de greutate pentru %s"
+#~ msgid ""
+#~ "You're receiving this e-mail because you requested a password reset for "
+#~ "your user account at %(site_name)s."
+#~ msgstr ""
+#~ "Primești acest e-mail pentru că ai solicitat resetarea parolei pentru "
+#~ "contul tău de utilizator pe %(site_name)s."
 
-#: weight/views.py:123
-msgid "Successfully deleted."
-msgstr "Șters cu succes."
+#~ msgid "Please go to the following page and choose a new password:"
+#~ msgstr "Te rugăm să accesezi următoarea pagină și să alegi o nouă parolă:"
 
-#: weight/views.py:127
+#~ msgid "Your username, in case you've forgotten:"
+#~ msgstr "Numele tău de utilizator, în caz că l-ai uitat:"
+
+#~ msgid "Thanks for using our site!"
+#~ msgstr "Îți mulțumim că folosești site-ul nostru!"
+
 #, python-format
-msgid "Delete weight entry for the %s"
-msgstr "Ștergeți greutatea pentru %s"
+#~ msgid "The %(site_name)s team"
+#~ msgstr "Echipa %(site_name)s"
+
+#~ msgid "Password reset confirmation"
+#~ msgstr "Confirmarea resetării parolei"
+
+#~ msgid "Do you really want to change this user&#39;s password?"
+#~ msgstr "Ești sigur că vrei să schimbi parola acestui utilizator?"
+
+#~ msgctxt "weight unit, i.e. ounces"
+#~ msgid "oz"
+#~ msgstr "oz"
+
+#~ msgid "File type is not supported"
+#~ msgstr "Tipul de fișier nu este acceptat"
+
+#~ msgid "If you enter a time, you must enter both start and end time."
+#~ msgstr ""
+#~ "Dacă introduci o oră, trebuie să introduci atât ora de început cât și ora "
+#~ "de finalizare."
+
+#~ msgid "Used for password resets and, optionally, e-mail reminders."
+#~ msgstr ""
+#~ "Folosit pentru resetarea parolei și, opțional, mementouri prin e-mail."
+
+#~ msgid "Workout reminders"
+#~ msgstr "Mementouri antrenament"
+
+#~ msgid "Show exercise comments"
+#~ msgstr "Arată comentariile exercițiilor"
+
+#~ msgid "Check to show exercise comments on the workout view"
+#~ msgstr ""
+#~ "Bifează pentru a arăta comentariile exercițiilor în vizualizarea "
+#~ "antrenamentului"
+
+#~ msgid "Also use ingredients in English"
+#~ msgstr "Folosește și ingrediente în engleză"
+
+#~ msgid ""
+#~ "Check to also show ingredients in English while creating\n"
+#~ "a nutritional plan. These ingredients are extracted from a list provided\n"
+#~ "by the US Department of Agriculture. It is extremely complete, with "
+#~ "around\n"
+#~ "7000 entries, but can be somewhat overwhelming and make the search "
+#~ "difficult."
+#~ msgstr ""
+#~ "Bifează pentru a afișa și ingredientele în engleză la crearea unui plan\n"
+#~ "nutrițional. Aceste ingrediente sunt extrase dintr-o listă furnizată de\n"
+#~ "Departamentul Agriculturii din SUA. Este extrem de completă, cu "
+#~ "aproximativ\n"
+#~ "7000 de intrări, dar poate fi oarecum copleșitoare și poate îngreuna "
+#~ "căutarea."
+
+#~ msgid "Allow external access"
+#~ msgstr "Permite acces extern"
+
+#~ msgid ""
+#~ "Allow external users to access your workouts and logs in a read-only "
+#~ "mode. You need to set this before you can share links e.g. to social "
+#~ "media."
+#~ msgstr ""
+#~ "Permite utilizatorilor externi să acceseze antrenamentele și jurnalele "
+#~ "tale în modul de citire (read-only). Trebuie să setezi acest lucru "
+#~ "înainte de a putea distribui linkuri, de ex. pe rețelele de socializare."
+
+#~ msgid "Your API key"
+#~ msgstr "Cheia ta API"
+
+#~ msgid "You need to verify your email to contribute exercises"
+#~ msgstr ""
+#~ "Trebuie să îți verifici adresa de e-mail pentru a contribui cu exerciții"
+
+#~ msgid "You were successfully registered"
+#~ msgstr "Te-ai înregistrat cu succes"
+
+#, python-format
+#~ msgid "A verification email was sent to %(email)s"
+#~ msgstr "Un e-mail de verificare a fost trimis la %(email)s"
+
+#~ msgid "View Object"
+#~ msgstr "Vezi obiect"
+
+#~ msgid "Email verification"
+#~ msgstr "Verificarea e-mailului"
+
+#, python-format
+#~ msgid "%(username)s, your email was verified"
+#~ msgstr "%(username)s, e-mailul tău a fost verificat"
+
+#~ msgid "Error, invalid verification token"
+#~ msgstr "Eroare, token de verificare invalid"
+
+#~ msgid "Email Confirmation"
+#~ msgstr "Confirmarea e-mailului"
+
+#, python-format
+#~ msgid "You are almost there, %(username)s!"
+#~ msgstr "Aproape ai terminat, %(username)s!"
+
+#, python-format
+#~ msgid "Please click <a href=\"%(link)s\">here</a> to confirm your email"
+#~ msgstr ""
+#~ "Te rugăm să dai click <a href=\"%(link)s\">aici</a> pentru a-ți confirma "
+#~ "e-mailul"
+
+#, python-format
+#~ msgid "The token expires on %(time)s"
+#~ msgstr "Token-ul expiră pe %(time)s"
+
+#~ msgid "Ingredient weight units"
+#~ msgstr "Unități de greutate pentru ingrediente"
+
+#~ msgid "Some way of answering you (e-mail, etc.)"
+#~ msgstr "Metodă de contactare (e-mail, etc.)"
+
+#~ msgid "Comment"
+#~ msgstr "Comentariu"
+
+#~ msgid "What do you want to say?"
+#~ msgstr "Ce vrei să spui?"
+
+#~ msgid "Category"
+#~ msgstr "Categoria"
+
+#~ msgid "Primary muscles"
+#~ msgstr "Mușchii primari"
+
+#~ msgid "Secondary muscles"
+#~ msgstr "Mușchii secundari"
+
+#~ msgid "Exercise Categories"
+#~ msgstr "Categorii de Exerciții"
+
+#~ msgid "A comment about how to correctly do this exercise."
+#~ msgstr "Comentariu despre modul de a face acest exercițiu corect."
+
+#, fuzzy
+#~| msgid "Add new exercise"
+#~ msgid "Alias for an exercise"
+#~ msgstr "Adăugați un exercițiu nou"
+
+#, fuzzy
+#~| msgid "Weight log"
+#~ msgid "Height"
+#~ msgstr "Jurnalul de greutate"
+
+#~ msgid "Language"
+#~ msgstr "Limba"
+
+#, fuzzy
+#~| msgid "Workout reminders"
+#~ msgid "Workout template"
+#~ msgstr "Mementouri de antrenament"
+
+#, fuzzy
+#~| msgid "Weight log"
+#~ msgid "Height (in)"
+#~ msgstr "Jurnalul de greutate"
+
+#, fuzzy
+#~| msgid "Weight log"
+#~ msgid "Weight (kg)"
+#~ msgstr "Jurnalul de greutate"
+
+#, fuzzy
+#~| msgid "Weight log"
+#~ msgid "Weight (lbs)"
+#~ msgstr "Jurnalul de greutate"
+
+#~ msgid "Sample day"
+#~ msgstr "Zi de probă"
+
+#~ msgid "Another sample day"
+#~ msgstr "Altă zi de probă"
+
+#~ msgid "Sample nutritional plan"
+#~ msgstr "Plan nutrițional de probă"
+
+#, python-brace-format
+#~ msgid "Placeholder workout nr {0} for schedule"
+#~ msgstr "Substituent workout nr {0} pentru program"
+
+#, fuzzy
+#~ msgid "My cool workout schedule"
+#~ msgstr "Programul meu cool de antrenament"
+
+#~ msgid "Empty placeholder schedule"
+#~ msgstr "Program substituent gol"
+
+#~ msgid "Day of the week"
+#~ msgstr "Zi a săptămânii"
+
+#, fuzzy
+#~| msgid "Add new exercise"
+#~ msgid "Add one now"
+#~ msgstr "Adăugați un exercițiu nou"
+
+#, python-format
+#~ msgid "Edit weight entry for the %s"
+#~ msgstr "Editați intrarea de greutate pentru %s"
+
+#~ msgid "Successfully deleted."
+#~ msgstr "Șters cu succes."
+
+#, python-format
+#~ msgid "Delete weight entry for the %s"
+#~ msgstr "Ștergeți greutatea pentru %s"
+
+#~ msgid "Submission date"
+#~ msgstr "Data depunerii"
+
+#~ msgid "Accept"
+#~ msgstr "Acceptare"
+
+#~ msgid "Decline"
+#~ msgstr "Declinare"
+
+#~ msgid "Pending"
+#~ msgstr "în așteptare"
+
+#~ msgid "Accepted"
+#~ msgstr "Acceptat"
+
+#~ msgid "Declined"
+#~ msgstr "Declinat"
+
+#~ msgid "Export as CSV"
+#~ msgstr "Exportați ca CSV"
+
+#~ msgid "Import from spreadsheet"
+#~ msgstr "Importați din foaie de calcul"
+
+#, python-format
+#~ msgid "This exercise was submitted by <strong>%(username)s</strong>."
+#~ msgstr "Acest exercițiu a fost prezentat de <strong>%(username)s</strong>."
+
+#~ msgid "Ingredients"
+#~ msgstr "Ingrediente"
+
+#~ msgid "Add new exercise"
+#~ msgstr "Adăugați un exercițiu nou"
+
+#~ msgid "Main muscles"
+#~ msgstr "Mușchii principali"
+
+#~ msgid "exercise name"
+#~ msgstr "numele exercițiului"
+
+#~ msgid "Submitting an exercise"
+#~ msgstr "Depunerea unui exercițiu"
+
+#~ msgid ""
+#~ "Thank you for submitting an exercise. This is much\n"
+#~ "appreciated!"
+#~ msgstr ""
+#~ "Vă mulțumim pentru trimiterea unui exercițiu. E mult ⏎\n"
+#~ "apreciat!"
+
+#~ msgid "No categories."
+#~ msgstr "Nici o categorie."
+
+#~ msgid "Use link to create one"
+#~ msgstr "Folosiți link-ul pentru a crea una"
+
+#~ msgid "Exercise is pending review"
+#~ msgstr "Exercițiul este în așteptare revizuire"
+
+#~ msgid "Till then, it will not be shown in the overview or the search."
+#~ msgstr ""
+#~ "Până atunci el nu va fi indicat in prezentarea generală sau in căutare."
+
+#~ msgid "Comments for this exercise"
+#~ msgstr "Comentarii pentru acest exercițiu"
+
+#~ msgid "Add new comment"
+#~ msgstr "Adaugați un comentariu"
+
+#~ msgid "The diagram shows the most used muscles on this exercise"
+#~ msgstr "Diagrama arată cele mai utilizate mușchi la acest exercițiu"
+
+#~ msgid "Anterior deltoid"
+#~ msgstr "Deltoidul anterior"
+
+#~ msgid "Biceps femoris"
+#~ msgstr "Biceps femoral"
+
+#~ msgid "Brachialis"
+#~ msgstr "Brahial"
+
+#~ msgid "Gastrocnemius"
+#~ msgstr "Gastrocnemius"
+
+#~ msgid "Gluteus maximus"
+#~ msgstr "Gluteus maximus"
+
+#~ msgid "Latissimus dorsi"
+#~ msgstr "Dorsal mare"
+
+#~ msgid "Obliquus externus abdominis"
+#~ msgstr "Obliquus externus abdominis"
+
+#~ msgid "Pectoralis major"
+#~ msgstr "Pectoral major"
+
+#~ msgid "Quadriceps femoris"
+#~ msgstr "Quadriceps femoris"
+
+#~ msgid "Rectus abdominis"
+#~ msgstr "Drept abdominal"
+
+#~ msgid "Serratus anterior"
+#~ msgstr "Serratus anterior"
+
+#~ msgid "Soleus"
+#~ msgstr "Soleus"
+
+#~ msgid "Trapezius"
+#~ msgstr "Trapez"
 
 #~ msgid "Twitter"
 #~ msgstr "Twitter"
@@ -3828,15 +3781,5 @@ msgstr "Ștergeți greutatea pentru %s"
 #~ msgid "Last 12 months"
 #~ msgstr "Ultimele 12 luni"
 
-#~ msgid "No filter"
-#~ msgstr "Fără filtru"
-
-#~ msgctxt "Noun, not verb"
-#~ msgid "Change"
-#~ msgstr "Schimba"
-
 #~ msgid "Days"
 #~ msgstr "Zile"
-
-#~ msgid "Edit weight"
-#~ msgstr "Editați greutatea"

@@ -20,7 +20,6 @@ from django.conf import settings
 from django.conf.urls import include
 from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
-from django.contrib import admin
 from django.contrib.sitemaps.views import (
     index,
     sitemap,
@@ -28,7 +27,16 @@ from django.contrib.sitemaps.views import (
 from django.urls import path
 
 # Third Party
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from rest_framework import routers
+from rest_framework_simplejwt.views import (
+    TokenRefreshView,
+    TokenVerifyView,
+)
 
 # wger
 from wger.core.api import views as core_api_views
@@ -38,12 +46,12 @@ from wger.gallery.api import views as gallery_api_views
 from wger.manager.api import views as manager_api_views
 from wger.measurements.api import views as measurements_api_views
 from wger.nutrition.api import views as nutrition_api_views
-from wger.nutrition.sitemap import NutritionSitemap
+from wger.trophies.api import views as trophies_api_views
+from wger.utils import oidc_auth
+from wger.utils.api_schema import CachedSchemaGenerator
 from wger.utils.generic_views import TextTemplateView
 from wger.weight.api import views as weight_api_views
 
-
-#admin.autodiscover()
 
 #
 # REST API
@@ -55,80 +63,180 @@ router = routers.DefaultRouter()
 #
 
 # Manager app
-router.register(r'day', manager_api_views.DayViewSet, basename='day')
-router.register(r'set', manager_api_views.SetViewSet, basename='Set')
-router.register(r'setting', manager_api_views.SettingViewSet, basename='Setting')
-router.register(r'workout', manager_api_views.WorkoutViewSet, basename='workout')
-router.register(r'templates', manager_api_views.UserWorkoutTemplateViewSet, basename='templates')
+router.register(r'routine', manager_api_views.RoutineViewSet, basename='routine')
+router.register(r'templates', manager_api_views.UserRoutineTemplateViewSet, basename='templates')
 router.register(
     r'public-templates',
-    manager_api_views.PublicWorkoutTemplateViewSet,
+    manager_api_views.PublicRoutineTemplateViewSet,
     basename='public-templates',
 )
 router.register(
-    r'workoutsession', manager_api_views.WorkoutSessionViewSet, basename='workoutsession'
+    r'workoutsession',
+    manager_api_views.WorkoutSessionViewSet,
+    basename='workoutsession',
 )
+router.register(
+    r'day',
+    manager_api_views.RoutineDayViewSet,
+    basename='day',
+)
+router.register(
+    r'slot',
+    manager_api_views.SlotViewSet,
+    basename='slot',
+)
+router.register(
+    r'slot-entry',
+    manager_api_views.SlotEntryViewSet,
+    basename='slot-entry',
+)
+router.register(
+    r'weight-config',
+    manager_api_views.WeightConfigViewSet,
+    basename='weight-config',
+)
+router.register(
+    r'max-weight-config',
+    manager_api_views.MaxWeightConfigViewSet,
+    basename='max-weight-config',
+)
+router.register(
+    r'repetitions-config',
+    manager_api_views.RepetitionsConfigViewSet,
+    basename='repetitions-config',
+)
+router.register(
+    r'max-repetitions-config',
+    manager_api_views.MaxRepetitionsConfigViewSet,
+    basename='max-repetitions-config',
+)
+router.register(
+    r'sets-config',
+    manager_api_views.SetsConfigViewSet,
+    basename='sets-config',
+)
+router.register(
+    r'max-sets-config',
+    manager_api_views.MaxSetsConfigViewSet,
+    basename='max-sets-config',
+)
+router.register(
+    r'rest-config',
+    manager_api_views.RestConfigViewSet,
+    basename='rest-config',
+)
+router.register(
+    r'max-rest-config',
+    manager_api_views.MaxRestConfigViewSet,
+    basename='max-rest-config',
+)
+router.register(r'rir-config', manager_api_views.RiRConfigViewSet, basename='rir-config')
+router.register(r'max-rir-config', manager_api_views.MaxRiRConfigViewSet, basename='max-rir-config')
 router.register(r'workoutlog', manager_api_views.WorkoutLogViewSet, basename='workoutlog')
-router.register(r'schedulestep', manager_api_views.ScheduleStepViewSet, basename='schedulestep')
-router.register(r'schedule', manager_api_views.ScheduleViewSet, basename='schedule')
 
 # Core app
-router.register(r'daysofweek', core_api_views.DaysOfWeekViewSet, basename='daysofweek')
 router.register(r'language', core_api_views.LanguageViewSet, basename='language')
 router.register(r'license', core_api_views.LicenseViewSet, basename='license')
-router.register(r'userprofile', core_api_views.UserProfileViewSet, basename='userprofile')
+# userprofile is not registered here: a user has exactly one profile, so it is
+# a plain path without list or detail routes (see UserProfileView)
 router.register(
     r'setting-repetitionunit',
     core_api_views.RepetitionUnitViewSet,
-    basename='setting-repetition-unit'
+    basename='setting-repetition-unit',
 )
 router.register(
-    r'setting-weightunit', core_api_views.WeightUnitViewSet, basename='setting-weight-unit'
+    r'setting-weightunit', core_api_views.RoutineWeightUnitViewSet, basename='setting-weight-unit'
 )
 
 # Exercises app
-router.register(r'exerciseinfo', exercises_api_views.ExerciseInfoViewset, basename='exerciseinfo')
-router.register(r'exercise', exercises_api_views.ExerciseViewSet, basename='exercise')
-router.register(r'equipment', exercises_api_views.EquipmentViewSet, basename='api')
 router.register(
-    r'exercisecategory', exercises_api_views.ExerciseCategoryViewSet, basename='exercisecategory'
+    r'exerciseinfo',
+    exercises_api_views.ExerciseInfoViewset,
+    basename='exerciseinfo',
+)
+
+router.register(
+    r'exercise-translation',
+    exercises_api_views.ExerciseTranslationViewSet,
+    basename='exercise-translation',
 )
 router.register(
-    r'exerciseimage', exercises_api_views.ExerciseImageViewSet, basename='exerciseimage'
+    r'exercise',
+    exercises_api_views.ExerciseViewSet,
+    basename='exercise',
 )
 router.register(
-    r'exercisecomment', exercises_api_views.ExerciseCommentViewSet, basename='exercisecomment'
+    r'equipment',
+    exercises_api_views.EquipmentViewSet,
+    basename='equipment',
 )
-router.register(r'muscle', exercises_api_views.MuscleViewSet, basename='muscle')
+router.register(
+    r'deletion-log',
+    exercises_api_views.DeletionLogViewSet,
+    basename='deletion-log',
+)
+router.register(
+    r'exercisecategory',
+    exercises_api_views.ExerciseCategoryViewSet,
+    basename='exercisecategory',
+)
+router.register(
+    r'video',
+    exercises_api_views.ExerciseVideoViewSet,
+    basename='video',
+)
+router.register(
+    r'exerciseimage',
+    exercises_api_views.ExerciseImageViewSet,
+    basename='exerciseimage',
+)
+router.register(
+    r'exercisecomment',
+    exercises_api_views.ExerciseCommentViewSet,
+    basename='exercisecomment',
+)
+router.register(
+    r'exercisealias',
+    exercises_api_views.ExerciseAliasViewSet,
+    basename='exercisealias',
+)
+router.register(
+    r'muscle',
+    exercises_api_views.MuscleViewSet,
+    basename='muscle',
+)
 
 # Nutrition app
 router.register(r'ingredient', nutrition_api_views.IngredientViewSet, basename='api-ingredient')
 router.register(
     r'ingredientinfo', nutrition_api_views.IngredientInfoViewSet, basename='api-ingredientinfo'
 )
-router.register(r'weightunit', nutrition_api_views.WeightUnitViewSet, basename='weightunit')
+router.register(
+    r'ingredient-sync',
+    nutrition_api_views.IngredientSyncViewSet,
+    basename='api-ingredient-sync',
+)
 router.register(
     r'ingredientweightunit',
     nutrition_api_views.IngredientWeightUnitViewSet,
-    basename='ingredientweightunit'
+    basename='ingredientweightunit',
 )
 router.register(
     r'nutritionplan', nutrition_api_views.NutritionPlanViewSet, basename='nutritionplan'
 )
 router.register(
-    r'nutritionplaninfo',
-    nutrition_api_views.NutritionPlanInfoViewSet,
-    basename='nutritionplaninfo'
+    r'nutritionplaninfo', nutrition_api_views.NutritionPlanInfoViewSet, basename='nutritionplaninfo'
 )
 router.register(r'nutritiondiary', nutrition_api_views.LogItemViewSet, basename='nutritiondiary')
 router.register(r'meal', nutrition_api_views.MealViewSet, basename='meal')
 router.register(r'mealitem', nutrition_api_views.MealItemViewSet, basename='mealitem')
+router.register(r'ingredient-image', nutrition_api_views.ImageViewSet, basename='ingredientimage')
 
 # Weight app
 router.register(r'weightentry', weight_api_views.WeightEntryViewSet, basename='weightentry')
 
 # Gallery app
-router.register(r'gallery', gallery_api_views.ImageViewSet, basename='gallery')
+router.register(r'gallery', gallery_api_views.GalleryImageViewSet, basename='gallery')
 
 # Measurements app
 router.register(
@@ -142,18 +250,28 @@ router.register(
     basename='measurement-category',
 )
 
+# Trophies app
+router.register(r'trophy', trophies_api_views.TrophyViewSet, basename='trophy')
+router.register(r'user-trophy', trophies_api_views.UserTrophyViewSet, basename='user-trophy')
+router.register(
+    r'user-statistics',
+    trophies_api_views.UserStatisticsViewSet,
+    basename='user-statistics',
+)
+
 #
 # Sitemaps
 #
-sitemaps = {'exercises': ExercisesSitemap, 'nutrition': NutritionSitemap}
+sitemaps = {
+    'exercises': ExercisesSitemap,
+}  # 'nutrition': NutritionSitemap}
 
 #
 # The actual URLs
 #
 urlpatterns = i18n_patterns(
-    #url(r'^admin/', admin.site.urls),
     path('', include(('wger.core.urls', 'core'), namespace='core')),
-    path('workout/', include(('wger.manager.urls', 'manager'), namespace='manager')),
+    path('routine/', include(('wger.manager.urls', 'manager'), namespace='manager')),
     path('exercise/', include(('wger.exercises.urls', 'exercise'), namespace='exercise')),
     path('weight/', include(('wger.weight.urls', 'weight'), namespace='weight')),
     path('nutrition/', include(('wger.nutrition.urls', 'nutrition'), namespace='nutrition')),
@@ -161,52 +279,122 @@ urlpatterns = i18n_patterns(
     path('config/', include(('wger.config.urls', 'config'), namespace='config')),
     path('gym/', include(('wger.gym.urls', 'gym'), namespace='gym')),
     path('gallery/', include(('wger.gallery.urls', 'gallery'), namespace='gallery')),
-    path('email', include(('wger.mailer.urls', 'email'), namespace='email')),
+    path('trophies/', include(('wger.trophies.urls', 'trophies'), namespace='trophies')),
+    path(
+        'measurement/',
+        include(('wger.measurements.urls', 'measurements'), namespace='measurements'),
+    ),
+    path('email/', include(('wger.mailer.urls', 'email'), namespace='email')),
     path('sitemap.xml', index, {'sitemaps': sitemaps}, name='sitemap'),
     path(
         'sitemap-<section>.xml',
-        sitemap, {'sitemaps': sitemaps},
-        name='django.contrib.sitemaps.views.sitemap'
-    )
+        sitemap,
+        {'sitemaps': sitemaps},
+        name='django.contrib.sitemaps.views.sitemap',
+    ),
 )
 
 #
 # URLs without language prefix
 #
 urlpatterns += [
-    path('robots.txt', TextTemplateView.as_view(template_name="robots.txt"), name='robots'),
-
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('robots.txt', TextTemplateView.as_view(template_name='robots.txt'), name='robots'),
+    # allauth account pages are mounted without a language prefix: the OAuth
+    # callback's redirect_uri has to be stable
+    path('account/', include('allauth.urls')),
+    # REST auth API consumed by the Flutter app.
+    path('allauth/', include('allauth.headless.urls')),
+    # OAuth2/OIDC provider. Mounted at the root, the paths (/.well-known/... and
+    # /identity/o/...) are part of the include. The authorization endpoint is
+    # wrapped to keep the flow from starting when the provider isn't configured.
+    path('identity/o/authorize', oidc_auth.authorization_view, name='oidc-authorize'),
+    path('', include('allauth.idp.urls')),
     # API
-    path('api/v2/exercise/search/', exercises_api_views.search, name='exercise-search'),
-    path('api/v2/exerciseinfo/search/', exercises_api_views.search, name='exercise-info'),
-    path('api/v2/ingredient/search/', nutrition_api_views.search, name='ingredient-search'),
+    path(
+        'api/v2/exercise-submission/',
+        exercises_api_views.ExerciseSubmissionViewSet.as_view(),
+        name='exercise-submission',
+    ),
+    path('api/v2/check-language/', core_api_views.check_language, name='check-language'),
+    path(
+        'api/v2/userprofile/',
+        core_api_views.UserProfileView.as_view(),
+        name='userprofile',
+    ),
+    path(
+        'api/v2/userprofile/verify-email/',
+        core_api_views.VerifyEmailView.as_view(),
+        name='userprofile-verify-email',
+    ),
     path('api/v2/', include(router.urls)),
-
-    # The api user login
-    path(
-        'api/v2/login/', core_api_views.UserAPILoginView.as_view({'post': 'post'}), name='api_user'
-    ),
-    path(
-        'api/v2/register/',
-        core_api_views.UserAPIRegistrationViewSet.as_view({'post': 'post'}),
-        name='api_register'
-    ),
-
+    path('api/v2/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v2/token/verify', TokenVerifyView.as_view(), name='token_verify'),
     # Others
     path(
         'api/v2/version/',
         core_api_views.ApplicationVersionView.as_view({'get': 'get'}),
-        name='app_version'
+        name='app_version',
+    ),
+    path(
+        'api/v2/check-permission/',
+        core_api_views.PermissionView.as_view({'get': 'get'}),
+        name='permission',
     ),
     path(
         'api/v2/min-app-version/',
         core_api_views.RequiredApplicationVersionView.as_view({'get': 'get'}),
-        name='min_app_version'
+        name='min_app_version',
+    ),
+    path(
+        'api/v2/min-server-version/',
+        core_api_views.RequiredServerVersionView.as_view({'get': 'get'}),
+        name='min_server_version',
+    ),
+    path(
+        'api/v2/powersync-token',
+        core_api_views.get_powersync_token,
+        name='get_token',
+    ),
+    path(
+        'api/v2/powersync-keys',
+        core_api_views.get_powersync_keys,
+        name='powersync-keys',
+    ),
+    path(
+        'api/v2/upload-powersync-data',
+        core_api_views.upload_powersync_data,
+        name='powersync-data',
+    ),
+    # Api documentation
+    #
+    # metadata_class=None disables the OPTIONS handler on the HTML views: its
+    # metadata response would otherwise be rendered through the UI template,
+    # which requires context only the GET handler provides, and crash with 500.
+    path(
+        'api/v2/schema',
+        SpectacularAPIView.as_view(generator_class=CachedSchemaGenerator),
+        name='schema',
+    ),
+    path(
+        'api/v2/schema/ui',
+        SpectacularSwaggerView.as_view(url_name='schema', metadata_class=None),
+        name='api-swagger-ui',
+    ),
+    path(
+        'api/v2/schema/redoc',
+        SpectacularRedocView.as_view(url_name='schema', metadata_class=None),
+        name='api-redoc',
     ),
 ]
+
 
 #
 # URL for user uploaded files, served like this during development only
 #
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # urlpatterns.append(path('__debug__/', include('debug_toolbar.urls')))
+
+if settings.EXPOSE_PROMETHEUS_METRICS:
+    urlpatterns += [path('prometheus/', include('django_prometheus.urls'))]

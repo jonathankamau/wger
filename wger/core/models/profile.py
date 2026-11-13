@@ -17,8 +17,15 @@
 # Standard Library
 import datetime
 import decimal
+from functools import lru_cache
+from zoneinfo import (
+    ZoneInfo,
+    ZoneInfoNotFoundError,
+    available_timezones,
+)
 
 # Django
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -27,13 +34,23 @@ from django.core.validators import (
 )
 from django.db import models
 from django.db.models import IntegerField
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+# Third Party
+from allauth.account.models import EmailAddress
 
 # wger
 from wger.gym.models import Gym
+from wger.measurements.models import (
+    Category,
+    Measurement,
+)
 from wger.utils.constants import TWOPLACES
-from wger.utils.units import AbstractWeight
-from wger.weight.models import WeightEntry
+from wger.utils.units import (
+    AbstractHeight,
+    AbstractWeight,
+)
 
 # Local
 from .language import Language
@@ -52,6 +69,24 @@ def birthdate_validator(birthdate):
             _('%(birthdate)s is not a valid birthdate'),
             params={'birthdate': birthdate},
         )
+
+
+@lru_cache(maxsize=1)
+def available_timezone_names() -> frozenset[str]:
+    """
+    The IANA names, cached: available_timezones() rescans the tzdata on every call
+    """
+    return frozenset(available_timezones())
+
+
+def validate_timezone(value: str) -> None:
+    """
+    Validates that the given string is a real IANA timezone name.
+
+    An empty value is allowed and means that no client has reported one.
+    """
+    if value and value not in available_timezone_names():
+        raise ValidationError(f'"{value}" is not a valid IANA timezone name')
 
 
 class UserProfile(models.Model):
@@ -107,29 +142,6 @@ class UserProfile(models.Model):
     # User preferences
     #
 
-    show_comments = models.BooleanField(
-        verbose_name=_('Show exercise comments'),
-        help_text=_('Check to show exercise comments on the '
-                    'workout view'),
-        default=True,
-    )
-    """
-    Show exercise comments on workout view
-    """
-
-    # Also show ingredients in english while composing a nutritional plan
-    # (obviously this is only meaningful if the user has a language other than english)
-    show_english_ingredients = models.BooleanField(
-        verbose_name=_('Also use ingredients in English'),
-        help_text=_(
-            """Check to also show ingredients in English while creating
-a nutritional plan. These ingredients are extracted from a list provided
-by the US Department of Agriculture. It is extremely complete, with around
-7000 entries, but can be somewhat overwhelming and make the search difficult."""
-        ),
-        default=True
-    )
-
     workout_reminder_active = models.BooleanField(
         verbose_name=_('Activate workout reminders'),
         help_text=_(
@@ -138,16 +150,16 @@ by the US Department of Agriculture. It is extremely complete, with around
             'to provide a valid email for this '
             'to work.'
         ),
-        default=False
+        default=False,
     )
 
     workout_reminder = IntegerField(
         verbose_name=_('Remind before expiration'),
-        help_text=_('The number of days you want to be reminded '
-                    'before a workout expires.'),
+        help_text=_('The number of days you want to be reminded before a workout expires.'),
         default=14,
-        validators=[MinValueValidator(1), MaxValueValidator(30)]
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
+
     workout_duration = IntegerField(
         verbose_name=_('Default duration of workouts'),
         help_text=_(
@@ -156,8 +168,9 @@ by the US Department of Agriculture. It is extremely complete, with around
             'reminders.'
         ),
         default=12,
-        validators=[MinValueValidator(1), MaxValueValidator(30)]
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
+
     last_workout_notification = models.DateField(editable=False, blank=False, null=True)
     """
     The last time the user got a workout reminder email
@@ -176,8 +189,28 @@ by the US Department of Agriculture. It is extremely complete, with around
             'language used on the website.'
         ),
         default=2,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
+
+    weight_rounding = models.DecimalField(
+        default=None,
+        null=True,
+        max_digits=4,
+        decimal_places=2,
+    )
+    """
+    Default rounding for weight
+    """
+
+    repetitions_rounding = models.DecimalField(
+        default=None,
+        null=True,
+        max_digits=4,
+        decimal_places=2,
+    )
+    """
+    Default rounding for repetitions
+    """
 
     #
     # User statistics
@@ -186,13 +219,13 @@ by the US Department of Agriculture. It is extremely complete, with around
         verbose_name=_('Age'),
         blank=False,
         null=True,
-        validators=[MinValueValidator(10), MaxValueValidator(100)]
+        validators=[MinValueValidator(10), MaxValueValidator(100)],
     )
     """The user's age"""
 
     birthdate = models.DateField(
-        verbose_name=('Date of Birth'),
-        blank=False,
+        verbose_name=_('Date of Birth'),
+        blank=True,
         null=True,
         validators=[birthdate_validator],
     )
@@ -200,9 +233,9 @@ by the US Department of Agriculture. It is extremely complete, with around
 
     height = IntegerField(
         verbose_name=_('Height (cm)'),
-        blank=False,
+        blank=True,
         validators=[MinValueValidator(140), MaxValueValidator(230)],
-        null=True
+        null=True,
     )
     """The user's height"""
 
@@ -221,7 +254,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         default=7,
         blank=False,
         null=True,
-        validators=[MinValueValidator(4), MaxValueValidator(10)]
+        validators=[MinValueValidator(4), MaxValueValidator(10)],
     )
     """The average hours of sleep per day"""
 
@@ -231,7 +264,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         default=8,
         blank=False,
         null=True,
-        validators=[MinValueValidator(1), MaxValueValidator(15)]
+        validators=[MinValueValidator(1), MaxValueValidator(15)],
     )
     """The average hours at work per day"""
 
@@ -242,7 +275,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         choices=INTENSITY,
         default=INTENSITY_LOW,
         blank=False,
-        null=True
+        null=True,
     )
     """Physical intensity of work"""
 
@@ -252,7 +285,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         default=3,
         blank=False,
         null=True,
-        validators=[MinValueValidator(1), MaxValueValidator(30)]
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
     """The average hours performing sports per week"""
 
@@ -263,7 +296,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         choices=INTENSITY,
         default=INTENSITY_MEDIUM,
         blank=False,
-        null=True
+        null=True,
     )
     """Physical intensity of sport activities"""
 
@@ -273,7 +306,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         default=8,
         blank=False,
         null=True,
-        validators=[MinValueValidator(1), MaxValueValidator(15)]
+        validators=[MinValueValidator(1), MaxValueValidator(15)],
     )
     """The average hours of free time per day"""
 
@@ -284,7 +317,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         choices=INTENSITY,
         default=INTENSITY_LOW,
         blank=False,
-        null=True
+        null=True,
     )
     """Physical intensity during free time"""
 
@@ -294,7 +327,7 @@ by the US Department of Agriculture. It is extremely complete, with around
         default=2500,
         blank=False,
         null=True,
-        validators=[MinValueValidator(1500), MaxValueValidator(5000)]
+        validators=[MinValueValidator(1500), MaxValueValidator(5000)],
     )
     """Basic caloric intake based on physical activity"""
 
@@ -309,27 +342,31 @@ by the US Department of Agriculture. It is extremely complete, with around
     )
     """Preferred weight unit"""
 
-    ro_access = models.BooleanField(
-        verbose_name=_('Allow external access'),
-        help_text=_(
-            'Allow external users to access your workouts and '
-            'logs in a read-only mode. You need to set this '
-            'before you can share links e.g. to social media.'
-        ),
-        default=False
-    )
-    """Allow anonymous read-only access"""
-
     num_days_weight_reminder = models.IntegerField(
-        verbose_name=_('Automatic reminders for weight '
-                       'entries'),
-        help_text=_('Number of days after the last '
-                    'weight entry (enter 0 to '
-                    'deactivate)'),
+        verbose_name=_('Automatic reminders for weight entries'),
+        help_text=_('Number of days after the last weight entry (enter 0 to deactivate)'),
         validators=[MinValueValidator(0), MaxValueValidator(30)],
-        default=0
+        default=0,
     )
     """Number of Days for email weight reminder"""
+
+    time_zone = models.CharField(
+        verbose_name='Timezone',
+        max_length=50,
+        blank=True,
+        default='',
+        validators=[validate_timezone],
+        help_text='IANA timezone name, e.g. "Europe/Berlin". Empty means no '
+        'client has reported one and the instance timezone is used.',
+    )
+    """
+    IANA timezone name (e.g. "Europe/Berlin") used to compute what calendar day
+    a workout session, log, or other "local" event counts for.
+
+    Empty means no client has reported one. That is not the same as the instance
+    timezone: features that would rather say nothing than say something wrong
+    check for it, see the time trophies.
+    """
 
     #
     # API
@@ -349,6 +386,47 @@ by the US Department of Agriculture. It is extremely complete, with around
     behalf over the REST API
     """
 
+    trophies_enabled = models.BooleanField(
+        default=True,
+        verbose_name=_('Enable trophies'),
+        help_text=_('Enable or disable the trophy system for this user'),
+    )
+    """Flag to enable or disable trophies for this user"""
+
+    @property
+    def get_allauth_email(self) -> EmailAddress | None:
+        try:
+            return EmailAddress.objects.get_for_user(user=self.user, email=self.user.email)
+        except EmailAddress.DoesNotExist:
+            return None
+
+    @property
+    def is_verified(self) -> bool:
+        email_obj = self.get_allauth_email
+        return email_obj is not None and email_obj.verified
+
+    @property
+    def is_trustworthy(self) -> bool:
+        """
+        Flag indicating whether the user "is trustworthy" and can submit or edit exercises
+
+        At the moment the criteria are:
+        - the account has existed for 3 weeks
+        - the email address has been verified
+        """
+
+        # Superusers are always trustworthy
+        if self.user.is_superuser:
+            return True
+
+        # Temporary users are never trustworthy
+        if self.is_temporary:
+            return False
+
+        days_since_joined = datetime.date.today() - self.user.date_joined.date()
+        minimum_account_age = settings.WGER_SETTINGS['MIN_ACCOUNT_AGE_TO_TRUST']
+        return days_since_joined.days > minimum_account_age and self.is_verified
+
     @property
     def weight(self):
         """
@@ -356,8 +434,9 @@ by the US Department of Agriculture. It is extremely complete, with around
         more consistent with the other settings (age, height, etc.)
         """
         try:
-            weight = WeightEntry.objects.filter(user=self.user).latest().weight
-        except WeightEntry.DoesNotExist:
+            entry = Measurement.body_weight_for(self.user).latest('date')
+            weight = entry.value_in(self.weight_unit)
+        except Measurement.DoesNotExist:
             weight = 0
         return weight
 
@@ -385,17 +464,16 @@ by the US Department of Agriculture. It is extremely complete, with around
         """
         Make sure the total amount of hours is 24
         """
-        if (
-            (self.sleep_hours and self.freetime_hours and self.work_hours)
-            and (self.sleep_hours + self.freetime_hours + self.work_hours) > 24
-        ):
+        if (self.sleep_hours and self.freetime_hours and self.work_hours) and (
+            self.sleep_hours + self.freetime_hours + self.work_hours
+        ) > 24:
             raise ValidationError(_('The sum of all hours has to be 24'))
 
     def __str__(self):
         """
         Return a more human-readable representation
         """
-        return f"Profile for user {self.user}"
+        return f'Profile for user {self.user}'
 
     @property
     def use_metric(self):
@@ -404,6 +482,22 @@ by the US Department of Agriculture. It is extremely complete, with around
         :return: Boolean
         """
         return self.weight_unit == 'kg'
+
+    @property
+    def zone_info(self) -> ZoneInfo:
+        """
+        The user's timezone, falling back to the instance one
+
+        This is the only place the fallback is spelled out. Use
+        ``time_zone`` itself to tell a reported zone from an assumed one.
+        """
+        if not self.time_zone:
+            return timezone.get_default_timezone()
+
+        try:
+            return ZoneInfo(self.time_zone)
+        except (ZoneInfoNotFoundError, ValueError):
+            return timezone.get_default_timezone()
 
     def calculate_bmi(self):
         """
@@ -420,7 +514,8 @@ by the US Department of Agriculture. It is extremely complete, with around
             return 0
 
         weight = self.weight if self.use_metric else AbstractWeight(self.weight, 'lb').kg
-        return weight / pow(self.height / decimal.Decimal(100), 2)
+        height = self.height if self.use_metric else AbstractHeight(self.height, 'inches').inches
+        return weight / pow(height / decimal.Decimal(100), 2)
 
     def calculate_basal_metabolic_rate(self, formula=1):
         """
@@ -488,25 +583,17 @@ by the US Department of Agriculture. It is extremely complete, with around
 
     def user_bodyweight(self, weight):
         """
-        Create a new weight entry as needed
+        Create a new weight entry and return it
         """
-        if (
-            not WeightEntry.objects.filter(user=self.user).exists() or (
-                datetime.date.today() - WeightEntry.objects.filter(user=self.user).latest().date >
-                datetime.timedelta(days=3)
-            )
-        ):
-            entry = WeightEntry()
-            entry.weight = weight
-            entry.user = self.user
-            entry.date = datetime.date.today()
-            entry.save()
+        category = Category.get_or_create_body_weight(self.user, unit=self.weight_unit)
+        entry = Measurement(
+            category=category,
+            value=weight,
+            date=timezone.now(),
+            extra_data={'unit': self.weight_unit},
+        )
+        entry.save()
 
-        # Update the last entry
-        else:
-            entry = WeightEntry.objects.filter(user=self.user).latest()
-            entry.weight = weight
-            entry.save()
         return entry
 
     def get_owner_object(self):

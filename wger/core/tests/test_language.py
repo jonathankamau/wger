@@ -16,7 +16,9 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Django
-from django.urls import reverse_lazy
+from django.urls import (
+    reverse_lazy,
+)
 
 # wger
 from wger.core.models import Language
@@ -39,7 +41,7 @@ class LanguageRepresentationTestCase(WgerTestCase):
         """
         Test that the representation of an object is correct
         """
-        self.assertEqual(f"{Language.objects.get(pk=1)}", 'Deutsch (de)')
+        self.assertEqual(f'{Language.objects.get(pk=1)}', 'Deutsch (de)')
 
 
 class LanguageOverviewTest(WgerAccessTestCase):
@@ -67,7 +69,7 @@ class CreateLanguageTestCase(WgerAddTestCase):
 
     object_class = Language
     url = 'core:language:add'
-    data = {'short_name': 'dk', 'full_name': 'Dansk'}
+    data = {'short_name': 'dk', 'full_name': 'Dansk', 'full_name_en': 'Danish'}
 
 
 class EditLanguageTestCase(WgerEditTestCase):
@@ -78,7 +80,7 @@ class EditLanguageTestCase(WgerEditTestCase):
     object_class = Language
     url = 'core:language:edit'
     pk = 1
-    data = {'short_name': 'dk', 'full_name': 'Dansk'}
+    data = {'short_name': 'dk', 'full_name': 'Dansk', 'full_name_en': 'Danish'}
 
 
 class DeleteLanguageTestCase(WgerDeleteTestCase):
@@ -91,10 +93,48 @@ class DeleteLanguageTestCase(WgerDeleteTestCase):
     pk = 1
 
 
+class UseBrowserLanguageRedirectTestCase(WgerTestCase):
+    """
+    The ``?next=`` parameter must only redirect to the same origin.
+    """
+
+    URL = reverse_lazy('core:language:browser_language')
+
+    def test_open_redirect_protocol_relative_blocked(self):
+        response = self.client.get(self.URL, {'next': '//evil.example/x'})
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            response['Location'].startswith('//evil.example'),
+            msg=f'open redirect to {response["Location"]!r}',
+        )
+
+    def test_open_redirect_absolute_url_blocked(self):
+        response = self.client.get(self.URL, {'next': 'https://evil.example/'})
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn('evil.example', response['Location'])
+
+    def test_open_redirect_url_encoded_blocked(self):
+        response = self.client.get(self.URL + '?next=%2F%2Fevil.example%2Fx')
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn('evil.example', response['Location'])
+
+    def test_safe_relative_next_passes_through(self):
+        response = self.client.get(self.URL, {'next': '/exercise/overview'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/exercise/overview')
+
+    def test_language_prefix_is_still_stripped(self):
+        response = self.client.get(self.URL, {'next': '/en/exercise/overview'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/exercise/overview')
+
+
 class LanguageApiTestCase(api_base_test.ApiBaseResourceTestCase):
     """
     Tests the language overview resource
     """
+
     pk = 1
     resource = Language
     private_resource = False
+    overview_cached = True

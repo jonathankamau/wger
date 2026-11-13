@@ -1,0 +1,833 @@
+# This file is part of wger Workout Manager.
+#
+# wger Workout Manager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# wger Workout Manager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+
+# Standard Library
+import datetime
+import zoneinfo
+from decimal import Decimal
+from unittest import mock
+
+# Django
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils import timezone
+
+# wger
+from wger.core.tests.api_base_test import ApiBaseResourceTestCase
+from wger.core.tests.base_testcase import WgerTestCase
+from wger.exercises.models import Exercise
+from wger.manager.dataclasses import WorkoutDayData
+from wger.manager.models import (
+    Day,
+    Label,
+    RepetitionsConfig,
+    Slot,
+    SlotEntry,
+    WeightConfig,
+    WorkoutLog,
+    WorkoutSession,
+)
+from wger.manager.models.routine import Routine
+
+
+class RoutineTestCase(WgerTestCase):
+    """
+    Test the different day and date functions
+    """
+
+    maxDiff = None
+    """Show full diff on assert failures"""
+
+    routine: Routine
+    day1: Day
+    day2: Day
+    day3: Day
+
+    def setUp(self):
+        super().setUp()
+
+        self.routine = Routine(
+            user_id=1,
+            name='A routine',
+            description='A routine',
+            start=datetime.date(2024, 1, 1),
+            end=datetime.date(2024, 1, 10),
+        )
+        self.routine.save()
+
+        self.day1 = Day(routine=self.routine, description='day 1', order=1)
+        self.day1.save()
+
+        self.day2 = Day(
+            routine=self.routine,
+            description='day 2',
+            order=2,
+            is_rest=True,
+        )
+        self.day2.save()
+
+        self.day3 = Day(routine=self.routine, description='day 3', order=3)
+        self.day3.save()
+
+        Label(routine=self.routine, start_offset=0, end_offset=3, label='First label').save()
+        Label(routine=self.routine, start_offset=4, end_offset=5, label='Second label').save()
+
+    def test_labels(self):
+        """
+        Test that the labels are correctly assigned to their dates
+        """
+
+        self.assertEqual(
+            self.routine.label_dict,
+            {
+                datetime.date(2024, 1, 1): 'First label',
+                datetime.date(2024, 1, 2): 'First label',
+                datetime.date(2024, 1, 3): 'First label',
+                datetime.date(2024, 1, 4): 'First label',
+                datetime.date(2024, 1, 5): 'Second label',
+                datetime.date(2024, 1, 6): 'Second label',
+            },
+        )
+
+    def test_date_sequences(self):
+        """
+        Test that the days are correctly outputted in a sequence
+        """
+
+        self.assertListEqual(
+            self.routine.date_sequence,
+            [
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 1),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day2,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 2),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day3,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 3),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 4),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day2,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 5),
+                    label='Second label',
+                ),
+                WorkoutDayData(
+                    day=self.day3,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 6),
+                    label='Second label',
+                ),
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=3,
+                    date=datetime.date(2024, 1, 7),
+                    label=None,
+                ),
+                WorkoutDayData(
+                    day=self.day2,
+                    iteration=3,
+                    date=datetime.date(2024, 1, 8),
+                    label=None,
+                ),
+                WorkoutDayData(
+                    day=self.day3,
+                    iteration=3,
+                    date=datetime.date(2024, 1, 9),
+                    label=None,
+                ),
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=4,
+                    date=datetime.date(2024, 1, 10),
+                    label=None,
+                ),
+            ],
+        )
+
+    def test_date_sequences_need_logs_to_advance_no_session(self):
+        """
+        Test that days do not advance if they have the need_logs_to_advance flag set
+        and there are no logs
+        """
+
+        # Arrange
+        today = timezone.localdate()
+        start = today - datetime.timedelta(days=5)
+        self.routine.start = start
+        self.routine.end = today + datetime.timedelta(weeks=3)
+        self.day1.need_logs_to_advance = True
+        self.day1.save()
+        WorkoutSession.objects.all().delete()
+        Label.objects.all().delete()
+
+        # Assert
+        sequence = self.routine.date_sequence
+
+        # The first day does not advance
+        self.assertEqual(
+            sequence[0],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start,
+            ),
+        )
+        self.assertEqual(
+            sequence[1],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=1),
+            ),
+        )
+        self.assertEqual(
+            sequence[2],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=2),
+            ),
+        )
+        self.assertEqual(
+            sequence[3],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=3),
+            ),
+        )
+        self.assertEqual(
+            sequence[4],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=4),
+            ),
+        )
+        self.assertEqual(
+            sequence[5],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=5),
+            ),
+        )
+
+        # For dates in the future, the days always advance
+        self.assertEqual(
+            sequence[6],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=1,
+                date=start + datetime.timedelta(days=6),
+            ),
+        )
+        self.assertEqual(
+            sequence[7],
+            WorkoutDayData(
+                day=self.day3,
+                iteration=1,
+                date=start + datetime.timedelta(days=7),
+            ),
+        )
+        self.assertEqual(
+            sequence[8],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=2,
+                date=start + datetime.timedelta(days=8),
+            ),
+        )
+        self.assertEqual(
+            sequence[9],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=2,
+                date=start + datetime.timedelta(days=9),
+            ),
+        )
+        self.assertEqual(
+            sequence[10],
+            WorkoutDayData(
+                day=self.day3,
+                iteration=2,
+                date=start + datetime.timedelta(days=10),
+            ),
+        )
+        self.assertEqual(
+            sequence[11],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=3,
+                date=start + datetime.timedelta(days=11),
+            ),
+        )
+
+    def test_date_sequences_need_logs_to_advance_session_available(self):
+        """
+        Test that days only advance if they have the need_logs_to_advance flag set
+        and there are is a session
+        """
+
+        # Arrange
+        today = timezone.localdate()
+        start = today - datetime.timedelta(days=5)
+
+        self.routine.start = start
+        self.routine.end = today + datetime.timedelta(days=10)
+        self.day1.need_logs_to_advance = True
+        self.day1.save()
+
+        Label.objects.all().delete()
+        WorkoutSession.objects.all().delete()
+        WorkoutSession.objects.create(
+            day=self.day1,
+            routine=self.routine,
+            datetime_start=timezone.make_aware(
+                datetime.datetime.combine(start + datetime.timedelta(days=2), datetime.time())
+            ),
+            user=self.routine.user,
+        )
+
+        # Assert
+        sequence = self.routine.date_sequence
+        self.assertEqual(
+            sequence[0],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start,
+            ),
+        )
+        self.assertEqual(
+            sequence[1],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=1),
+            ),
+        )
+
+        # Session saved on this day
+        self.assertEqual(
+            sequence[2],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=1,
+                date=start + datetime.timedelta(days=2),
+            ),
+        )
+
+        # Day can advance
+        self.assertEqual(
+            sequence[3],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=1,
+                date=start + datetime.timedelta(days=3),
+            ),
+        )
+        self.assertEqual(
+            sequence[4],
+            WorkoutDayData(
+                day=self.day3,
+                iteration=1,
+                date=start + datetime.timedelta(days=4),
+            ),
+        )
+        self.assertEqual(
+            sequence[5],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=2,
+                date=start + datetime.timedelta(days=5),
+            ),
+        )
+
+        # For dates in the future, the days always advance
+        self.assertEqual(
+            sequence[6],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=2,
+                date=start + datetime.timedelta(days=6),
+            ),
+        )
+        self.assertEqual(
+            sequence[7],
+            WorkoutDayData(
+                day=self.day3,
+                iteration=2,
+                date=start + datetime.timedelta(days=7),
+            ),
+        )
+        self.assertEqual(
+            sequence[8],
+            WorkoutDayData(
+                day=self.day1,
+                iteration=3,
+                date=start + datetime.timedelta(days=8),
+            ),
+        )
+        self.assertEqual(
+            sequence[9],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=3,
+                date=start + datetime.timedelta(days=9),
+            ),
+        )
+
+    def test_date_sequence_week_skip(self):
+        """
+        Test that the fit_in_week flag works
+        """
+
+        # Arrange
+        self.routine.fit_in_week = True
+        self.routine.end = datetime.date(2024, 1, 12)
+        self.routine.save()
+
+        # Assert
+        self.assertListEqual(
+            self.routine.date_sequence,
+            [
+                # Monday
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 1),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day2,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 2),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=self.day3,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 3),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 4),
+                    label='First label',
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 5),
+                    label='Second label',
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 6),
+                    label='Second label',
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=1,
+                    date=datetime.date(2024, 1, 7),
+                ),
+                # Monday, start the cycle again
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 8),
+                ),
+                WorkoutDayData(
+                    day=self.day2,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 9),
+                ),
+                WorkoutDayData(
+                    day=self.day3,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 10),
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 11),
+                ),
+                WorkoutDayData(
+                    day=None,
+                    iteration=2,
+                    date=datetime.date(2024, 1, 12),
+                ),
+            ],
+        )
+
+    def test_date_sequence_fit_in_week_need_logs_no_session(self):
+        """
+        Test that fit_in_week doesn't insert rest day placeholders while the
+        first day is still waiting for logs
+        """
+
+        # Arrange
+        today = timezone.localdate()
+        start = today - datetime.timedelta(days=10)
+
+        self.routine.fit_in_week = True
+        self.routine.start = start
+        self.routine.end = today + datetime.timedelta(weeks=2)
+        self.routine.save()
+        self.day1.need_logs_to_advance = True
+        self.day1.save()
+
+        Label.objects.all().delete()
+        WorkoutSession.objects.all().delete()
+
+        # Assert
+        sequence = self.routine.date_sequence
+
+        # The first day stays current up to today, one entry per date
+        for i in range((today - start).days + 1):
+            self.assertEqual(
+                sequence[i],
+                WorkoutDayData(
+                    day=self.day1,
+                    iteration=1,
+                    date=start + datetime.timedelta(days=i),
+                ),
+            )
+
+        # For dates in the future, the days advance
+        self.assertEqual(
+            sequence[(today - start).days + 1],
+            WorkoutDayData(
+                day=self.day2,
+                iteration=1,
+                date=today + datetime.timedelta(days=1),
+            ),
+        )
+
+    def test_date_sequences_current(self):
+        """
+        Test that the correct active day is returned
+        """
+        self.assertEqual(
+            self.routine.data_for_day(datetime.date(2024, 1, 7)),
+            WorkoutDayData(day=self.day1, iteration=3, date=datetime.date(2024, 1, 7)),
+        )
+
+    def test_data_for_day_defaults_to_the_owners_today(self):
+        """
+        The default date resolves in the owner's zone, not the active one
+        """
+        # 26 hours apart, so their calendar days differ at every time of day
+        west = timezone.localdate(timezone=zoneinfo.ZoneInfo('Etc/GMT+12'))
+        east = timezone.localdate(timezone=zoneinfo.ZoneInfo('Pacific/Kiritimati'))
+        self.assertNotEqual(west, east)
+
+        sequence = [
+            WorkoutDayData(day=None, iteration=1, date=west),
+            WorkoutDayData(day=None, iteration=1, date=east),
+        ]
+        profile = self.routine.user.userprofile
+
+        # Both directions: the active zone can agree with at most one of them
+        for zone_name, expected in (
+            ('Etc/GMT+12', sequence[0]),
+            ('Pacific/Kiritimati', sequence[1]),
+        ):
+            profile.time_zone = zone_name
+            profile.save()
+
+            routine = Routine.objects.get(pk=self.routine.pk)
+            with mock.patch.object(
+                Routine,
+                'date_sequence',
+                new_callable=mock.PropertyMock,
+                return_value=sequence,
+            ):
+                self.assertEqual(routine.data_for_day(), expected)
+
+    def _date_sequence_cache_ttl(self):
+        """Capture the timeout date_sequence passes to cache.set, forcing a cache miss."""
+        with (
+            mock.patch('wger.manager.models.routine.cache.get', return_value=None),
+            mock.patch('wger.manager.models.routine.cache.set') as mock_set,
+        ):
+            _ = self.routine.date_sequence
+        return mock_set.call_args.args[2]
+
+    def test_date_sequence_cache_keeps_full_ttl_without_need_logs(self):
+        """
+        A sequence that does not depend on the current date keeps the full cache TTL
+        """
+        self.assertEqual(
+            self._date_sequence_cache_ttl(),
+            settings.WGER_SETTINGS['ROUTINE_CACHE_TTL'],
+        )
+
+    def test_date_sequence_cache_capped_to_day_with_need_logs(self):
+        """
+        A sequence that bakes in today's date must expire by the next local midnight
+        """
+        self.day1.need_logs_to_advance = True
+        self.day1.save()
+
+        ttl = self._date_sequence_cache_ttl()
+        self.assertLessEqual(ttl, 24 * 60 * 60)
+        self.assertLess(ttl, settings.WGER_SETTINGS['ROUTINE_CACHE_TTL'])
+
+
+class RoutineApiTestCase(ApiBaseResourceTestCase):
+    """
+    Tests the routine api endpoint
+    """
+
+    pk = 2
+    resource = Routine
+    private_resource = True
+    # special_endpoints = (
+    #     'day-sequence',
+    #     'date-sequence-gym',
+    #     'current-day-display',
+    #     'current-day-gym',
+    #     'current-iteration-display',
+    #     'current-iteration-gym',
+    # )
+    data = {
+        'name': 'A new comment',
+        'start': '2024-03-11',
+        'end': '2024-06-20',
+    }
+
+
+class RoutineDateValidationTestCase(WgerTestCase):
+    """
+    The routine API must enforce sane date bounds:
+    - ``end`` may not be before ``start``
+    - the duration may not exceed ``Routine.MAX_DURATION_DAYS``, otherwise
+      walking the ``date_sequence`` could be abused to consume server CPU.
+    """
+
+    def _post_routine(self, start, end):
+        self.user_login('test')
+        return self.client.post(
+            reverse('routine-list'),
+            data={
+                'name': 'duration test',
+                'start': start.isoformat(),
+                'end': end.isoformat(),
+            },
+            content_type='application/json',
+        )
+
+    def test_rejects_routine_longer_than_limit(self):
+        start = datetime.date(2024, 1, 1)
+        end = start + datetime.timedelta(days=Routine.MAX_DURATION_DAYS + 1)
+        response = self._post_routine(start, end)
+        self.assertEqual(response.status_code, 400)
+
+    def test_accepts_routine_at_limit(self):
+        start = datetime.date(2024, 1, 1)
+        end = start + datetime.timedelta(days=Routine.MAX_DURATION_DAYS)
+        response = self._post_routine(start, end)
+        self.assertEqual(response.status_code, 201)
+
+    def test_rejects_end_before_start(self):
+        start = datetime.date(2024, 6, 1)
+        end = datetime.date(2024, 1, 1)
+        response = self._post_routine(start, end)
+        self.assertEqual(response.status_code, 400)
+
+
+class RoutineLogsAndStatsScopeTestCase(WgerTestCase):
+    """
+    The /logs/ and /stats/ actions of a routine return the owner's
+    private workout history. They must never be accessible to anyone but
+    the routine owner, even when the routine is a public template.
+    """
+
+    PUBLIC_TEMPLATE_PK = 5
+    # owned by trainer2 (user 5), is_template + is_public
+
+    @property
+    def logs_url(self):
+        return reverse('routine-logs', kwargs={'pk': self.PUBLIC_TEMPLATE_PK})
+
+    @property
+    def stats_url(self):
+        return reverse('routine-stats', kwargs={'pk': self.PUBLIC_TEMPLATE_PK})
+
+    @property
+    def detail_url(self):
+        return reverse('routine-detail', kwargs={'pk': self.PUBLIC_TEMPLATE_PK})
+
+    def test_non_owner_cannot_read_template_logs(self):
+        self.user_login('test')
+        response = self.client.get(self.logs_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_owner_cannot_read_template_stats(self):
+        self.user_login('test')
+        response = self.client.get(self.stats_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_owner_can_read_own_template_logs(self):
+        self.user_login('trainer2')
+        response = self.client.get(self.logs_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_owner_can_read_own_template_stats(self):
+        self.user_login('trainer2')
+        response = self.client.get(self.stats_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_template_structure_remains_publicly_readable(self):
+        """
+        The template's exercise structure is the public part of the
+        feature — only logs/stats need to be restricted.
+        """
+        self.user_login('test')
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+
+
+class RoutineDateSequenceHistoryScopeTestCase(WgerTestCase):
+    """
+    The date sequence of a public template only follows the owner's sessions
+    and logs for the owner. Other users get the sequence without any history.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.owner = User.objects.get(username='trainer2')
+
+        # Day A only advances after a logged session, the owner had one on 01-03
+        self.days_template = Routine.objects.create(
+            user=self.owner,
+            name='Days',
+            start=datetime.date(2024, 1, 1),
+            end=datetime.date(2024, 1, 6),
+            is_template=True,
+            is_public=True,
+        )
+        day_a = Day.objects.create(
+            routine=self.days_template,
+            order=1,
+            name='A',
+            need_logs_to_advance=True,
+        )
+        Day.objects.create(routine=self.days_template, order=2, name='B')
+        WorkoutSession.objects.create(
+            user=self.owner,
+            routine=self.days_template,
+            day=day_a,
+            datetime_start=datetime.datetime(2024, 1, 3, 12, 0, tzinfo=datetime.timezone.utc),
+        )
+
+        # +2.5 kg per iteration once the previous iteration reached 5 repetitions
+        self.progression_template = Routine.objects.create(
+            user=self.owner,
+            name='Progression',
+            start=datetime.date(2024, 2, 1),
+            end=datetime.date(2024, 2, 3),
+            is_template=True,
+            is_public=True,
+        )
+        day = Day.objects.create(routine=self.progression_template, order=1, name='Squat')
+        exercise = Exercise.objects.first()
+        entry = SlotEntry.objects.create(
+            slot=Slot.objects.create(day=day, order=1),
+            exercise=exercise,
+            order=1,
+        )
+        RepetitionsConfig.objects.create(slot_entry=entry, iteration=1, value=5)
+        WeightConfig.objects.create(slot_entry=entry, iteration=1, value=100)
+        WeightConfig.objects.create(
+            slot_entry=entry,
+            iteration=2,
+            value=2.5,
+            operation='+',
+            repeat=True,
+            requirements={'rules': ['repetitions']},
+        )
+        when = datetime.datetime(2024, 2, 1, 18, 0, tzinfo=datetime.timezone.utc)
+        session = WorkoutSession.objects.create(
+            user=self.owner,
+            routine=self.progression_template,
+            day=day,
+            datetime_start=when,
+        )
+        WorkoutLog.objects.create(
+            user=self.owner,
+            session=session,
+            routine=self.progression_template,
+            slot_entry=entry,
+            exercise=exercise,
+            iteration=1,
+            date=when,
+            repetitions=5,
+            repetitions_unit_id=1,
+            weight=100,
+            weight_unit_id=1,
+        )
+
+    def day_names(self, url_name: str, username: str) -> list[str]:
+        self.user_login(username)
+        response = self.client.get(reverse(url_name, kwargs={'pk': self.days_template.pk}))
+        self.assertEqual(response.status_code, 200)
+        return [entry['day']['name'] for entry in response.data]
+
+    def weights(self, url_name: str, username: str) -> list[Decimal]:
+        self.user_login(username)
+        response = self.client.get(reverse(url_name, kwargs={'pk': self.progression_template.pk}))
+        self.assertEqual(response.status_code, 200)
+        return [Decimal(str(entry['slots'][0]['sets'][0]['weight'])) for entry in response.data]
+
+    def test_days_follow_sessions_only_for_owner(self):
+        """The owner's session moves the sequence on, for other users it does not"""
+        for url_name in ('routine-date-sequence-display-mode', 'routine-date-sequence-gym-mode'):
+            with self.subTest(url_name=url_name):
+                self.assertEqual(
+                    self.day_names(url_name, 'trainer2'),
+                    ['A', 'A', 'A', 'B', 'A', 'A'],
+                )
+                self.assertEqual(self.day_names(url_name, 'test'), ['A'] * 6)
+
+    def test_progression_follows_logs_only_for_owner(self):
+        """The owner's log unlocks the progression, for other users it does not"""
+        for url_name in ('routine-date-sequence-display-mode', 'routine-date-sequence-gym-mode'):
+            with self.subTest(url_name=url_name):
+                self.assertEqual(
+                    self.weights(url_name, 'trainer2'),
+                    [Decimal(100), Decimal('102.5'), Decimal('102.5')],
+                )
+                self.assertEqual(self.weights(url_name, 'test'), [Decimal(100)] * 3)

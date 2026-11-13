@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -20,7 +18,8 @@ from django.apps import AppConfig
 
 class CoreConfig(AppConfig):
     name = 'wger.core'
-    verbose_name = "Core"
+    verbose_name = 'Core'
 
     def ready(self):
-        import wger.core.signals
+        import wger.core.checks  # noqa: F401
+        import wger.core.signals  # noqa: F401

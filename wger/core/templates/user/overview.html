@@ -1,8 +1,7 @@
 {% extends "base.html" %}
-{% load i18n static wger_extras django_bootstrap_breadcrumbs %}
+{% load i18n wger_extras django_bootstrap_breadcrumbs %}
 
 {% block title %}{{current_user|format_username}}{% endblock %}
-
 
 {% block breadcrumbs %}
     {% if current_user.userprofile.gym %}
@@ -22,10 +21,13 @@
 
 {% if perms.gym.gym_trainer %}
 
-<h4>{% translate "Workouts" %} <small>({% blocktranslate with number=10 %}last {{ number }}{% endblocktranslate %})</small></h4>
+<h4>{% translate "Routines" %} <small>({% blocktranslate with number=10 %}last {{ number }}{% endblocktranslate %})</small></h4>
 {% if perms.gym.gym_trainer %}
-<a href="{{trainer_login}}?next={% url 'manager:workout:overview' %}" class="btn btn-light btn-sm">{% translate "Overview" %}</a>
-<a href="{{trainer_login}}?next={% url 'manager:workout:add' %}" class="btn btn-light btn-sm">{% translate "Add workout" %}</a>
+<form method="post" action="{{trainer_login}}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'manager:routine:overview' %}">
+    <button type="submit" class="btn btn-light btn-sm">{% translate "Overview" %}</button>
+</form>
 {% endif %}
 
 <table class="table">
@@ -38,19 +40,23 @@
 </tr>
 </thead>
 <tbody>
-{% for workout in workouts %}
+{% for entry in routine_data %}
 <tr>
     <td>
-        {{workout.workout.creation_date}}
+        {{entry.routine.created}}
     </td>
     <td>
-        <a href="{{trainer_login}}?next={{ workout.workout.get_absolute_url }}">{{workout.workout}}</a>
+        <form method="post" action="{{trainer_login}}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ entry.routine.get_absolute_url }}">
+            <button type="submit" class="btn btn-link p-0 align-baseline border-0">{{entry.routine}}</button>
+        </form>
     </td>
     <td>
-        {{workout.logs|default:'-/-'}}
+        {{entry.logs|default:'-/-'}}
     </td>
     <td>
-        {{workout.last_log.date|default:'-/-'}}
+        {{entry.last_log.date|default:'-/-'}}
     </td>
 </tr>
 {% empty %}
@@ -67,7 +73,11 @@
 
 <h4>{% translate "Log" %} <small>({% blocktranslate with number=10 %}last {{ number }}{% endblocktranslate %})</small></h4>
 {% if perms.gym.gym_trainer %}
-<a href="{{trainer_login}}?next={% url 'manager:workout:calendar' %}" class="btn btn-light btn-sm">{% translate "Calendar" %}</a>
+<form method="post" action="{{trainer_login}}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'manager:routine:calendar' %}">
+    <button type="submit" class="btn btn-light btn-sm">{% translate "Calendar" %}</button>
+</form>
 {% endif %}
 
 <table class="table">
@@ -83,7 +93,7 @@
 {% for log in session %}
 <tr>
     <td>
-        {{log.date}}
+        {{log.datetime_start|date}}
     </td>
     <td>
         {{log.get_impression_display}}
@@ -92,8 +102,8 @@
         {{log.notes|default:'-/-'|truncatewords:6}}
     </td>
     <td>
-        {% if log.time_start and log.time_end %}
-            {{log.time_start|time:"H:i"}} - {{log.time_end|time:"H:i"}}
+        {% if log.datetime_end %}
+            {{log.datetime_start|time:"H:i"}} - {{log.datetime_end|time:"H:i"}}
         {% else %}
             -/-
         {% endif %}
@@ -111,7 +121,11 @@
 
 <h4>{% translate "Weight" %} <small>({% blocktranslate with number=5 %}last {{ number }}{% endblocktranslate %})</small></h4>
 {% if perms.gym.gym_trainer %}
-<a href="{{trainer_login}}?next={% url 'weight:overview' %}" class="btn btn-light btn-sm">{% translate "Weight overview" %}</a>
+<form method="post" action="{{trainer_login}}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'weight:overview' %}">
+    <button type="submit" class="btn btn-light btn-sm">{% translate "Weight overview" %}</button>
+</form>
 {% endif %}
 
 <table class="table">
@@ -128,7 +142,7 @@
         {{weight.date}}
     </td>
     <td>
-        {{weight.weight}} {% trans_weight_unit 'kg' current_user %}
+        {{weight.value}} {% trans_weight_unit 'kg' current_user %}
     </td>
 </tr>
 {% empty %}
@@ -143,8 +157,11 @@
 
 <h4>{% translate "Nutrition plans" %} <small>({% blocktranslate with number=5 %}last {{ number }}{% endblocktranslate %})</small></h4>
 {% if perms.gym.gym_trainer %}
-    <a href="{{trainer_login}}?next={% url 'nutrition:plan:overview' %}" class="btn btn-light btn-sm">{% translate "Overview" %}</a>
-    <a href="{{trainer_login}}?next={% url 'nutrition:plan:add' %}" class="btn btn-light btn-sm">{% translate "Add nutrition plan" %}</a>
+    <form method="post" action="{{trainer_login}}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'nutrition:plan:overview' %}">
+        <button type="submit" class="btn btn-light btn-sm">{% translate "Overview" %}</button>
+    </form>
 {% endif %}
 
 <table class="table">
@@ -165,19 +182,23 @@
         {{nutrition_plan.creation_date}}
     </td>
     <td>
-        <a href="{{trainer_login}}?next={{ nutrition_plan.get_absolute_url }}">{{nutrition_plan}}</a>
+        <form method="post" action="{{trainer_login}}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ nutrition_plan.get_absolute_url }}">
+            <button type="submit" class="btn btn-link p-0 align-baseline border-0">{{nutrition_plan}}</button>
+        </form>
     </td>
     <td>
         {{nutrition_plan.get_nutritional_values.total.energy|floatformat}} {% translate "kcal" %}
     </td>
     <td>
-        {{nutrition_plan.get_nutritional_values.total.protein|floatformat}} {% trans_weight_unit 'g' current_user %}
+        {{nutrition_plan.get_nutritional_values.total.protein|floatformat}} {% translate "g" context "weight unit, i.e. grams" %}
     </td>
     <td>
-        {{nutrition_plan.get_nutritional_values.total.carbohydrates|floatformat}} {% trans_weight_unit 'g' current_user %}
+        {{nutrition_plan.get_nutritional_values.total.carbohydrates|floatformat}} {% translate "g" context "weight unit, i.e. grams" %}
     </td>
     <td>
-        {{nutrition_plan.get_nutritional_values.total.fat|floatformat}} {% trans_weight_unit 'g' current_user %}
+        {{nutrition_plan.get_nutritional_values.total.fat|floatformat}} {% translate "g" context "weight unit, i.e. grams" %}
     </td>
 </tr>
 {% empty %}
@@ -197,59 +218,41 @@
 
 {% block sidebar %}
 {% if perms.gym.manage_gyms or perms.gym.manage_gym %}
-<div class="btn-group float-right">
-    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-toggle="dropdown">
+<div class="btn-group float-end">
+    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-bs-toggle="dropdown">
         {% translate "Actions" %} <span class="caret"></span>
     </button>
     <div class="dropdown-menu" role="menu">
-        <a href="{% url 'core:user:edit' current_user.pk %}" class="wger-modal-dialog dropdown-item">{% translate "Edit"%}</a>
+        {% translate 'Edit' as text %}
+        {% url 'core:user:edit' current_user.pk as url %}
+        {% modal_link url=url text=text css_class='dropdown-item' %}
+
         <div class="dropdown-divider"></div>
             {% if current_user.is_active %}
-            <a href="{% url 'core:user:deactivate' current_user.pk %}" class="dropdown-item">{% translate "Deactivate user"%}</a>
-        {% else %}
-            <a href="{% url 'core:user:activate' current_user.pk %}" class="dropdown-item">{% translate "Activate user"%}</a>
-        {% endif %}
-        <a data-url="{% url 'gym:gym:reset-user-password' current_user.pk %}" data-toggle="modal" data-target="#confirmation-modal" class="dropdown-item">{% translate "Reset user password" %}</a>
+                {% translate 'Deactivate user' as text %}
+                {% url 'core:user:deactivate' current_user.pk as url %}
+                {% modal_link url=url text=text css_class='dropdown-item' %}
+            {% else %}
+                {% translate 'Activate user' as text %}
+                {% url 'core:user:activate' current_user.pk as url %}
+                {% modal_link url=url text=text css_class='dropdown-item' %}
+            {% endif %}
+        {% translate 'Reset user password' as text %}
+        {% url 'gym:gym:reset-user-password' current_user.pk as url %}
+        {% modal_link url=url text=text css_class='dropdown-item' %}
         {% if perms.gym.manage_gym or perms.gym.manage_gyms %}
         {% if current_user.userprofile.gym %}
-            <a href="{% url 'gym:gym:edit-user-permission' current_user.pk %}" class="wger-modal-dialog dropdown-item">{% translate "Roles"%}</a>
+            {% translate 'Roles' as text %}
+            {% url 'gym:gym:edit-user-permission' current_user.pk as url %}
+            {% modal_link url=url text=text css_class='dropdown-item' %}
         {% endif %}
         {% endif %}
-        <a href="{% url 'core:user:delete' current_user.pk %}" class="wger-modal-dialog dropdown-item">{% translate "Delete"%}</a>
+
+        {% translate 'Delete' as text %}
+        {% url 'core:user:delete' current_user.pk as url %}
+        {% modal_link url=url text=text css_class='dropdown-item' %}
     </div>
 </div>
-
-<div id="confirmation-modal" class="modal fade" tabindex="-1" role="dialog">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">{% translate 'Password reset confirmation' %}</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <p>{% translate 'Do you really want to change this user&#39;s password?' %}</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-dismiss="modal">{% translate 'No' %}</button>
-                <button type="button" class="btn btn-success">{% translate 'Yes' %}</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    $(document).ready(function() {
-        $('#confirmation-modal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget);
-            var url = button.data('url');
-            var modal = $(this);
-
-            modal.find('button.btn-success').click(function() {
-                window.location.href = url;
-            });
-        });
-    });
-</script>
 
 {% endif %}
 <h4>{% translate "Details" %}</h4>
@@ -318,8 +321,8 @@
 {# Contract #}
 {#          #}
 {% if perms.gym.add_contract %}
-<div class="btn-group float-right">
-    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-toggle="dropdown">
+<div class="btn-group float-end">
+    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-bs-toggle="dropdown">
         {% translate "Actions" %} <span class="caret"></span>
     </button>
     <div class="dropdown-menu" role="menu">
@@ -357,13 +360,16 @@
 {# Admin notes #}
 {#             #}
 {% if perms.gym.add_adminusernote %}
-<div class="btn-group float-right">
-    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-toggle="dropdown">
+<div class="btn-group float-end">
+    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-bs-toggle="dropdown">
         {% translate "Actions" %} <span class="caret"></span>
     </button>
     <div class="dropdown-menu" role="menu">
         <a href="{% url 'gym:admin_note:list' current_user.pk %}" class="dropdown-item">{% translate "Overview" %}</a>
-        <a href="{% url 'gym:admin_note:add' current_user.pk %}" class="wger-modal-dialog dropdown-item">{% translate "Add"%}</a>
+
+        {% translate 'Add' as text %}
+        {% url 'gym:admin_note:add' current_user.pk as url %}
+        {% modal_link url=url text=text css_class='dropdown-item' %}
     </div>
 </div>
 
@@ -393,8 +399,8 @@
 {# Documents #}
 {#           #}
 {% if perms.gym.add_userdocument %}
-<div class="btn-group float-right">
-    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-toggle="dropdown">
+<div class="btn-group float-end">
+    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-bs-toggle="dropdown">
         {% translate "Actions" %} <span class="caret"></span>
     </button>
     <div class="dropdown-menu" role="menu">
@@ -438,12 +444,15 @@
 {# Gym configuration #}
 {#                   #}
 {% if perms.gym.change_gymuserconfig and current_user.gymuserconfig %}
-<div class="btn-group float-right">
-    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-toggle="dropdown">
+<div class="btn-group float-end">
+    <button type="button" class="btn btn-light dropdown-toggle btn-sm" data-bs-toggle="dropdown">
         {% translate "Actions" %} <span class="caret"></span>
     </button>
     <div class="dropdown-menu" role="menu">
-        <a href="{% url 'gym:user_config:edit' current_user.gymuserconfig.pk %}" class="wger-modal-dialog dropdown-item">{% translate "Edit"%}</a>
+
+        {% translate 'Edit' as text %}
+        {% url 'gym:user_config:edit' current_user.gymuserconfig.pk %}
+        {% modal_link url=url text=text css_class='dropdown-item' %}
     </div>
 </div>
 {% endif %}
@@ -478,17 +487,19 @@
         }
     </style>
 
-    <a
-       {% if enable_login_button %}
-        href="{% url 'core:user:trainer-login' current_user.pk %}"
-        class="btn btn-sm btn-success"
-       {% else %}
-        href="#"
-        title="{% blocktranslate %}Admin login is only available for users in {{gym_name}}{% endblocktranslate %}"
-        class="btn btn-sm btn-secondary"
-       {% endif %}
-    >
+    {% if enable_login_button %}
+    <form method="post" action="{% url 'core:user:trainer-login' current_user.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success">
+            {% translate "Log in as this user" %}
+        </button>
+    </form>
+    {% else %}
+    <a href="#"
+       title="{% blocktranslate %}Admin login is only available for users in {{gym_name}}{% endblocktranslate %}"
+       class="btn btn-sm btn-secondary">
        {% translate "Log in as this user" %}
     </a>
+    {% endif %}
 {% endif %}
 {% endblock %}

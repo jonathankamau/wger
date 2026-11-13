@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -16,299 +14,531 @@
 # along with Workout Manager.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard Library
-import logging
+from uuid import UUID
 
 # Django
-from django.utils.translation import gettext as _
+from django.conf import settings
+from django.core.cache import cache
+from django.db.models import Prefetch
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 # Third Party
+from actstream import action as actstream_action
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
 from easy_thumbnails.alias import aliases
 from easy_thumbnails.files import get_thumbnailer
 from rest_framework import viewsets
-from rest_framework.decorators import (
-    action,
-    api_view,
-)
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
+from rest_framework.generics import CreateAPIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
 
 # wger
-from wger.config.models import LanguageConfig
+from wger.exercises.api.filtersets import (
+    ExerciseFilterSet,
+    ExerciseListFilterSet,
+    RelevanceOrderingFilter,
+)
+from wger.exercises.api.permissions import (
+    CanContributeExercises,
+    CanCreateExercises,
+)
 from wger.exercises.api.serializers import (
+    DeletionLogSerializer,
     EquipmentSerializer,
-    ExerciseBaseSerializer,
+    ExerciseAliasSerializer,
     ExerciseCategorySerializer,
     ExerciseCommentSerializer,
     ExerciseImageSerializer,
     ExerciseInfoSerializer,
     ExerciseSerializer,
+    ExerciseSubmissionSerializer,
+    ExerciseTranslationSerializer,
+    ExerciseVideoSerializer,
     MuscleSerializer,
 )
+from wger.exercises.api.throttling import CreateScopedRateThrottle
 from wger.exercises.models import (
+    Alias,
+    DeletionLog,
     Equipment,
     Exercise,
     ExerciseCategory,
     ExerciseComment,
     ExerciseImage,
+    ExerciseVideo,
     Muscle,
+    Translation,
 )
-from wger.utils.language import (
-    load_item_languages,
-    load_language,
-)
-from wger.utils.permissions import CreateOnlyPermission
+from wger.exercises.views.helper import StreamVerbs
+from wger.utils.api_schema import ImageThumbnailsSerializer
+from wger.utils.cache import CacheKeyMapper
+from wger.utils.url import make_absolute_url
 
 
-logger = logging.getLogger(__name__)
-
-
-class ExerciseBaseViewSet(viewsets.ReadOnlyModelViewSet):
+class ExerciseViewSet(ModelViewSet):
     """
-    API endpoint for exercise base objects. For a read-only endpoint with all
-    the information of an exercise, see /api/v2/exerciseinfo/
-    """
-    queryset = Exercise.objects.accepted()
-    serializer_class = ExerciseBaseSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly, CreateOnlyPermission)
-    ordering_fields = '__all__'
-    filterset_fields = (
-        'category',
-        'muscles',
-        'muscles_secondary',
-        'equipment',
-    )
+    API endpoint for exercise objects.
 
+    Creating an exercise here requires the add_exercise permission, regular
+    users submit new exercises via /api/v2/exercise-submission/.
 
-class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
+    For a read-only endpoint with all the information of an exercise, see /api/v2/exerciseinfo/
     """
-    API endpoint for exercise objects. For a read-only endpoint with all
-    the information of an exercise, see /api/v2/exerciseinfo/
-    """
-    queryset = Exercise.objects.accepted()
+
+    queryset = Exercise.with_translations.all()
     serializer_class = ExerciseSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly, CreateOnlyPermission)
+    permission_classes = (CanCreateExercises,)
+    throttle_classes = (CreateScopedRateThrottle,)
+    throttle_scope = 'exercise_create'
     ordering_fields = '__all__'
+    ordering = ['id']
+    filterset_class = ExerciseListFilterSet
+
+    def perform_create(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_create(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_update(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_destroy(self, instance: Exercise):
+        """Manually delete the exercise and set the replacement, if any"""
+
+        uuid = self.request.query_params.get('replaced_by', '')
+        try:
+            UUID(uuid, version=4)
+        except ValueError:
+            uuid = None
+
+        # An exercise can't be replaced by itself, treat it as a plain deletion
+        if uuid == str(instance.uuid):
+            uuid = None
+
+        transfer_media = 'transfer_media' in self.request.query_params
+        transfer_translations = 'transfer_translations' in self.request.query_params
+
+        replacement = Exercise.objects.filter(uuid=uuid).first() if uuid else None
+
+        deleted_repr = str(instance)
+        deleted_uuid = str(instance.uuid)
+
+        instance.delete(
+            replace_by=uuid,
+            transfer_media=transfer_media,
+            transfer_translations=transfer_translations,
+        )
+
+        if replacement:
+            actstream_action.send(
+                self.request.user,
+                verb=StreamVerbs.MERGED.value,
+                action_object=replacement,
+                deleted_uuid=deleted_uuid,
+                deleted_repr=deleted_repr,
+                transfer_media=transfer_media,
+                transfer_translations=transfer_translations,
+            )
+        else:
+            actstream_action.send(
+                self.request.user,
+                verb=StreamVerbs.DELETED.value,
+                deleted_uuid=deleted_uuid,
+                deleted_repr=deleted_repr,
+                model_type='exercise',
+            )
+
+
+class ExerciseTranslationViewSet(ModelViewSet):
+    """
+    API endpoint for editing or adding exercise translation objects.
+    """
+
+    queryset = Translation.objects.all()
+    permission_classes = (CanContributeExercises,)
+    throttle_classes = (CreateScopedRateThrottle,)
+    throttle_scope = 'exercise_create'
+    serializer_class = ExerciseTranslationSerializer
+    ordering_fields = '__all__'
+    ordering = ['name', 'id']
     filterset_fields = (
         'uuid',
-        'creation_date',
-        'exercise_base',
+        'created',
+        'exercise',
         'description',
-        'language',
-        'status',
         'name',
+        'language',
     )
 
     def perform_create(self, serializer):
         """
-        Set author and status
+        Save entry to activity stream
         """
-        language = load_language()
-        obj = serializer.save(language=language)
-        # Todo is it right to call set author after save?
-        obj.set_author(self.request)
-        obj.save()
 
-    def get_queryset(self):
-        """Add additional filters for fields from exercise base"""
+        super().perform_create(serializer)
 
-        qs = Exercise.objects.accepted()
-
-        category = self.request.query_params.get('category')
-        muscles = self.request.query_params.get('muscles')
-        muscles_secondary = self.request.query_params.get('muscles_secondary')
-        equipment = self.request.query_params.get('equipment')
-        license = self.request.query_params.get('license')
-
-        if category:
-            try:
-                qs = qs.filter(exercise_base__category_id=int(category))
-            except ValueError:
-                logger.info(f"Got {category} as category ID")
-
-        if muscles:
-            try:
-                qs = qs.filter(exercise_base__muscles__in=[int(m) for m in muscles.split(',')])
-            except ValueError:
-                logger.info(f"Got {muscles} as muscle IDs")
-
-        if muscles_secondary:
-            try:
-                muscle_ids = [int(m) for m in muscles_secondary.split(',')]
-                qs = qs.filter(exercise_base__muscles_secondary__in=muscle_ids)
-            except ValueError:
-                logger.info(f"Got '{muscles_secondary}' as secondary muscle IDs")
-
-        if equipment:
-            try:
-                qs = qs.filter(exercise_base__equipment__in=[int(e) for e in equipment.split(',')])
-            except ValueError:
-                logger.info(f"Got {equipment} as equipment IDs")
-
-        if license:
-            try:
-                qs = qs.filter(exercise_base__license_id=int(license))
-            except ValueError:
-                logger.info(f"Got {license} as license ID")
-
-        return qs
-
-
-@api_view(['GET'])
-def search(request):
-    """
-    Searches for exercises.
-
-    This format is currently used by the exercise search autocompleter
-    """
-    q = request.GET.get('term', None)
-    results = []
-    json_response = {}
-
-    if q:
-        languages = load_item_languages(
-            LanguageConfig.SHOW_ITEM_EXERCISES, language_code=request.GET.get('language', None)
-        )
-        exercises = (
-            Exercise.objects.filter(name__icontains=q).filter(language__in=languages).filter(
-                status=Exercise.STATUS_ACCEPTED
-            ).order_by('exercise_base__category__name', 'name').distinct()
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
         )
 
-        for exercise in exercises:
-            if exercise.main_image:
-                image_obj = exercise.main_image
-                image = image_obj.image.url
-                t = get_thumbnailer(image_obj.image)
-                thumbnail = t.get_thumbnail(aliases.get('micro_cropped')).url
-            else:
-                image = None
-                thumbnail = None
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
 
-            exercise_json = {
-                'value': exercise.name,
-                'data': {
-                    'id': exercise.id,
-                    'name': exercise.name,
-                    'category': _(exercise.category.name),
-                    'image': image,
-                    'image_thumbnail': thumbnail
-                }
-            }
-            results.append(exercise_json)
-        json_response['suggestions'] = results
+        # Don't allow to change the base or the language over the API
+        if serializer.validated_data.get('exercise'):
+            del serializer.validated_data['exercise']
 
-    return Response(json_response)
+        if serializer.validated_data.get('language'):
+            del serializer.validated_data['language']
+
+        super().perform_update(serializer)
+
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
 
 
 class ExerciseInfoViewset(viewsets.ReadOnlyModelViewSet):
     """
-    Read-only info API endpoint for exercise objects. Returns nested data
-    structures for more easy parsing.
+    Read-only info API endpoint for exercise objects, grouped by the exercise
+    base. Returns nested data structures for more easy and faster parsing and
+    is the recommended way to access the exercise data.
     """
 
-    queryset = Exercise.objects.accepted()
     serializer_class = ExerciseInfoSerializer
     ordering_fields = '__all__'
-    filterset_fields = (
-        'creation_date',
-        'description',
-        'language',
-        'name',
-        'exercise_base',
-        'license',
-        'license_author',
-    )
+    ordering = ['id']
+    filterset_class = ExerciseFilterSet
+    filter_backends = (DjangoFilterBackend, RelevanceOrderingFilter)
+
+    def get_queryset(self):
+        """
+        Heavy queryset with select_related/prefetch_related to avoid n+1 queries.
+
+        Used by retrieve() and the cache-miss path in list(); warm list() requests
+        skip it entirely (see list()).
+        """
+        return Exercise.objects.select_related(
+            'category',
+            'license',
+        ).prefetch_related(
+            'muscles',
+            'muscles_secondary',
+            'equipment',
+            'exerciseimage_set',
+            'exercisevideo_set',
+            Prefetch(
+                'translations',
+                queryset=Translation.objects.prefetch_related('alias_set', 'exercisecomment_set'),
+            ),
+        )
+
+    def list(self, request, *args, **kwargs):
+        """Serve the list from the per-exercise cache, hitting the DB only for misses."""
+
+        # Only id + uuid are needed to build the cache keys: filtering/ordering
+        # still apply, but no related rows are pulled.
+        queryset = self.filter_queryset(Exercise.objects.only('id', 'uuid'))
+        page = self.paginate_queryset(queryset)
+        exercises = page if page is not None else list(queryset)
+
+        keys = {
+            exercise.uuid: CacheKeyMapper.get_exercise_api_key(exercise.uuid)
+            for exercise in exercises
+        }
+        representations = cache.get_many(keys.values())
+
+        missing = [uuid for uuid, key in keys.items() if key not in representations]
+        if missing:
+            # to_representation() repopulates the cache as a side effect
+            for exercise in self.get_queryset().filter(uuid__in=missing):
+                representations[keys[exercise.uuid]] = self.get_serializer(exercise).data
+
+        data = [
+            representations[keys[exercise.uuid]]
+            for exercise in exercises
+            if keys[exercise.uuid] in representations
+        ]
+        return self.get_paginated_response(data) if page is not None else Response(data)
+
+
+class ExerciseSubmissionViewSet(CreateAPIView):
+    """
+    API endpoint for submitting new exercises
+    """
+
+    serializer_class = ExerciseSubmissionSerializer
+    queryset = Exercise.objects.all()
+    permission_classes = (CanContributeExercises,)
+    throttle_classes = (CreateScopedRateThrottle,)
+    throttle_scope = 'exercise_create'
 
 
 class EquipmentViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for equipment objects
     """
+
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     ordering_fields = '__all__'
-    filterset_fields = ('name', )
+    ordering = ['name', 'id']
+    filterset_fields = ('name',)
+
+    @method_decorator(cache_page(settings.WGER_SETTINGS['EXERCISE_CACHE_TTL']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+
+class DeletionLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for exercise deletion logs
+
+    This lists objects that where deleted on a wger instance and should be deleted
+    as well when performing a sync (e.g. because many exercises where submitted at
+    once or an image was uploaded that hasn't a CC license)
+    """
+
+    queryset = DeletionLog.objects.all()
+    serializer_class = DeletionLogSerializer
+    ordering_fields = '__all__'
+    ordering = ['id']
+    filterset_fields = ('model_type',)
 
 
 class ExerciseCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for exercise categories objects
     """
+
     queryset = ExerciseCategory.objects.all()
     serializer_class = ExerciseCategorySerializer
     ordering_fields = '__all__'
-    filterset_fields = ('name', )
+    ordering = ['name', 'id']
+    filterset_fields = ('name',)
+
+    @method_decorator(cache_page(settings.WGER_SETTINGS['EXERCISE_CACHE_TTL']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
 
-class ExerciseImageViewSet(viewsets.ModelViewSet):
+class ExerciseImageViewSet(ModelViewSet):
     """
     API endpoint for exercise image objects
     """
+
     queryset = ExerciseImage.objects.all()
     serializer_class = ExerciseImageSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly, CreateOnlyPermission)
+    permission_classes = (CanContributeExercises,)
+    # the image is uploaded as a file, which JSON cannot carry
+    parser_classes = (MultiPartParser,)
     ordering_fields = '__all__'
     filterset_fields = (
         'is_main',
-        'status',
-        'exercise_base',
+        'exercise',
         'license',
         'license_author',
     )
 
+    @method_decorator(cache_page(settings.WGER_SETTINGS['EXERCISE_CACHE_TTL']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    @extend_schema(responses={200: ImageThumbnailsSerializer})
     @action(detail=True)
     def thumbnails(self, request, pk):
         """
-        Return a list of the image's thumbnails
+        Return the image's thumbnails, one per configured alias
         """
-        try:
-            image = ExerciseImage.objects.get(pk=pk)
-        except ExerciseImage.DoesNotExist:
-            return Response([])
+        image = self.get_object()
 
         thumbnails = {}
         for alias in aliases.all():
             t = get_thumbnailer(image.image)
             thumbnails[alias] = {
-                'url': t.get_thumbnail(aliases.get(alias)).url,
-                'settings': aliases.get(alias)
+                'url': make_absolute_url(t.get_thumbnail(aliases.get(alias)).url, request),
+                'settings': aliases.get(alias),
             }
-        thumbnails['original'] = image.image.url
+        thumbnails['original'] = make_absolute_url(image.image.url, request)
         return Response(thumbnails)
 
     def perform_create(self, serializer):
         """
-        Set the license data
+        Save entry to activity stream
         """
-        obj = serializer.save()
-        # Todo is it right to call set author after save?
-        obj.set_author(self.request)
-        obj.save()
+        super().perform_create(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_update(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
 
 
-class ExerciseCommentViewSet(viewsets.ReadOnlyModelViewSet):
+class ExerciseVideoViewSet(ModelViewSet):
+    """
+    API endpoint for exercise video objects
+    """
+
+    queryset = ExerciseVideo.objects.all()
+    serializer_class = ExerciseVideoSerializer
+    permission_classes = (CanContributeExercises,)
+    # the video is uploaded as a file, which JSON cannot carry
+    parser_classes = (MultiPartParser,)
+    ordering_fields = '__all__'
+    filterset_fields = (
+        'is_main',
+        'exercise',
+        'license',
+        'license_author',
+    )
+
+    def perform_create(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_create(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_update(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
+
+
+class ExerciseCommentViewSet(ModelViewSet):
     """
     API endpoint for exercise comment objects
     """
+
     serializer_class = ExerciseCommentSerializer
+    permission_classes = (CanContributeExercises,)
     ordering_fields = '__all__'
-    filterset_fields = ('comment', 'exercise')
+    ordering = ['id']
+    filterset_fields = ('comment', 'translation')
 
     def get_queryset(self):
         """Filter by language for exercise comments"""
         qs = ExerciseComment.objects.all()
         language = self.request.query_params.get('language')
         if language:
-            exercises = Exercise.objects.filter(language=language)
-            qs = ExerciseComment.objects.filter(exercise__in=exercises)
+            translations = Translation.objects.filter(language=language)
+            qs = ExerciseComment.objects.filter(translation__in=translations)
         return qs
+
+    def perform_create(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_create(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_update(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
+
+
+class ExerciseAliasViewSet(ModelViewSet):
+    """
+    API endpoint for exercise aliases objects
+    """
+
+    serializer_class = ExerciseAliasSerializer
+    queryset = Alias.objects.all()
+    permission_classes = (CanContributeExercises,)
+    ordering_fields = '__all__'
+    ordering = ['id']
+    filterset_fields = ('alias', 'translation')
+
+    def perform_create(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_create(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.CREATED.value,
+            action_object=serializer.instance,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Save entry to activity stream
+        """
+        super().perform_update(serializer)
+        actstream_action.send(
+            self.request.user,
+            verb=StreamVerbs.UPDATED.value,
+            action_object=serializer.instance,
+        )
 
 
 class MuscleViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for muscle objects
     """
+
     queryset = Muscle.objects.all()
     serializer_class = MuscleSerializer
     ordering_fields = '__all__'
-    filterset_fields = ('name', 'is_front')
+    ordering = ['name', 'id']
+    filterset_fields = ('name', 'is_front', 'name_en')
+
+    @method_decorator(cache_page(settings.WGER_SETTINGS['EXERCISE_CACHE_TTL']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)

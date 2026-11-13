@@ -14,6 +14,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard Library
+from decimal import Decimal
+
 # Django
 from django.core.validators import (
     MaxValueValidator,
@@ -21,10 +24,10 @@ from django.core.validators import (
 )
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 
 # wger
 from wger.nutrition.helpers import BaseMealItem
+from wger.utils.uuid import uuid7
 
 # Local
 from .ingredient import Ingredient
@@ -40,35 +43,46 @@ class LogItem(BaseMealItem, models.Model):
 
     # Metaclass to set some other properties
     class Meta:
+        # id breaks ties between entries logged at the same time (a whole meal),
+        # so pages of the API list don't repeat or skip entries
         ordering = [
-            "datetime",
+            '-datetime',
+            '-id',
         ]
+
+    id = models.UUIDField(
+        default=uuid7,
+        primary_key=True,
+    )
 
     plan = models.ForeignKey(
         NutritionPlan,
-        verbose_name=_('Nutrition plan'),
+        verbose_name='Nutrition plan',
         on_delete=models.CASCADE,
-    )
-
-    meal = models.ForeignKey(
-        Meal,
-        verbose_name=_('Meal'),
-        on_delete=models.CASCADE,
-        related_name="log_items",
-        blank=True,
-        null=True
     )
     """
     The plan this log belongs to
     """
 
-    datetime = models.DateTimeField(default=timezone.now)
+    meal = models.ForeignKey(
+        Meal,
+        verbose_name='Meal',
+        on_delete=models.SET_NULL,
+        related_name='log_items',
+        blank=True,
+        null=True,
+    )
+    """
+    The meal this log belongs to (optional)
+    """
+
+    datetime = models.DateTimeField(verbose_name='Date and Time (Approx.)', default=timezone.now)
     """
     Time and date when the log was added
     """
 
     comment = models.TextField(
-        verbose_name=_('Comment'),
+        verbose_name='Comment',
         blank=True,
         null=True,
     )
@@ -78,7 +92,7 @@ class LogItem(BaseMealItem, models.Model):
 
     ingredient = models.ForeignKey(
         Ingredient,
-        verbose_name=_('Ingredient'),
+        verbose_name='Ingredient',
         on_delete=models.CASCADE,
     )
     """
@@ -87,7 +101,7 @@ class LogItem(BaseMealItem, models.Model):
 
     weight_unit = models.ForeignKey(
         IngredientWeightUnit,
-        verbose_name=_('Weight unit'),
+        verbose_name='Weight unit',
         null=True,
         blank=True,
         on_delete=models.CASCADE,
@@ -99,8 +113,8 @@ class LogItem(BaseMealItem, models.Model):
     amount = models.DecimalField(
         decimal_places=2,
         max_digits=6,
-        verbose_name=_('Amount'),
-        validators=[MinValueValidator(1), MaxValueValidator(1000)],
+        verbose_name='Amount',
+        validators=[MinValueValidator(Decimal(1)), MaxValueValidator(Decimal(1000))],
     )
     """
     The amount of units
@@ -110,7 +124,7 @@ class LogItem(BaseMealItem, models.Model):
         """
         Return a more human-readable representation
         """
-        return "Diary entry for {}, plan {}".format(self.datetime, self.plan.pk)
+        return f'Diary entry for {self.datetime}, plan {self.plan.pk}'
 
     def get_owner_object(self):
         """

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 *-*
-
 # This file is part of wger Workout Manager.
 #
 # wger Workout Manager is free software: you can redistribute it and/or modify
@@ -31,6 +29,7 @@ class Command(BaseCommand):
     """
     Check that all gym trainers and users have configurations
     """
+
     help = 'Check that all gym trainers and users have configurations'
 
     def handle(self, **options):

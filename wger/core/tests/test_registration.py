@@ -14,16 +14,21 @@
 
 # Standard Library
 import logging
+from io import StringIO
 
 # Django
 from django.contrib.auth.models import User
+from django.core import mail
+from django.core.management import call_command
+from django.test import override_settings
 from django.urls import reverse
 
+# Third Party
+from allauth.account.models import EmailAddress
+from django_recaptcha.fields import ReCaptchaField
+
 # wger
-from wger.core.forms import (
-    RegistrationForm,
-    RegistrationFormNoCaptcha,
-)
+from wger.core.captcha import TurnstileField
 from wger.core.tests.base_testcase import WgerTestCase
 
 
@@ -32,40 +37,110 @@ logger = logging.getLogger(__name__)
 
 class RegistrationTestCase(WgerTestCase):
     """
-    Tests registering a new user
+    Tests registering a new user via the registration form
     """
 
-    def test_registration_captcha(self):
+    def test_registration_captcha_recaptcha(self):
         """
-        Tests that the correct form is used depending on global
-        configuration settings
+        The signup form shows a reCAPTCHA field when CAPTCHA_PROVIDER is 'recaptcha'.
+        """
+        with self.settings(
+            WGER_SETTINGS={
+                'CAPTCHA_PROVIDER': 'recaptcha',
+                'ALLOW_REGISTRATION': True,
+                'ALLOW_GUEST_USERS': True,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
+            }
+        ):
+            response = self.client.get(reverse('core:user:registration'))
+            self.assertIn('captcha', response.context['form'].fields)
+
+    def test_registration_captcha_turnstile(self):
+        """
+        The signup form shows a Turnstile field when CAPTCHA_PROVIDER is 'turnstile'.
+        """
+        with self.settings(
+            WGER_SETTINGS={
+                'CAPTCHA_PROVIDER': 'turnstile',
+                'ALLOW_REGISTRATION': True,
+                'ALLOW_GUEST_USERS': True,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
+            }
+        ):
+            response = self.client.get(reverse('core:user:registration'))
+            self.assertIn('captcha', response.context['form'].fields)
+
+    def test_registration_captcha_none(self):
+        """
+        The signup form shows no captcha field when CAPTCHA_PROVIDER is 'none'.
+        """
+        with self.settings(
+            WGER_SETTINGS={
+                'CAPTCHA_PROVIDER': 'none',
+                'ALLOW_REGISTRATION': True,
+                'ALLOW_GUEST_USERS': True,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
+            }
+        ):
+            response = self.client.get(reverse('core:user:registration'))
+            self.assertNotIn('captcha', response.context['form'].fields)
+
+    def test_registration_captcha_use_recaptcha(self):
+        """
+        The signup form shows a reCAPTCHA field when only the deprecated
+        USE_RECAPTCHA is set
         """
         with self.settings(
             WGER_SETTINGS={
                 'USE_RECAPTCHA': True,
-                'REMOVE_WHITESPACE': False,
                 'ALLOW_REGISTRATION': True,
                 'ALLOW_GUEST_USERS': True,
-                'TWITTER': False,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
             }
         ):
             response = self.client.get(reverse('core:user:registration'))
-            self.assertIsInstance(response.context['form'], RegistrationForm)
+            self.assertIsInstance(response.context['form'].fields['captcha'], ReCaptchaField)
 
+    def test_registration_captcha_provider_over_use_recaptcha(self):
+        """
+        An explicit CAPTCHA_PROVIDER takes precedence over USE_RECAPTCHA
+        """
         with self.settings(
             WGER_SETTINGS={
-                'USE_RECAPTCHA': False,
-                'REMOVE_WHITESPACE': False,
+                'USE_RECAPTCHA': True,
+                'CAPTCHA_PROVIDER': 'turnstile',
                 'ALLOW_REGISTRATION': True,
                 'ALLOW_GUEST_USERS': True,
-                'TWITTER': False,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
             }
         ):
             response = self.client.get(reverse('core:user:registration'))
-            self.assertIsInstance(response.context['form'], RegistrationFormNoCaptcha)
+            self.assertIsInstance(response.context['form'].fields['captcha'], TurnstileField)
+
+    def test_signup_submit_button_not_named_submit(self):
+        """
+        The submit button must not be named "submit": a control with that name
+        shadows HTMLFormElement.submit(), which the reCAPTCHA v3 widget calls to
+        submit the form once the token is set.
+        """
+        with self.settings(
+            WGER_SETTINGS={
+                'CAPTCHA_PROVIDER': 'recaptcha',
+                'ALLOW_REGISTRATION': True,
+                'ALLOW_GUEST_USERS': True,
+                'MASTODON': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
+            }
+        ):
+            response = self.client.get(reverse('core:user:registration'))
+            self.assertNotContains(response, 'name="submit"')
 
     def test_register(self):
-
         # Fetch the registration page
         response = self.client.get(reverse('core:user:registration'))
         self.assertEqual(response.status_code, 200)
@@ -108,6 +183,122 @@ class RegistrationTestCase(WgerTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(count_before + 1, count_after)
 
+        # Password too short
+        registration_data['password1'] = 'abc123'
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Password is "password" (commonly used)
+        registration_data['password1'] = 'password'
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Password is entirely numeric
+        registration_data['password1'] = '123456789'
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Passwords don't match
+        registration_data['password2'] = 'quai8fai7Zaeq'
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # First password is missing
+        registration_data['password1'] = ''
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Second password is missing
+        registration_data['password2'] = ''
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Username is too long
+        long_user = (
+            'my_username_is_'
+            'wayyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+            '_toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+            '_loooooooooooooooooooooooooooooooooooooooooooooooooooooooooong'
+        )
+        registration_data['username'] = long_user
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Username contains invalid symbol
+        registration_data['username'] = 'username!'
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+        # Username is missing
+        registration_data['username'] = ''
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertFalse(response.context['form'].is_valid())
+        self.user_logout()
+
+    def test_register_rejects_secondary_email_address(self):
+        """
+        Uniqueness must also cover allauth's ``EmailAddress`` table —
+        secondary addresses owned by another user must not be claimable
+        through the HTML registration form either.
+        """
+        admin = User.objects.get(username='admin')
+        EmailAddress.objects.create(
+            user=admin,
+            email='secondary@example.com',
+            primary=False,
+            verified=False,
+        )
+
+        registration_data = {
+            'username': 'newuser',
+            'password1': 'quai8fai7Zae',
+            'password2': 'quai8fai7Zae',
+            'email': 'secondary@example.com',
+            'g-recaptcha-response': 'PASSED',
+        }
+        count_before = User.objects.count()
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+
+        # A passing form would 302-redirect after creating the user; the
+        # rejection path re-renders the page with the form context.
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['form'].is_valid())
+        self.assertEqual(User.objects.count(), count_before)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_registration_sends_verification_email(self):
+        """
+        Tests that a verification email is sent when a new user registers
+        """
+
+        registration_data = {
+            'username': 'newuser',
+            'password1': 'quai8fai7Zae',
+            'password2': 'quai8fai7Zae',
+            'email': 'newuser@example.com',
+            'g-recaptcha-response': 'PASSED',
+        }
+        response = self.client.post(reverse('core:user:registration'), registration_data)
+        self.assertEqual(response.status_code, 302)
+
+        # A verification email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('newuser@example.com', mail.outbox[0].to)
+
+        # An EmailAddress entry was created with verified=False
+        user = User.objects.get(username='newuser')
+        email_obj = EmailAddress.objects.get(user=user)
+        self.assertEqual(email_obj.email, 'newuser@example.com')
+        self.assertFalse(email_obj.verified)
+
     def test_registration_deactivated(self):
         """
         Test that with deactivated registration no users can register
@@ -116,12 +307,11 @@ class RegistrationTestCase(WgerTestCase):
         with self.settings(
             WGER_SETTINGS={
                 'USE_RECAPTCHA': False,
-                'REMOVE_WHITESPACE': False,
                 'ALLOW_GUEST_USERS': True,
                 'ALLOW_REGISTRATION': False,
+                'MIN_ACCOUNT_AGE_TO_TRUST': 21,
             }
         ):
-
             # Fetch the registration page
             response = self.client.get(reverse('core:user:registration'))
             self.assertEqual(response.status_code, 302)
@@ -140,3 +330,44 @@ class RegistrationTestCase(WgerTestCase):
             count_after = User.objects.count()
             self.assertEqual(response.status_code, 302)
             self.assertEqual(count_before, count_after)
+
+
+class CreateUserCommand(WgerTestCase):
+    def setUp(self):
+        super(CreateUserCommand, self).setUp()
+        self.out = StringIO()
+
+    def test_access_api_user_creation(self):
+        """Tests giving permission to register users via API"""
+
+        user = User.objects.get(username='admin')
+        self.assertFalse(user.userprofile.can_add_user)
+
+        call_command('add-user-rest', 'admin', stdout=self.out, no_color=True)
+        self.assertEqual('admin is now ALLOWED to add users via the API\n', self.out.getvalue())
+
+        user = User.objects.get(username='admin')
+        self.assertTrue(user.userprofile.can_add_user)
+
+    def test_revoke_access_api_user_creation(self):
+        """Tests revoking permission to register users via API"""
+
+        user = User.objects.get(username='test')
+        self.assertTrue(user.userprofile.can_add_user)
+
+        call_command('add-user-rest', 'test', disable=True, stdout=self.out, no_color=True)
+        self.assertEqual(
+            'test is now DISABLED from adding users via the API\n',
+            self.out.getvalue(),
+        )
+
+        user = User.objects.get(username='test')
+        self.assertFalse(user.userprofile.can_add_user)
+
+    def test_access_get_api_users(self):
+        """Tests listing created users via API"""
+
+        call_command('list-users-api', stdout=self.out, no_color=True)
+        self.assertIn('Users created by test:', self.out.getvalue())
+        self.assertIn('- trainer1', self.out.getvalue())
+        self.assertIn('- trainer2', self.out.getvalue())

@@ -8,34 +8,38 @@
 # docker build --tag wger/base .
 #
 
-FROM ubuntu:21.04
+FROM ubuntu:24.04
 
-LABEL maintainer="Roland Geider <roland@geider.net>"
+LABEL org.opencontainers.image.authors="wger team <hello@wger.de>"
 
 # Install dependencies
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-  && apt-get install --no-install-recommends -y \
-      git \
+RUN apt update \
+  && apt install --no-install-recommends -y \
+      ca-certificates \
+      python3 \
+      adduser \
       locales \
-      nodejs \
-      npm \
-      python3-venv \
-      python3-pip \
       sqlite3 \
-      netcat-openbsd \
+      wget \
+      tzdata \
+      libpq5 \
+      gettext \
+  && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
-  && npm install -g yarn@1.22.5 sass\
-  && locale-gen en_US.UTF-8
+  && locale-gen en_US.UTF-8 \
+  && wget https://bootstrap.pypa.io/get-pip.py \
+  && python3 get-pip.py --no-warn-script-location --break-system-packages
 
 # Environmental variables
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 
 # Add wger user
-RUN adduser wger --disabled-password --gecos ""
+RUN deluser ubuntu
+RUN adduser wger --uid 1000 --disabled-password --gecos ""

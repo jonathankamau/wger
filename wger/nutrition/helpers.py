@@ -15,91 +15,116 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard Library
+import re
+from dataclasses import (
+    asdict,
+    dataclass,
+)
 from decimal import Decimal
 
 # wger
-from wger.nutrition.consts import (
-    MEALITEM_WEIGHT_GRAM,
-    MEALITEM_WEIGHT_UNIT,
+from wger.nutrition.consts import KJ_PER_KCAL
+from wger.utils.constants import (
+    CHARACTERS_TO_REMOVE_FROM_INGREDIENT_NAME,
+    HTML_ENTITY_PATTERN,
+    HTML_ENTITY_TO_HUMAN_READABLE_MAP,
 )
-from wger.utils.constants import TWOPLACES
-from wger.utils.units import AbstractWeight
 
 
-class BaseMealItem(object):
+class BaseMealItem:
     """
     Base class for an item (component) of a meal or log
 
     This just provides some common helper functions
     """
 
-    def get_unit_type(self):
-        """
-        Returns the type of unit used:
-        - a value in grams
-        - a 'human' unit like 'a cup' or 'a slice'
-        """
-
-        if self.weight_unit:
-            return MEALITEM_WEIGHT_UNIT
-        else:
-            return MEALITEM_WEIGHT_GRAM
-
-    def get_nutritional_values(self, use_metric=True):
+    def get_nutritional_values(self):
         """
         Sums the nutritional info for the ingredient in the MealItem
 
-        :param use_metric Flag that controls the units used
+        All values are in grams
         """
-        nutritional_info = {
-            'energy': 0,
-            'protein': 0,
-            'carbohydrates': 0,
-            'carbohydrates_sugar': 0,
-            'fat': 0,
-            'fat_saturated': 0,
-            'fibres': 0,
-            'sodium': 0
-        }
-        # Calculate the base weight of the item
-        if self.get_unit_type() == MEALITEM_WEIGHT_GRAM:
-            item_weight = self.amount
-        else:
-            item_weight = (self.amount * self.weight_unit.amount * self.weight_unit.gram)
+        values = NutritionalValues()
 
-        nutritional_info['energy'] += self.ingredient.energy * item_weight / 100
-        nutritional_info['protein'] += self.ingredient.protein * item_weight / 100
-        nutritional_info['carbohydrates'] += self.ingredient.carbohydrates * item_weight / 100
-        nutritional_info['fat'] += self.ingredient.fat * item_weight / 100
+        # Calculate the base weight of the item
+        if self.weight_unit:
+            item_weight = self.amount * Decimal(self.weight_unit.gram)
+        else:
+            item_weight = self.amount
+
+        values.energy = self.ingredient.energy * item_weight / 100
+        values.protein = self.ingredient.protein * item_weight / 100
+        values.carbohydrates = self.ingredient.carbohydrates * item_weight / 100
+        values.fat = self.ingredient.fat * item_weight / 100
 
         if self.ingredient.carbohydrates_sugar:
-            nutritional_info['carbohydrates_sugar'] += \
-                self.ingredient.carbohydrates_sugar * item_weight / 100
+            values.carbohydrates_sugar = self.ingredient.carbohydrates_sugar * item_weight / 100
 
         if self.ingredient.fat_saturated:
-            nutritional_info['fat_saturated'] += self.ingredient.fat_saturated * item_weight / 100
+            values.fat_saturated = self.ingredient.fat_saturated * item_weight / 100
 
-        if self.ingredient.fibres:
-            nutritional_info['fibres'] += self.ingredient.fibres * item_weight / 100
+        if self.ingredient.fiber:
+            values.fiber = self.ingredient.fiber * item_weight / 100
 
         if self.ingredient.sodium:
-            nutritional_info['sodium'] += self.ingredient.sodium * item_weight / 100
+            values.sodium = self.ingredient.sodium * item_weight / 100
 
-        # If necessary, convert weight units
-        if not use_metric:
-            for key, value in nutritional_info.items():
+        return values
 
-                # Energy is not a weight!
-                if key == 'energy':
-                    continue
 
-                # Everything else, to ounces
-                nutritional_info[key] = AbstractWeight(value, 'g').oz
+@dataclass
+class NutritionalValues:
+    energy: Decimal | int | float = 0
+    protein: Decimal | int | float = 0
+    carbohydrates: Decimal | int | float = 0
+    carbohydrates_sugar: Decimal | int | float | None = None
+    fat: Decimal | int | float = 0
+    fat_saturated: Decimal | int | float | None = None
+    fiber: Decimal | int | float | None = None
+    sodium: Decimal | int | float | None = None
 
-        nutritional_info['energy_kilojoule'] = Decimal(nutritional_info['energy']) * Decimal(4.184)
+    @property
+    def energy_kilojoule(self):
+        return self.energy * KJ_PER_KCAL
 
-        # Only 2 decimal places, anything else doesn't make sense
-        for i in nutritional_info:
-            nutritional_info[i] = Decimal(nutritional_info[i]).quantize(TWOPLACES)
+    def __add__(self, other: 'NutritionalValues'):
+        """
+        Allow adding nutritional values
+        """
+        return NutritionalValues(
+            energy=self.energy + other.energy,
+            protein=self.protein + other.protein,
+            carbohydrates=self.carbohydrates + other.carbohydrates,
+            carbohydrates_sugar=self.carbohydrates_sugar + other.carbohydrates_sugar
+            if self.carbohydrates_sugar and other.carbohydrates_sugar
+            else self.carbohydrates_sugar or other.carbohydrates_sugar,
+            fat=self.fat + other.fat,
+            fat_saturated=self.fat_saturated + other.fat_saturated
+            if self.fat_saturated and other.fat_saturated
+            else self.fat_saturated or other.fat_saturated,
+            fiber=self.fiber + other.fiber
+            if self.fiber and other.fiber
+            else self.fiber or other.fiber,
+            sodium=self.sodium + other.sodium
+            if self.sodium and other.sodium
+            else self.sodium or other.sodium,
+        )
 
-        return nutritional_info
+    @property
+    def to_dict(self):
+        return asdict(self)
+
+
+def remove_problematic_characters(
+    string: str, characters_to_be_removed: set[str] = CHARACTERS_TO_REMOVE_FROM_INGREDIENT_NAME
+) -> str:
+    string = ''.join(c for c in string if c not in characters_to_be_removed)
+    return string
+
+
+def change_html_entities_to_human_readable(
+    string, html_entity_map: dict[str, str] = HTML_ENTITY_TO_HUMAN_READABLE_MAP
+) -> str:
+    pattern = re.compile(HTML_ENTITY_PATTERN)
+    string = pattern.sub(lambda m: html_entity_map.get(m.group(0), m.group(0)), string)
+    return string
